@@ -1,3 +1,13 @@
+This project was edited by [Aristotle](https://aristotle.harmonic.fun).
+
+To cite Aristotle:
+- Tag @Aristotle-Harmonic on GitHub PRs/issues
+- Add as co-author to commits:
+```
+Co-authored-by: Aristotle (Harmonic) <aristotle-harmonic@harmonic.fun>
+```
+
+
 # Rational `d` for which `36n³ - 19 = -2d·x²·(-(x+6n) + √((x+6n)² + (36n³-19)/x))` has integer solutions
 
 ## 1. Reduction of the equation
