@@ -1,0 +1,22 @@
+SetClassGroupBounds("GRH");
+
+// Rank-2 scan over B = b0/6 and B = b0/1
+for b0 in [-300..300] do
+    if b0 eq 0 then continue; end if;
+    for bden in [1, 6] do
+        b := Rationals() ! (b0/bden);
+        a2 := 18*b;
+        a4 := -108*b^2;
+        a6 := 216*b^3 - 24624;
+        E := EllipticCurve([Rationals()!0, a2, Rationals()!0, a4, a6]);
+        if Discriminant(E) eq 0 then continue; end if;
+
+        r := Rank(E);
+        printf "B = %o/%o : rank = %o\n", b0, bden, r;  // progress
+
+        if r ge 2 then
+            printf "  *** RANK %o ***\n", r;
+            printf "  gens = %o\n", Generators(E);
+        end if;
+    end for;
+end for;
