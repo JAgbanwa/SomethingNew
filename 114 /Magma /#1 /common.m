@@ -1,6 +1,6 @@
 /*
-Shared exact helpers for the four searches in this directory.
-Run from this directory so that load "common.m" resolves correctly.
+Canonical exact helpers for the four searches in this directory.
+build_standalone.py embeds these helpers in each executable script.
 
 Target: y^2 = 1 + (972*m^3-19)/((12*u+7)*(12*u+7+18*m)^2),
         with m,u integers and y rational (nonintegral by default).
@@ -13,8 +13,8 @@ Inverse: A=6*D/X, m=(B-A)/18, u=(A-7)/12, y=W/(6*B*X).
 
 The former model omitted A from (A*B*y)^2=A*(A*B^2+972*m^3-19).
 Only integer B congruent to 1 modulo 6 can yield integer m,u.
-These routines search finite combinations of returned generators.
-They do not claim that the returned generators or search are exhaustive.
+The default uses bounded point searches, without computing generators.
+Optional generator computations and finite combinations are not exhaustive.
 */
 
 Q := Rationals();
@@ -68,62 +68,125 @@ function RecoverPoint(B,P)
     return [Q | m,u,y];
 end function;
 
-function SearchGeneratorBox(B,E,G,H,allow_integer_y)
+// Materialize at most max_combinations points, including the identity first.
+// Coefficients are ordered 0,1,-1,2,-2,... so a truncated box starts centrally.
+function BoundedPointCombinations(E,G,H,max_combinations)
+    assert H ge 1 and max_combinations ge 1;
+    width := 2*H+1;
+    total := width^#G;
+    count := Minimum(total,max_combinations);
+    points := [E!0];
+    for j in [1..count-1] do
+        digits := j;
+        P := E!0;
+        for S in G do
+            digit := digits mod width;
+            if digit mod 2 eq 1 then
+                k := (digit+1) div 2;
+            else
+                k := -(digit div 2);
+            end if;
+            digits := digits div width;
+            if k ne 0 then
+                P := P+k*S;
+            end if;
+        end for;
+        Append(~points,P);
+    end for;
+    return points,total gt count;
+end function;
+
+procedure RecordPoint(~found,B,P,allow_integer_y)
+    if P[3] eq 0 or P[1] eq 0 then
+        return;
+    end if;
+    A := 6*(B^3-114)/P[1];
+    if Denominator(A) ne 1 then
+        return;
+    end if;
+    Ai := Z!A;
+    if (Ai-7) mod 12 ne 0 or (B-Ai) mod 18 ne 0 then
+        return;
+    end if;
+    values := RecoverPoint(B,P);
+    if #values eq 0 then
+        return;
+    end if;
+    m := values[1]; u := values[2]; y := values[3];
+    if not IsRequestedSolution(m,u,y,allow_integer_y) then
+        return;
+    end if;
+    sol := <Z!m,Z!u,Q!y>;
+    if sol notin found then
+        Include(~found,sol);
+        printf "VERIFIED m=%o, u=%o, y=%o\n",sol[1],sol[2],sol[3];
+    end if;
+end procedure;
+
+function SearchGeneratorBox(B,E,G,H,allow_integer_y :
+                            MaxSeeds:=3,MaxCombinations:=1000)
     assert Denominator(Q!B) eq 1;
     B := Z!B;
     assert B mod 6 eq 1;
-    assert H ge 1;
-    D := B^3-114;
-
-    // Include mixed sums of generators, with each coefficient in [-H,H].
-    // At most (2*H+1)^#G combinations are formed; keep H modest.
-    points := { E!0 };
-    for P in G do
-        points := { R+k*P : R in points, k in [-H..H] };
-    end for;
-
+    assert H ge 1 and MaxSeeds ge 1 and MaxCombinations ge 1;
     found := {};
-    for P in points do
+    seeds := [E!0];
+    Remove(~seeds,1);
+    seen_x := { Q | };
+    omitted := 0;
+
+    // Check every input point directly, even if it is omitted from mixed sums.
+    // Our model has a1=a3=0, so P and -P have the same x-coordinate.
+    for P in G do
+        RecordPoint(~found,B,P,allow_integer_y);
+        RecordPoint(~found,B,-P,allow_integer_y);
         if P[3] eq 0 then
             continue;
         end if;
-        X := P[1];
-        if X eq 0 then
+        if P[1] in seen_x then
             continue;
         end if;
-
-        // Filter integer m,u using the corrected inverse A=6*D/X.
-        A := 6*D/X;
-        if Denominator(A) ne 1 then
-            continue;
+        Include(~seen_x,P[1]);
+        if #seeds lt MaxSeeds then
+            Append(~seeds,P);
+        else
+            omitted +:= 1;
         end if;
-        Ai := Z!A;
-        if (Ai-7) mod 12 ne 0 or (B-Ai) mod 18 ne 0 then
-            continue;
-        end if;
-
-        values := RecoverPoint(B,P);
-        if #values eq 0 then
-            continue;
-        end if;
-        m := values[1]; u := values[2]; y := values[3];
-        if not IsRequestedSolution(m,u,y,allow_integer_y) then
-            continue;
-        end if;
-        sol := <Z!m,Z!u,Q!y>;
-        if sol notin found then
-            Include(~found,sol);
-            printf "VERIFIED m=%o, u=%o, y=%o\n", sol[1],sol[2],sol[3];
-        end if;
+    end for;
+    printf "B=%o: %o seeds for mixed sums; %o omitted by MaxSeeds.\n",
+           B,#seeds,omitted;
+    if #seeds eq 0 then
+        print "No finite seed points were found at the current search bound.";
+        return found;
+    end if;
+    printf "B=%o: forming at most %o coefficient combinations.\n",
+           B,Minimum((2*H+1)^#seeds,MaxCombinations);
+    points,truncated := BoundedPointCombinations(E,seeds,H,MaxCombinations);
+    if truncated then
+        print "Combination limit reached: this coefficient box is truncated.";
+    end if;
+    for P in points do
+        RecordPoint(~found,B,P,allow_integer_y);
+        RecordPoint(~found,B,-P,allow_integer_y);
     end for;
     return found;
 end function;
 
-function SearchB(B,H,allow_integer_y)
+function SearchB(B,H,allow_integer_y : PointBound:=1000,
+                 UseGenerators:=false,MaxSeeds:=3,MaxCombinations:=1000)
+    assert PointBound ge 1;
+    printf "Starting B=%o.\n",B;
     E := CurveForB(B);
-    G := Generators(E);
-    printf "B=%o; returned generators=%o; coefficient bound=%o\n",B,#G,H;
-    found := SearchGeneratorBox(B,E,G,H,allow_integer_y);
-    printf "B=%o: %o verified triples in this finite generator box.\n",B,#found;
+    if UseGenerators then
+        print "Computing generators; this optional step can take a long time.";
+        G := Generators(E);
+    else
+        printf "Bounded rational-point search, x-height bound=%o.\n",PointBound;
+        G := [P : P in Points(E : Bound:=PointBound)];
+    end if;
+    printf "B=%o: %o input points; coefficient bound=%o.\n",B,#G,H;
+    found := SearchGeneratorBox(B,E,G,H,allow_integer_y :
+                  MaxSeeds:=MaxSeeds,MaxCombinations:=MaxCombinations);
+    printf "B=%o: %o verified triples in this finite search.\n",B,#found;
     return found;
 end function;
