@@ -1,77 +1,14 @@
-// ============================================================
-// Fast residue-filtered search on a rank-1 curve
-// ============================================================
+// Corrected single-B search with exact residue filters in common.m.
+// Run from the parent #1 directory.
+load "common.m";
 
-b0 := -30;                     // numerator of B
-bden := 11;                    // denominator of B
-b := Rationals() ! (b0/bden);
+// The former B=-30/11 can NEVER give integer m,u.
+// Choose an integer B congruent to 1 modulo 6.
+B := 7;
+// Example large setting: B := 10^30+3;
+CoefficientBound := 6;
+AllowIntegerY := false;
 
-a2 := 18*b;
-a4 := -108*b^2;
-a6 := 216*b^3 - 24624;
-
-E := EllipticCurve([ Rationals()!0, a2, Rationals()!0, a4, a6 ]);
-printf "Curve E: %o\n", E;
-printf "Discriminant nonzero: %o\n", Discriminant(E) ne 0;
-
-r := Rank(E);
-printf "Rank = %o\n", r;
-
-Gens := Generators(E);
-printf "Generators = %o\n", Gens;
-
-// Declare P — this was the missing piece
-P := Gens[1];
-
-found := [];
-
-for k in [1..5000] do
-    Q := k*P;
-    X := Q[1];
-    W := Q[2];
-
-    num := Numerator(X);
-    den := Denominator(X);
-
-    // Condition 1: u = -(X+42)/72 ∈ ℤ  <=>  num + 42*den ≡ 0 (mod 72*den)
-    if (num + 42*den) mod (72*den) ne 0 then
-        continue;
-    end if;
-
-    // Condition 2: m = (6b + X)/108 ∈ ℤ
-    // 6b = 6*b0/bden.  Write 6b = nb/db with nb = 6*b0/G, db = bden/G where G = GCD(6*b0, bden)
-    nb := 6*b0;
-    db := bden;
-    G := GCD(nb, db);
-    nb := nb div G;
-    db := db div G;
-    // m = (nb/db + num/den)/108 = (nb*den + num*db) / (108*db*den)
-    // Need (nb*den + num*db) ≡ 0 (mod 108*db*den)
-    if (nb*den + num*db) mod (108*db*den) ne 0 then
-        continue;
-    end if;
-
-    // Both conditions met — this k gives integer (u,m)
-    A_val := -X/6;
-    u_int := Integers() ! ((A_val - 7)/12);
-    m_int := Integers() ! ((b - A_val)/18);
-    Y_val := W/36;
-    y_val := Y_val / (A_val * b);
-
-    if y_val ne 0 and not IsIntegral(y_val) then
-        printf "HIT k=%o : u=%o, m=%o\n", k, u_int, m_int;
-        printf "         y=%o\n", y_val;
-        Append(~found, <k, u_int, m_int, y_val>);
-    end if;
-end for;
-
-printf "\nTotal hits: %o\n", #found;
-
-// Verify
-for s in found do
-    u_int := s[2]; m_int := s[3]; y_val := s[4];
-    lhs := y_val^2;
-    rhs := 1 + (972*m_int^3 - 19) /
-                ((12*u_int + 7)*(12*u_int + 7 + 18*m_int)^2);
-    printf "Check k=%o : %o\n", s[1], lhs eq rhs;
-end for;
+found := SearchB(B,CoefficientBound,AllowIntegerY);
+printf "Finished selected B: %o verified triples.\n",#found;
+print "An empty result is not a proof of global nonexistence.";

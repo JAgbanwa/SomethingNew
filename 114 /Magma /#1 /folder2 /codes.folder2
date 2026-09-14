@@ -1,96 +1,25 @@
-// ============================================================
-// Goal: find integer (m, u) AND rational non-integer y
-// ============================================================
-// Chain: A = 12u+7, B = A+18m, Y = y*A*B
-//   Y^2 = A*B^2 + 972 m^3 - 19
-// With B integer b:
-//   u integer  <=>  A ≡ 7 (mod 12)
-//   m integer  <=>  A ≡ b (mod 18)
-// Combined: A ≡ 7 (mod 12), A ≡ b (mod 18), needs b ≡ 1 (mod 6)
-//
-// Parametrize: X = -6A, W = 6Y (W^2 = 36 Y^2)
-//   W^2 = X^3 + 18b X^2 - 108b^2 X + (216b^3 - 24624)
-// A = -X/6
-// ============================================================
+// Corrected search on a chosen list of admissible integer B values.
+// Run from the parent #1 directory.
+load "common.m";
 
-printf "Searching integer B ≡ 1 (mod 6) for rank-positive curves...\n";
-printf "Then testing multiples of generators for integer u, m\n\n";
+BValues := [1,7,13,19,25,31,37,43,49,55,
+            -5,-11,-17,-23,-29,-35,-41,-47,-53];
+CoefficientBound := 3;
+AllowIntegerY := false;
 
-found := [];
-
-for b in [1, 7, 13, 19, 25, 31, 37, 43, 49, 55, -5, -11, -17, -23, -29, -35, -41, -47, -53] do
-
-    a2 := 18*b;
-    a4 := -108*b^2;
-    a6 := 216*b^3 - 24624;
-
-    E := EllipticCurve([ Rationals()!0, a2, Rationals()!0, a4, a6 ]);
-
-    if Discriminant(E) eq 0 then
-        continue;
-    end if;
-
-    r := Rank(E);
-    printf "B = %o : rank = %o\n", b, r;
-
-    if r eq 0 then
-        continue;
-    end if;
-
-    Gens := Generators(E);
-
-    for i in [1..#Gens] do
-        P := Gens[i];
-        printf "  gen %o: %o\n", i, P;
-
-        // Search multiples up to a generous bound
-        for k in [1..500] do
-            Q := k*P;
-            X := Q[1];
-            W := Q[2];
-
-            A_val := -X/6;
-
-            // Check integer conditions
-            // u integer  <=>  A ≡ 7 (mod 12)
-            // m integer  <=>  A ≡ b (mod 18)
-            // Use modular arithmetic on rationals
-            // A ≡ 7 (mod 12):  (A - 7)/12 ∈ ℤ
-            // A ≡ b (mod 18):  (A - b)/18 ∈ ℤ
-            u_val := (A_val - 7)/12;
-            m_val := (b - A_val)/18;
-
-            if IsIntegral(u_val) and IsIntegral(m_val) then
-                u_int := Integers() ! u_val;
-                m_int := Integers() ! m_val;
-
-                // Compute y
-                B_val := Rationals() ! b;
-                Y_val := W/36;
-                y_val := Y_val / (A_val * B_val);
-
-                if y_val ne 0 and not IsIntegral(y_val) then
-                    printf "    *** k=%o : u=%o, m=%o, y=%o\n",
-                           k, u_int, m_int, y_val;
-                    Append(~found, <u_int, m_int, y_val>);
-                end if;
-            end if;
-        end for;
-    end for;
+found := {};
+failed := [];
+for B in BValues do
+    assert B mod 6 eq 1;
+    try
+        hits := SearchB(B,CoefficientBound,AllowIntegerY);
+        found := found join hits;
+    catch err
+        Append(~failed,B);
+        printf "FAILED B=%o: %o\n",B,err;
+    end try;
 end for;
-
-printf "\nTotal integer (u,m) + rational y solutions: %o\n", #found;
-
-// Verify each
-printf "\nVerification:\n";
-for s in found do
-    u_int := s[1]; m_int := s[2]; y_val := s[3];
-    lhs := y_val^2;
-    rhs := 1 + (972*m_int^3 - 19) /
-                ((12*u_int + 7)*(12*u_int + 7 + 18*m_int)^2);
-    if lhs eq rhs then
-        printf "OK  u=%o m=%o y=%o\n", u_int, m_int, y_val;
-    else
-        printf "BAD u=%o m=%o\n", u_int, m_int;
-    end if;
-end for;
+printf "Completed finite list: %o verified triples; %o failed slices.\n",
+       #found,#failed;
+printf "Failed B values: %o\n",failed;
+print "An empty result is not a proof of global nonexistence.";

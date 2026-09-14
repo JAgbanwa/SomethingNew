@@ -1,3 +1,16 @@
+STATUS: OBSOLETE HISTORICAL OUTPUT -- NOT CORRECTED SEARCH RESULTS
+Correction date: 2026-09-14
+
+These ranks and generators belong to the former, incorrect curves. In
+particular, the displayed rank-two B=-300 and B=-49 both violate B mod 6 = 1.
+They must not be reused as rank data for the corrected curves.
+
+The scripts now use the corrected model documented in ../README.md.
+No new Magma output has been substituted for this historical record.
+The corrected scripts have not yet been executed in Magma; see ../self_test.m.
+Historical source commit: b2891590bcd54504e47e55e67177a36e90261374
+
+---------------- BEGIN HISTORICAL OUTPUT ----------------
 B = -300/1 : rank = 2
   *** RANK 2 ***
   gens = [ (58136971268324212/7751095878241 :
@@ -24,3 +37,4 @@ B = -293/1 : rank = 0
 B = -293/6 : rank = 1
 B = -292/1 : rank = 1
 B = -292/6 : rank = 1
+

@@ -1,5 +1,18 @@
+STATUS: OBSOLETE HISTORICAL OUTPUT -- NOT CORRECTED SEARCH RESULTS
+Correction date: 2026-09-14
+
+This partial log displays a generator of the former, incorrect curve. It
+contains no verified solution of the target equation and no completed search.
+
+The scripts now use the corrected model documented in ../README.md.
+No new Magma output has been substituted for this historical record.
+The corrected scripts have not yet been executed in Magma; see ../self_test.m.
+Historical source commit: b2891590bcd54504e47e55e67177a36e90261374
+
+---------------- BEGIN HISTORICAL OUTPUT ----------------
 Searching integer B  1 (mod 6) for rank-positive curves...
 Then testing multiples of generators for integer u, m
 
 B = 1 : rank = 1
   gen 1: (979/25 : 30367/125 : 1)
+

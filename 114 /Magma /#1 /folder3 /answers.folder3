@@ -1,6 +1,19 @@
+STATUS: OBSOLETE HISTORICAL OUTPUT -- NOT CORRECTED SEARCH RESULTS
+Correction date: 2026-09-14
+
+The former fixed B=-30/11 is incompatible with integer m,u. This partial log
+contains no admissible solution, regardless of the displayed rank or generator.
+
+The scripts now use the corrected model documented in ../README.md.
+No new Magma output has been substituted for this historical record.
+The corrected scripts have not yet been executed in Magma; see ../self_test.m.
+Historical source commit: b2891590bcd54504e47e55e67177a36e90261374
+
+---------------- BEGIN HISTORICAL OUTPUT ----------------
 Curve E: Elliptic Curve defined by y^2 = x^3 - 540/11*x^2 - 97200/121*x -
 38606544/1331 over Rational Field
 Discriminant nonzero: true
 Rank = 1
 Generators = [ (2074738572258553744/3367966628614225 :
 2863404342069275428032214972/195457198398824227281625 : 1) ]
+

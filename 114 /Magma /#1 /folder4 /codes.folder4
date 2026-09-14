@@ -1,22 +1,37 @@
-SetClassGroupBounds("GRH");
+// Corrected rank discovery on admissible integer B values.
+// Run from the parent #1 directory.
+load "common.m";
 
-// Rank-2 scan over B = b0/6 and B = b0/1
-for b0 in [-300..300] do
-    if b0 eq 0 then continue; end if;
-    for bden in [1, 6] do
-        b := Rationals() ! (b0/bden);
-        a2 := 18*b;
-        a4 := -108*b^2;
-        a6 := 216*b^3 - 24624;
-        E := EllipticCurve([Rationals()!0, a2, Rationals()!0, a4, a6]);
-        if Discriminant(E) eq 0 then continue; end if;
+BMin := -300;
+BMax := 300;
+CoefficientBound := 2;
+SearchDetectedCurves := true;
+AllowIntegerY := false;
 
+found := {};
+failed := [];
+for B in [BMin..BMax] do
+    if B mod 6 ne 1 then
+        continue;
+    end if;
+    try
+        E := CurveForB(B);
         r := Rank(E);
-        printf "B = %o/%o : rank = %o\n", b0, bden, r;  // progress
-
+        printf "B=%o: reported rank=%o\n",B,r;
         if r ge 2 then
-            printf "  *** RANK %o ***\n", r;
-            printf "  gens = %o\n", Generators(E);
+            G := Generators(E);
+            printf "Returned generators: %o\n",G;
+            if SearchDetectedCurves then
+                hits := SearchGeneratorBox(B,E,G,CoefficientBound,AllowIntegerY);
+                found := found join hits;
+            end if;
         end if;
-    end for;
+    catch err
+        Append(~failed,B);
+        printf "FAILED B=%o: %o\n",B,err;
+    end try;
 end for;
+printf "Completed rank scan: %o verified triples; %o failed slices.\n",
+       #found,#failed;
+printf "Failed B values: %o\n",failed;
+print "Rank data alone do not establish a solution with integer m,u.";
