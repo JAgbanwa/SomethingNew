@@ -1,0 +1,98 @@
+// ============================================================
+// Find rational non-integer y for:
+//   y^2 = 1 + (972*m^3 - 19) / ((12u + 7)(12u + 7 + 18m)^2)
+//
+// Substitutions:
+//   A = 12u + 7
+//   B = A + 18m         =>  m = (B - A)/18
+//   Y = y*A*B           =>  Y^2 = A*B^2 + 972*m^3 - 19
+//
+// With m = (B-A)/18:
+//   6*Y^2 = -A^3 + 3*B*A^2 + 3*B^2*A + B^3 - 114
+//
+// Set X = -6A, W = 6Y (so W^2 = 36 Y^2).  Then:
+//   W^2 = X^3 + 18B*X^2 - 108B^2*X + (216B^3 - 24624)
+//
+// Long Weierstrass form: [a1,a2,a3,a4,a6] = [0, 18B, 0, -108B^2, 216B^3-24624]
+// ============================================================
+
+printf "Searching over rational B = p/q with small height...\n\n";
+
+found := [];
+
+for p in [-30..30] do
+    for q in [1..20] do
+        if GCD(p, q) ne 1 then
+            continue;
+        end if;
+        if p eq 0 then
+            continue;
+        end if;
+
+        b := Rationals() ! (p/q);
+
+        a2 := 18*b;
+        a4 := -108*b^2;
+        a6 := 216*b^3 - 24624;
+
+        // 5-tuple long Weierstrass form: [a1, a2, a3, a4, a6]
+        E := EllipticCurve([ Rationals()!0, a2, Rationals()!0, a4, a6 ]);
+
+        // Skip singular curves
+        if Discriminant(E) eq 0 then
+            continue;
+        end if;
+
+        r := Rank(E);
+        if r gt 0 then
+            printf "B = %o/%o : rank = %o\n", p, q, r;
+            Gens := Generators(E);
+            printf "   generators: %o\n", Gens;
+
+            for i in [1..#Gens] do
+                P := Gens[i];
+                for k in [1..12] do
+                    Q := k*P;
+                    X := Q[1];
+                    W := Q[2];
+
+                    A_val := -X/6;
+                    B_val := b;
+                    u_val := (A_val - 7)/12;
+                    m_val := (B_val - A_val)/18;
+                    Y_val := W/36;
+
+                    if A_val ne 0 and B_val ne 0 then
+                        y_val := Y_val / (A_val * B_val);
+                        if y_val ne 0 and not IsIntegral(y_val) then
+                            printf "     k=%o : u=%o, m=%o, y=%o\n",
+                                   k, u_val, m_val, y_val;
+                            Append(~found, <u_val, m_val, y_val>);
+                        end if;
+                    end if;
+                end for;
+            end for;
+        end if;
+    end for;
+end for;
+
+printf "\nTotal solutions found: %o\n", #found;
+
+// ------------------------------------------------------------
+// Sanity check: plug each solution back into the original eqn
+// ------------------------------------------------------------
+printf "\nVerifying solutions...\n";
+for s in found do
+    u_val := s[1];
+    m_val := s[2];
+    y_val := s[3];
+    lhs := y_val^2;
+    rhs := 1 + (972*m_val^3 - 19) /
+                ((12*u_val + 7) * (12*u_val + 7 + 18*m_val)^2);
+    if lhs eq rhs then
+        printf "OK  u=%o m=%o y=%o\n", u_val, m_val, y_val;
+    else
+        printf "BAD u=%o m=%o y=%o  (lhs-rhs = %o)\n",
+               u_val, m_val, y_val, lhs - rhs;
+    end if;
+end for;
