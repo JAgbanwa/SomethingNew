@@ -469,7 +469,7 @@ theorem sat_abs_x_le_poly {d : ℚ} {n x : ℤ} (h : Sat d n x) :
   rcases sat_abs_x_le h with h1 | h1
   · nlinarith [sq_nonneg n]
   by_contra hcon
-  push Not at hcon
+  push_neg at hcon
   have hm : (0 : ℤ) ≤ |n| := abs_nonneg n
   have hB : (0 : ℤ) ≤ 24 * |n| + 14 * n ^ 2 + 100 := by positivity
   have hcube : (24 * |n| + 14 * n ^ 2 + 100) ^ 3 < |x| ^ 3 :=
@@ -554,6 +554,16 @@ theorem sat_sol₉ : Sat (1706615972245/230860333818) (-64722106) (-23707161) :=
 theorem sat_sol₁₀ : Sat (-336451937/111613781466) 101116178 (-1691117901) := by
   have hd : (-336451937/111613781466 : ℚ)
       = ((-17241814954146189 : ℤ) : ℚ) / (2 * ((-1691117901 : ℤ) : ℚ) ^ 2) := by norm_num
+  rw [hd]
+  exact sat_of_U (by norm_num) (by norm_num) (by norm_num)
+
+/-- `d = -14123191460839/14966022419456` works, with `(n, x) = (-516368250, 55022141248)`:
+a nine-digit `n` and an **eleven-digit** `x`.  Certified through `sat_of_U` with
+`U = 2dx² = -5713884084050227342552`. -/
+theorem sat_sol₁₁ :
+    Sat (-14123191460839/14966022419456) (-516368250) 55022141248 := by
+  have hd : (-14123191460839/14966022419456 : ℚ)
+      = ((-5713884084050227342552 : ℤ) : ℚ) / (2 * ((55022141248 : ℤ) : ℚ) ^ 2) := by norm_num
   rw [hd]
   exact sat_of_U (by norm_num) (by norm_num) (by norm_num)
 
