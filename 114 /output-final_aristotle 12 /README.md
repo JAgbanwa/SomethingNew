@@ -103,22 +103,83 @@ completeness is not a theorem.
 
 ## 4. Searches carried out
 
+### 4.1 A correction to the earlier runs: the `x`-range was not what it claimed
+
+The programs `search_div.c` and `search_sv.c` hold every divisor of `e·|A|` in a 128-bit
+integer.  To avoid overflow they silently replace the bound `|x| ≤ 13n²` of §2.3 by
+
+```
+|x| ≤ XCAP(n) = 2^125/|A|   (search_sv.c)     resp.   10^37/|A|   (search_div.c),
+```
+
+which for large `n` is *far* smaller than `13n²`.  In terms of the ratio `|x|/|n|` the
+effective coverage of those runs was
+
+| `n` | `10⁷` | `10⁸` | `10⁹` | `3·10⁹` | `8·10⁹` |
+| --- | --- | --- | --- | --- | --- |
+| largest `\|x\|/\|n\|` reached | `3·10⁷` | `1.2·10⁴` | `1.2` | `1.5·10⁻²` | `2.9·10⁻⁴` |
+
+The ten solutions known have `|x|/|n|` between `0.17` and `2058`, so for `|n| ≲ 10⁸` the old
+runs did cover the relevant band, but from `|n| ≈ 5·10⁸` on they missed essentially all of it:
+the entry "`|n| ≤ 8·10⁹`, **all** `x`" in the earlier version of this table is wrong, and the
+absence of new solutions in `10⁹ ≤ |n| ≤ 8·10⁹` says very little.
+
+A second, smaller loss affects the same runs.  The line sieve removes the primes `≤ 3·10⁷`
+from `A`; whatever is left is used as a single opaque factor even when it is composite.  For
+`A` of 26 digits that costs about 15% of the divisor combinations, for 31 digits about 46%
+(`search/facstat.c` measures this).  Two of the ten known solutions — the two largest,
+`(-64722106, -23707161)` and `(101116178, -1691117901)` — are only found when that cofactor is
+split.
+
+### 4.2 `search_xl.c`: the same algorithm without the `x` cut-off
+
+`search/search_xl.c` runs the divisor-pair algorithm of §2 with no 128-bit restriction on
+`|x|`.  Every quantity is carried twice: exactly **modulo 2^128** (wrapping `unsigned __int128`
+arithmetic) and approximately as a **double** (magnitude only).  The doubles locate the
+candidate `y` (the cubic is solved in floating point), and the final test is the congruence
+modulo `2^128`, which is exact.  Catastrophic cancellation could only occur for `|g| ≈ |h|`,
+and there `|g|,|h| ≤ sqrt(e|A|) < 2^126`, so both values are exact integers anyway.  Each
+unordered divisor pair is used once (the pairs `(g,h)` and `(h,g)` produce the same four
+signed differences).  The cofactor left by the sieve can be factored completely with a
+128-bit Montgomery Pollard-rho (`search/fac128.h`), under an iteration budget.
+
+Checks performed on the program:
+
+* it re-finds all ten known solutions (with the rho budget large enough for the two that need
+  the cofactor split);
+* over `|n| ≤ 200` with the full range `|x| ≤ 13n²` it returns exactly `(1,-9)` and `(-54,-9)`,
+  which is precisely the list that `DEquation.sat_exhaustive_abs_n_le_200` proves in Lean;
+* an internal consistency test (`-DDEBUG_RESID`) verified on 3.9·10⁷ candidates near
+  `n = 10¹⁰` that the residual of every candidate has the magnitude predicted by the
+  derivative, i.e. that the floating-point root finding is accurate and the 128-bit residues
+  are consistent.
+
+The program takes the ratio bound `K` as a parameter and searches `|x| ≤ min(13n², K|n|)`.
+Cost per `n` at `n ≈ 10⁸` is about 55 µs for `K = 10⁴` (the whole band in which all known
+solutions lie) against about 280 µs for the complete range `K = 13|n|`.
+
+### 4.3 The runs
+
 | search | range | outcome |
 | --- | --- | --- |
 | box (earlier run) | `\|n\| ≤ 10⁶`, `\|x\| ≤ 10⁶` | 5 pairs |
 | box (earlier run) | `\|n\| ≤ 2·10⁵`, `\|x\| ≤ 4·10⁶` | adds `(798, -1642284)` |
 | by `U = 2dx²` | `\|U\| ≤ 10⁸`, any `n`, any `x` | nothing new |
-| by `x = ±e y²` | `\|n\| ≤ 1.2·10⁵`, **all** `x` | nothing new (cross-check) |
-| by divisor pairs | `\|n\| ≤ 10⁸`, **all** `x` | adds two new pairs |
-| sieve + divisor pairs | `\|n\| ≤ 3.6·10⁹`, **all** `x` | adds two more pairs |
-| sieve + divisor pairs (this run) | `3.6·10⁹ ≤ \|n\| ≤ 8·10⁹`, **all** `x` | nothing new |
+| by `x = ±e y²` | `\|n\| ≤ 1.2·10⁵`, all `x` | nothing new (cross-check) |
+| by divisor pairs | `\|n\| ≤ 10⁸`, `\|x\| ≤ 10³⁷/\|A\|` | adds two new pairs |
+| sieve + divisor pairs | `\|n\| ≤ 8·10⁹`, `\|x\| ≤ 2¹²⁵/\|A\|` | nothing new |
+| `search_xl` (run3) | `\|n\| ≤ 1.33·10⁹`, `\|x\| ≤ 10⁴\|n\|` | adds `(-516368250, 55022141248)` |
+| `search_xl` (run4) | `\|n\| ≤ 1.48·10⁹`, **all** `x` (`\|x\| ≤ 13n²`) | nothing further |
+| `search_xl` (run5) | the `n` skipped by all earlier runs, `\|n\| ≤ 1.07·10⁹`, all `x`, cofactor split | nothing |
 
 (The searches skip the values of `n` for which `36n³-19` has more than 2·10⁶ divisor
-combinations — about one in 12 000; they are listed in the `search/dverr_*.txt` and
-`search/sverr_*.txt` logs and, for the last run, in `search/run2/skipped_n.txt` (699 984
-values). For large `n` the sieve also leaves an unfactored cofactor, so beyond `|n| ≈ 10⁸` the
-searches are thorough but no longer provably exhaustive. `search/run2/README.md` records the
-exact ranges covered by the last run.)
+combinations — about one in 12 000; they are listed in the `search/dverr_*.txt`,
+`search/sverr_*.txt` and `search/run3/err_*.txt` logs and, for the run of `search/run2`, in
+`search/run2/skipped_n.txt` (699 984 values); those with `|n| ≤ 1.07·10⁹` have since been
+processed individually in run5, see §4.4.  None of the large searches is exhaustive: the
+`x`-range is cut at `K|n|`, the unsieved cofactor of `A` is not split, and the values above
+are skipped.  Every hit that is printed is, on the other hand, re-verified exactly and then
+proved in Lean.)
 
 **All solutions known** (each `d` is the unique one for its pair, and each is proved in
 `RequestProject/Main.lean`):
@@ -135,9 +196,37 @@ exact ranges covered by the last run.)
 | `-186487860451/3639943440` | `12512774` | `2548980` | 8, 7 |
 | `1706615972245/230860333818` | `-64722106` | `-23707161` | 8, 8 |
 | `-336451937/111613781466` | `101116178` | `-1691117901` | 9, 10 |
+| `-14123191460839/14966022419456` | `-516368250` | `55022141248` | 9, **11** |
 
-The last four are the "particularly very large" ones: `n` reaches nine digits and `x` ten
-digits.
+The last five are the "particularly very large" ones.  The last line has an **eleven-digit**
+`x`, and its ratio `|x|/|n| = 106.6` lies exactly in the band that the earlier programs could
+not see at that size (they reached only `|x|/|n| ≤ 16.6` at `|n| ≈ 5·10⁸`).
+
+### 4.4 The complete-`x` sweep (run4/run5)
+
+The runs recorded in `search/run4` and `search/run5` (see `search/run4/README.md`) removed the
+two remaining gaps of §4.1 over the whole low range:
+
+* `|n| ≤ 1.48·10⁹` was swept with the **complete** `x`-range `|x| ≤ 13n²` — at `|n| = 10⁹` that
+  is `|x| ≤ 1.3·10¹⁹`, i.e. ratios up to `1.3·10¹⁰`, against the `1.2` that the old programs
+  reached there;
+* all 83 500 values of `n` with `|n| ≤ 1.07·10⁹` that every earlier run had skipped (because
+  `36n³-19` has more than 2·10⁶ divisor combinations — these are the *most* productive `n`,
+  since the expected number of solutions per `n` grows with the number of divisor
+  combinations) were re-processed individually, with the complete `x`-range and with the
+  unsieved cofactor of `36n³-19` factored completely.
+
+No solution other than the eleven listed above exists in that region.  In particular there is
+**no** solution at all with `10⁶ ≤ |n| ≤ 1.48·10⁹` apart from `(-516368250, 55022141248)`, and since
+`|x| ≤ 13n²`, a solution with a fifteen-digit `|x|` would need `|n| ≥ 8.8·10⁶`; the sweep shows
+that none occurs below `|n| = 1.48·10⁹`.  (The sweeps do not split the sieve cofactor, which
+costs about 15% of the divisor combinations at `|n| ≈ 10⁸`, so this is a very thorough search
+rather than a proof.)
+
+As consistency checks the sweep re-found every known solution lying in the swept range —
+`(-1160307,-10431164)`, `(12512774,2548980)` and `(-516368250,55022141248)` — and a separate
+run over the eleven known `n` with the complete `x`-range and deep factoring confirmed that
+each of those `n` carries exactly one `x`.
 
 ## 5. Why still larger solutions are out of reach of a search
 
@@ -163,3 +252,16 @@ same computation shows that a solution with **both** `|n|` and `|x|` of ten digi
 `|n| ≈ 10¹⁰`, where `36n³-19` has 32 digits and would have to be factored for each of `10¹⁰`
 values of `n`. That is far beyond the compute available here, so such pairs, while
 heuristically expected to exist, cannot be exhibited by this method.
+
+Quantitatively: the searches yield about `0.44` solutions per `e`-fold of `|n|`, while the
+cost of an `e`-fold grows linearly in `|n|` (about `10⁵` core-seconds per `e`-fold at
+`|n| ≈ 10⁹` for the complete `x`-range).  An eleven-digit `|n|` is therefore some two orders
+of magnitude more expensive per new solution than the region already covered; with eight
+cores one `e`-fold at `|n| ≈ 10¹⁰` costs several days of computation for an expected `0.44`
+solutions.  Nothing in the structure of the problem shortens this: there is no family, no
+section of the elliptic surface, and the `U = 2dx²` side of the problem is worse still
+(`|U| ≈ x²`, so a twelve-digit `x` needs `U` of twenty-four digits).  The practical
+consequence is that the reachable frontier moves by a factor of a few in `|n|` per day of
+computation, and the largest solution that can be exhibited today remains the one with
+`|n| ≈ 5·10⁸` and the eleven-digit `x = 55 022 141 248`.
+
