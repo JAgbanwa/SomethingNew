@@ -1,3 +1,6 @@
+# Summary of changes for run 500ff4e9-0b8a-48c7-b361-a7ee6f857449
+I merged the two Lean files into a single one. All content of `RequestProject/Exhaustive.lean` (the exhaustiveness section for |n| ≤ 200: the finite kernel-checked computation, `sat_exhaustive_abs_n_le_200` and `sat_d_of_abs_n_le_200`) now lives at the end of `RequestProject/Main.lean`, and `RequestProject/Exhaustive.lean` has been removed. The internal cross-reference in the file's header docstring and the file reference in `SEARCH_NOTES.md` were updated accordingly; no statements or proofs were changed. `RequestProject/Main.lean` builds cleanly (as does the whole project) and contains no `sorry`. The Properties table entries that pointed to the old file now point to `RequestProject/Main.lean`.
+
 # Summary of changes for run 3b650a73-97c8-402b-93ca-4e03dca225b3
 Continuing the earlier work on `36n³ − 19 = −2d·x²·(−(x+6n) + √((x+6n)² + (36n³−19)/x))`, this session added new proved mathematics, a machine-verified completeness result, and a much larger search.
 
