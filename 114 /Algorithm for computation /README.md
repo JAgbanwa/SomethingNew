@@ -51,7 +51,7 @@ and the family asked for: `n = 3m`, `x = 12u + 7`.
 This note describes the algorithms, why they are the right ones, what each of them costs,
 how the work is cut into one‑ to two‑hour tasks, and — honestly — how far each of them can
 reach.  The programs are in [`grid/`](grid/); the mathematical facts they rely on are
-proved in Lean in [`RequestProject/Algorithm.lean`](RequestProject/Algorithm.lean) and
+proved in Lean in [`RequestProject/Algorithm.lean`](https://github.com/JAgbanwa/SomethingNew/blob/main/114%20/Algorithm%20for%20computation%20/RequestProject%20/Algorithm.lean) and
 [`RequestProject/Main.lean`](RequestProject/Main.lean), so the search can be trusted not to
 miss solutions inside the range it claims to cover.
 
