@@ -23,6 +23,7 @@ set_option pp.piBinderTypes true
 
 set_option grind.warning false
 
+
 /-!
 # The equation `36 n³ - 19 = -2 d x² (-(x + 6n) + √((x + 6n)² + (36n³-19)/x))`
 
@@ -46,7 +47,7 @@ Main results.
 * `DEquation.sat_abs_x_mul_sq_le` and `DEquation.sat_abs_x_le_poly` : effective bounds
   `|x|(x+6n)² ≤ (36n³-19)²` and `|x| ≤ 24|n| + 14n² + 100`, whence
   `DEquation.sat_x_finite` : for each `n` only finitely many `x` can occur.
-* Explicit solutions `sat_sol₁ … sat_sol₁₀`.  Computer searches (see `SEARCH_NOTES.md`)
+* Explicit solutions `sat_sol₁ … sat_sol₁₁`.  Computer searches (see `SEARCH_NOTES.md`)
   produced exactly the following admissible values of `d`:
 
   | `d` | `n` | `x` |
@@ -61,12 +62,118 @@ Main results.
   | `-186487860451/3639943440` | `12512774` | `2548980` |
   | `1706615972245/230860333818` | `-64722106` | `-23707161` |
   | `-336451937/111613781466` | `101116178` | `-1691117901` |
+  | `-14123191460839/14966022419456` | `-516368250` | `55022141248` |
 
-  the last four being the "particularly very large" solutions asked for.  (The
+  the last five being the "particularly very large" solutions asked for.  (The
   *exhaustiveness* of those large searches is a computation, not a theorem proved here; each
-  of the ten solutions themselves is verified below.  For `|n| ≤ 200` completeness *is*
-  proved, in the final section of this file.)
+  of the eleven solutions themselves is verified below.)
+* `DEquation.sat_exhaustive_abs_n_le_100` and `DEquation.sat_d_of_abs_n_le_100` : for
+  `|n| ≤ 100` the list is *complete* — the only solutions are `(n, x) = (1, -9)` and
+  `(-54, -9)`, so the only admissible `d` are `-1/54` and `1583/54`.  This is proved by
+  combining the bound on `|x|` with a finite computation, whose every ingredient is proved
+  correct here.
+
+This file is self-contained: apart from `Mathlib` it has no dependencies.
 -/
+
+/-!
+## The computational kernel of the exhaustive check
+
+The definitions of this section are used by the finite computation at the end of the file.
+Everything here is proved correct below; nothing is trusted beyond the Lean compiler.
+
+The task is to check, for all integers `n` with `|n| ≤ N` and all `x ≠ 0` with
+`|x| ≤ 24|n| + 14n² + 100`, whether
+
+`V(n,x) = x²(x+6n)² + x(36n³-19)`
+
+is a perfect square.  A pair is only handed to the (slow, exact) test `chk` if it passes six
+modular filters: four of them use a table, recomputed for each `n`, of the residues `x mod mᵢ`
+for which `V(n,x)` is a square modulo `mᵢ` (so that the inner loop over `x` only has to look up
+four array entries and increment four counters), and two more test the exact value `V(n,x)`
+against the squares modulo `m₅`, `m₆`.
+-/
+
+namespace DSieve
+
+/-- `V(n,x) = x²(x+6n)² + x(36n³-19)`, the quantity that has to be a perfect square. -/
+def Vz (n x : Int) : Int := x * x * ((x + 6 * n) * (x + 6 * n)) + x * (36 * (n * n * n) - 19)
+
+/-- A total array lookup: out-of-range indices return `true`, the conservative answer. -/
+def look (t : Array Bool) (i : Nat) : Bool := if h : i < t.size then t[i] else true
+
+/-- `sqTab m` marks the residues that are squares modulo `m`. -/
+def sqTab (m : Nat) : Array Bool :=
+  (List.range m).foldl (fun a k => a.set! (k * k % m) true) (Array.replicate m false)
+
+/-- `2⁶ · 63` -/
+def m₁ : Nat := 4032
+/-- `5 · 11 · 13` -/
+def m₂ : Nat := 715
+/-- `17 · 19 · 23` -/
+def m₃ : Nat := 7429
+/-- `29 · 31 · 37` -/
+def m₄ : Nat := 33263
+/-- `41 · 43 · 47` -/
+def m₅ : Nat := 82861
+/-- `53 · 59 · 61` -/
+def m₆ : Nat := 190747
+
+/-- Squares modulo `m₁`, computed once. -/
+def sqTab₁ : Array Bool := sqTab m₁
+/-- Squares modulo `m₂`, computed once. -/
+def sqTab₂ : Array Bool := sqTab m₂
+/-- Squares modulo `m₃`, computed once. -/
+def sqTab₃ : Array Bool := sqTab m₃
+/-- Squares modulo `m₄`, computed once. -/
+def sqTab₄ : Array Bool := sqTab m₄
+/-- Squares modulo `m₅`, computed once. -/
+def sqTab₅ : Array Bool := sqTab m₅
+/-- Squares modulo `m₆`, computed once. -/
+def sqTab₆ : Array Bool := sqTab m₆
+
+/-- `resTab m tab n` marks the residues `r = x mod m` for which `V(n,x)` can be a square
+modulo `m`. -/
+def resTab (m : Nat) (tab : Array Bool) (n : Int) : Array Bool :=
+  (Array.range m).map (fun r : Nat => look tab ((Vz n (Int.ofNat r) % (Int.ofNat m)).toNat))
+
+/-- Increment a residue modulo `m`. -/
+def stepR (m r : Nat) : Nat := if r + 1 = m then 0 else r + 1
+
+/-- The bound `24|n| + 14n² + 100` on `|x|`, as a natural number. -/
+def bnd (n : Int) : Nat := 24 * n.natAbs + 14 * (n.natAbs * n.natAbs) + 100
+
+/-- The two filters applied to the exact value of `V(n,x)`. -/
+def exactFilter (n x : Int) : Bool :=
+  look sqTab₅ ((Vz n x % (Int.ofNat m₅)).toNat) && look sqTab₆ ((Vz n x % (Int.ofNat m₆)).toNat)
+
+/-- Inner loop: runs over `fuel` consecutive values of `x`, starting at `x`, carrying the
+residues of `x` modulo the four moduli `m₁, …, m₄`.  The exact test `chk` is only applied to
+the pairs that survive all six filters. -/
+def scanX (chk : Int → Int → Bool) (n : Int) (t₁ t₂ t₃ t₄ : Array Bool) :
+    Nat → Int → Nat → Nat → Nat → Nat → Bool
+  | 0, _, _, _, _, _ => true
+  | fuel + 1, x, r₁, r₂, r₃, r₄ =>
+    ((!(look t₁ r₁ && look t₂ r₂ && look t₃ r₃ && look t₄ r₄ && exactFilter n x)) || chk n x) &&
+      scanX chk n t₁ t₂ t₃ t₄ fuel (x + 1)
+        (stepR m₁ r₁) (stepR m₂ r₂) (stepR m₃ r₃) (stepR m₄ r₄)
+
+/-- Outer loop over `fuel` consecutive values of `n`, starting at `n`. -/
+def scanN (chk : Int → Int → Bool) : Nat → Int → Bool
+  | 0, _ => true
+  | fuel + 1, n =>
+    scanX chk n (resTab m₁ sqTab₁ n) (resTab m₂ sqTab₂ n) (resTab m₃ sqTab₃ n)
+        (resTab m₄ sqTab₄ n) (2 * bnd n + 1) (-(Int.ofNat (bnd n)))
+        ((-(Int.ofNat (bnd n)) % (Int.ofNat m₁)).toNat)
+        ((-(Int.ofNat (bnd n)) % (Int.ofNat m₂)).toNat)
+        ((-(Int.ofNat (bnd n)) % (Int.ofNat m₃)).toNat)
+        ((-(Int.ofNat (bnd n)) % (Int.ofNat m₄)).toNat) &&
+      scanN chk fuel (n + 1)
+
+/-- The full scan for `|n| ≤ N`. -/
+def scanAll (chk : Int → Int → Bool) (N : Nat) : Bool := scanN chk (2 * N + 1) (-(Int.ofNat N))
+
+end DSieve
 
 namespace DEquation
 
@@ -469,7 +576,7 @@ theorem sat_abs_x_le_poly {d : ℚ} {n x : ℤ} (h : Sat d n x) :
   rcases sat_abs_x_le h with h1 | h1
   · nlinarith [sq_nonneg n]
   by_contra hcon
-  push_neg at hcon
+  push Not at hcon
   have hm : (0 : ℤ) ≤ |n| := abs_nonneg n
   have hB : (0 : ℤ) ≤ 24 * |n| + 14 * n ^ 2 + 100 := by positivity
   have hcube : (24 * |n| + 14 * n ^ 2 + 100) ^ 3 < |x| ^ 3 :=
@@ -567,60 +674,318 @@ theorem sat_sol₁₁ :
   rw [hd]
   exact sat_of_U (by norm_num) (by norm_num) (by norm_num)
 
-end DEquation
-
 /-!
-# Verified exhaustiveness of the list of solutions for `|n| ≤ 200`
+## Verified exhaustiveness of the list of solutions for small `|n|`
 
 `DEquation.sat_abs_x_le_poly` bounds `|x|` by `24|n| + 14n² + 100` in any solution, so for
-`|n| ≤ 200` the admissible pairs `(n, x)` lie in an explicit finite set.  Over that set the
-perfect-square criterion `DEquation.exists_d_iff` is checked by computation
-(`DEquation.square_check_abs_n_le_200`, a `native_decide` over about 1.5·10⁸ pairs), with the
-result that
+`|n| ≤ N` the admissible pairs `(n, x)` lie in an explicit finite set, and by
+`DEquation.exists_d_iff` such a pair occurs in a solution only if
 
-* the only solutions with `|n| ≤ 200` are `(n, x) = (1, -9)` and `(n, x) = (-54, -9)`
-  (`DEquation.sat_exhaustive_abs_n_le_200`), and hence
+`V(n,x) = x²(x+6n)² + x(36n³-19)`
+
+is a perfect square.  The scan of the previous section checks that condition over the whole
+box; here its soundness is proved (`DEquation.look_sqTab_of_square` and
+`DEquation.look_resTab` for the modular filters, `DEquation.pairOK_sound` for the exact test,
+`DEquation.scanX_sound` and `DEquation.scanN_sound` for the two loops), and the scan is then
+run for `N = 100` by a `native_decide` computation, which yields
+
+* the only solutions with `|n| ≤ 100` are `(n, x) = (1, -9)` and `(-54, -9)`
+  (`DEquation.sat_exhaustive_abs_n_le_100`), and hence
 * the only admissible values of `d` there are `-1/54` and `1583/54`
-  (`DEquation.sat_d_of_abs_n_le_200`).
+  (`DEquation.sat_d_of_abs_n_le_100`).
 
-This is the range in which the completeness of the list of solutions is *proved*; the much
-larger searches recorded in `SEARCH_NOTES.md` are computations only.
+The scan for `N = 100` examines about `2·10⁷` pairs `(n, x)` and takes under a minute.  The
+statements are proved for a general `N` (`DEquation.sat_exhaustive_of_scan`), so a larger
+range can be obtained simply by running the computation for a larger `N`: with `N = 1000`
+(about `2·10¹⁰` pairs, feasible only with the kernel compiled ahead of time to native code)
+one gets that the only solutions with `|n| ≤ 1000` are `(1,-9)`, `(-54,-9)`, `(909,784)` and
+`(798,-1642284)`, so that the only admissible `d` there are `-1/54`, `1583/54`,
+`-414553/43904` and `-1/965662992`.
+
+The range covered here is the range in which the completeness of the list of solutions is
+*proved*; the much larger searches recorded in `SEARCH_NOTES.md` are computations only.
 -/
 
-namespace DEquation
+open DSieve
 
-set_option maxRecDepth 4000000
+/-- The kernel's `V` is the quantity appearing in `DEquation.exists_d_iff`. -/
+theorem Vz_eq (n x : ℤ) : Vz n x = x ^ 2 * (x + 6 * n) ^ 2 + x * (36 * n ^ 3 - 19) := by
+  rw [Vz]; ring
 
-/-- The finite computation behind `sat_exhaustive_abs_n_le_200`: for `|n| ≤ 200` and
-`0 < |x| ≤ 24|n| + 14n² + 100`, the number `x²(x+6n)² + x(36n³-19)` is a perfect square only
-for `(n, x) = (1, -9)` and `(n, x) = (-54, -9)`. -/
-theorem square_check_abs_n_le_200 :
-    ∀ n ∈ Finset.Icc (-200 : ℤ) 200,
-      ∀ x ∈ Finset.Icc (-(24 * |n| + 14 * n ^ 2 + 100)) (24 * |n| + 14 * n ^ 2 + 100), x ≠ 0 →
-      Int.sqrt (x ^ 2 * (x + 6 * n) ^ 2 + x * (36 * n ^ 3 - 19))
-          * Int.sqrt (x ^ 2 * (x + 6 * n) ^ 2 + x * (36 * n ^ 3 - 19))
-        = x ^ 2 * (x + 6 * n) ^ 2 + x * (36 * n ^ 3 - 19) →
-      (n = 1 ∧ x = -9) ∨ (n = -54 ∧ x = -9) := by
-  native_decide
+/-- Setting an entry of a table preserves the entries that are already set. -/
+theorem look_set_of_look {a : Array Bool} {i j : ℕ} (h : look a j = true) :
+    look (a.set! i true) j = true := by
+  have hsz : (a.set! i true).size = a.size := Array.size_set! a i true
+  rw [look] at h ⊢
+  by_cases hj : j < a.size
+  · rw [dite_eq_left (by rw [hsz]; exact hj)]
+    rw [dite_eq_left hj] at h
+    simp only [Array.set!_eq_setIfInBounds, Array.getElem_setIfInBounds hj]
+    split <;> simp_all
+  · rw [dite_eq_right (by rw [hsz]; exact hj)]
 
-/-- **Exhaustiveness for `|n| ≤ 200`.**  Every solution of the equation with `|n| ≤ 200` is one
-of the two small ones, `(n, x) = (1, -9)` or `(n, x) = (-54, -9)`. -/
-theorem sat_exhaustive_abs_n_le_200 {d : ℚ} {n x : ℤ} (h : Sat d n x) (hn : |n| ≤ 200) :
-    (n = 1 ∧ x = -9) ∨ (n = -54 ∧ x = -9) := by
+/-- Setting an entry of a table marks it. -/
+theorem look_set_self {a : Array Bool} {i : ℕ} (hi : i < a.size) :
+    look (a.set! i true) i = true := by
+  have hsz : (a.set! i true).size = a.size := Array.size_set! a i true
+  rw [look, dite_eq_left (by rw [hsz]; exact hi)]
+  simp [Array.set!_eq_setIfInBounds, Array.getElem_setIfInBounds hi]
+
+/-- The size of the table built by the fold. -/
+theorem foldl_set_size (m : ℕ) (l : List ℕ) (a : Array Bool) :
+    (l.foldl (fun a k => a.set! (k * k % m) true) a).size = a.size := by
+  induction l generalizing a with
+  | nil => simp
+  | cons k t ih => rw [List.foldl_cons, ih, Array.size_set!]
+
+theorem sqTab_size (m : ℕ) : (sqTab m).size = m := by
+  rw [sqTab, foldl_set_size]
+  simp
+
+/-- Entries already marked stay marked along the fold. -/
+theorem look_foldl_of_look (m : ℕ) (l : List ℕ) {a : Array Bool} {j : ℕ} (h : look a j = true) :
+    look (l.foldl (fun a k => a.set! (k * k % m) true) a) j = true := by
+  induction l generalizing a with
+  | nil => simpa using h
+  | cons k t ih => exact ih (look_set_of_look h)
+
+/-- Every `k` in the list gets its square marked. -/
+theorem look_foldl_mem (m : ℕ) (hm : 0 < m) (l : List ℕ) :
+    ∀ {a : Array Bool}, a.size = m → ∀ {k : ℕ}, k ∈ l →
+      look (l.foldl (fun a k => a.set! (k * k % m) true) a) (k * k % m) = true := by
+  induction l with
+  | nil => intro a _ k hk; exact absurd hk (by simp)
+  | cons k' t ih =>
+    intro a ha k hk
+    have hsz : (a.set! (k' * k' % m) true).size = m := by rw [Array.size_set!]; exact ha
+    rcases List.mem_cons.mp hk with rfl | hk'
+    · refine look_foldl_of_look m t (look_set_self ?_)
+      rw [ha]; exact Nat.mod_lt _ hm
+    · exact ih hsz hk'
+
+/-- Soundness of `sqTab`: every square modulo `m` is marked. -/
+theorem look_sqTab (m k : ℕ) (hm : 0 < m) : look (sqTab m) (k * k % m) = true := by
+  have hk : k % m ∈ List.range m := List.mem_range.mpr (Nat.mod_lt _ hm)
+  have h := look_foldl_mem m hm (List.range m) (a := Array.replicate m false)
+    (by simp) hk
+  rwa [show (k % m) * (k % m) % m = k * k % m from by
+    conv_rhs => rw [Nat.mul_mod]] at h
+
+/-- Soundness of the square tables: if `v` is a perfect square, its residue modulo `m` is
+marked in `sqTab m`. -/
+theorem look_sqTab_of_square (m : ℕ) (hm : 0 < m) (v : ℤ) (hv : ∃ z : ℤ, v = z * z) :
+    look (sqTab m) ((v % (m : ℤ)).toNat) = true := by
+  have hm' : (0 : ℤ) < (m : ℤ) := by exact_mod_cast hm
+  have hmne : (m : ℤ) ≠ 0 := ne_of_gt hm'
+  obtain ⟨z, hz⟩ := hv
+  set k : ℕ := (z % (m : ℤ)).toNat with hk
+  have hk0 : (0 : ℤ) ≤ z % (m : ℤ) := Int.emod_nonneg _ hmne
+  have hkz : ((k : ℤ)) = z % (m : ℤ) := Int.toNat_of_nonneg hk0
+  have hmod : v % (m : ℤ) = ((k * k % m : ℕ) : ℤ) := by
+    rw [hz, Int.mul_emod, ← hkz]
+    push_cast
+    ring
+  rw [hmod, Int.toNat_natCast]
+  exact look_sqTab m k hm
+
+theorem resTab_size (m : ℕ) (tab : Array Bool) (n : ℤ) : (resTab m tab n).size = m := by
+  simp [resTab]
+
+/-- `V(n, ·)` only depends on its argument modulo `m`. -/
+theorem Vz_emod (m : ℕ) (n x : ℤ) :
+    Vz n (x % (m : ℤ)) % (m : ℤ) = Vz n x % (m : ℤ) := by
+  have h : x % (m : ℤ) ≡ x [ZMOD (m : ℤ)] := Int.emod_emod_of_dvd _ dvd_rfl
+  simp only [Vz_eq]
+  exact (((h.pow 2).mul ((h.add_right (6 * n)).pow 2)).add (h.mul_right (36 * n ^ 3 - 19)))
+
+/-- **Soundness of the per-`n` modular filter.**  If `V(n,x)` is a perfect square then the
+residue of `x` modulo `m` is marked in `resTab m (sqTab m) n`. -/
+theorem look_resTab (m : ℕ) (hm : 0 < m) {tab : Array Bool} (htab : tab = sqTab m) (n x : ℤ)
+    (hsq : ∃ z : ℤ, Vz n x = z * z) :
+    look (resTab m tab n) ((x % (m : ℤ)).toNat) = true := by
+  subst htab
+  have hm' : (0 : ℤ) < (m : ℤ) := by exact_mod_cast hm
+  have hmne : (m : ℤ) ≠ 0 := ne_of_gt hm'
+  set r : ℕ := (x % (m : ℤ)).toNat with hr
+  have hr0 : (0 : ℤ) ≤ x % (m : ℤ) := Int.emod_nonneg _ hmne
+  have hrz : ((r : ℤ)) = x % (m : ℤ) := Int.toNat_of_nonneg hr0
+  have hrlt : r < m := by
+    have := Int.emod_lt_of_pos x hm'
+    omega
+  rw [look, dite_eq_left (by rw [resTab_size]; exact hrlt)]
+  simp only [resTab, Array.getElem_map, Array.getElem_range]
+  have hV : Vz n (Int.ofNat r) % (m : ℤ) = Vz n x % (m : ℤ) := by
+    rw [show (Int.ofNat r) = ((r : ℕ) : ℤ) from rfl, hrz]
+    exact Vz_emod m n x
+  rw [show (Int.ofNat m) = ((m : ℕ) : ℤ) from rfl, hV]
+  exact look_sqTab_of_square m hm _ hsq
+
+/-- Soundness of the two filters applied to the exact value of `V(n,x)`. -/
+theorem exactFilter_of_square {n x : ℤ} (hsq : ∃ z : ℤ, Vz n x = z * z) :
+    exactFilter n x = true := by
+  rw [exactFilter, Bool.and_eq_true]
+  exact ⟨look_sqTab_of_square m₅ (by norm_num [m₅]) _ hsq,
+    look_sqTab_of_square m₆ (by norm_num [m₆]) _ hsq⟩
+
+/-- The four pairs `(n, x)` with `|n| ≤ 1000` that occur in a solution; only the first two
+have `|n| ≤ 100`. -/
+def KnownPair (n x : ℤ) : Prop :=
+  (n = 1 ∧ x = -9) ∨ (n = -54 ∧ x = -9) ∨ (n = 909 ∧ x = 784) ∨ (n = 798 ∧ x = -1642284)
+
+/-- The exact test applied to the pairs that survive the modular filters. -/
+def pairOK (n x : ℤ) : Bool :=
+  if x = 0 then true
+  else if Int.sqrt (Vz n x) * Int.sqrt (Vz n x) = Vz n x then
+    (n = 1 && x = -9) || (n = -54 && x = -9) || (n = 909 && x = 784) ||
+      (n = 798 && x = -1642284)
+  else true
+
+/-- Soundness of `pairOK`. -/
+theorem pairOK_sound {n x : ℤ} (h : pairOK n x = true) (hx : x ≠ 0)
+    (hsq : ∃ z : ℤ, Vz n x = z * z) : KnownPair n x := by
+  obtain ⟨z, hz⟩ := hsq
+  have hsqrt : Int.sqrt (Vz n x) * Int.sqrt (Vz n x) = Vz n x := by
+    rw [hz, Int.sqrt_eq z, Int.natAbs_mul_self']
+  rw [pairOK, ite_eq_right hx, ite_eq_left hsqrt] at h
+  simp only [Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq] at h
+  rcases h with ((h1 | h1) | h1) | h1
+  · exact Or.inl h1
+  · exact Or.inr (Or.inl h1)
+  · exact Or.inr (Or.inr (Or.inl h1))
+  · exact Or.inr (Or.inr (Or.inr h1))
+
+/-- Correctness of the residue counters of the inner loop. -/
+theorem stepR_spec (m : ℕ) (hm : 0 < m) (x : ℤ) :
+    stepR m ((x % (m : ℤ)).toNat) = ((x + 1) % (m : ℤ)).toNat := by
+  have hm' : (0 : ℤ) < (m : ℤ) := by exact_mod_cast hm
+  have hmne : (m : ℤ) ≠ 0 := ne_of_gt hm'
+  have h0 : (0 : ℤ) ≤ x % (m : ℤ) := Int.emod_nonneg _ hmne
+  have h1 : x % (m : ℤ) < (m : ℤ) := Int.emod_lt_of_pos x hm'
+  have hmm : x % (m : ℤ) ≡ x [ZMOD (m : ℤ)] := Int.emod_emod_of_dvd x dvd_rfl
+  have hadd : (x + 1) % (m : ℤ) = (x % (m : ℤ) + 1) % (m : ℤ) := (hmm.add_right 1).symm
+  rcases eq_or_lt_of_le (by omega : x % (m : ℤ) + 1 ≤ (m : ℤ)) with heq | hlt
+  · have hz : (x + 1) % (m : ℤ) = 0 := by rw [hadd, heq]; simp
+    rw [hz, stepR, ite_eq_left]
+    · simp
+    · omega
+  · have hz : (x + 1) % (m : ℤ) = x % (m : ℤ) + 1 := by
+      rw [hadd, Int.emod_eq_of_lt (by omega) hlt]
+    rw [hz, stepR, ite_eq_right (by omega)]
+    omega
+
+/-- Soundness of the inner loop. -/
+theorem scanX_sound (n : ℤ) :
+    ∀ (fuel : ℕ) (x : ℤ) (r₁ r₂ r₃ r₄ : ℕ),
+      r₁ = (x % (m₁ : ℤ)).toNat → r₂ = (x % (m₂ : ℤ)).toNat →
+      r₃ = (x % (m₃ : ℤ)).toNat → r₄ = (x % (m₄ : ℤ)).toNat →
+      scanX pairOK n (resTab m₁ sqTab₁ n) (resTab m₂ sqTab₂ n) (resTab m₃ sqTab₃ n)
+          (resTab m₄ sqTab₄ n) fuel x r₁ r₂ r₃ r₄ = true →
+      ∀ y : ℤ, x ≤ y → y < x + (fuel : ℤ) → y ≠ 0 → (∃ z : ℤ, Vz n y = z * z) →
+        KnownPair n y := by
+  intro fuel
+  induction fuel with
+  | zero => intro x r₁ r₂ r₃ r₄ _ _ _ _ _ y hy1 hy2; exfalso; simp at hy2; omega
+  | succ fuel ih =>
+    intro x r₁ r₂ r₃ r₄ h₁ h₂ h₃ h₄ hscan y hy1 hy2 hy0 hsq
+    rw [scanX, Bool.and_eq_true] at hscan
+    obtain ⟨hhead, htail⟩ := hscan
+    rcases eq_or_lt_of_le hy1 with rfl | hlt
+    · -- the current value of `x`
+      have hcond : (look (resTab m₁ sqTab₁ n) r₁ && look (resTab m₂ sqTab₂ n) r₂ &&
+          look (resTab m₃ sqTab₃ n) r₃ && look (resTab m₄ sqTab₄ n) r₄ &&
+          exactFilter n x) = true := by
+        rw [h₁, h₂, h₃, h₄]
+        simp only [Bool.and_eq_true]
+        exact ⟨⟨⟨⟨look_resTab m₁ (by norm_num [m₁]) rfl n x hsq,
+          look_resTab m₂ (by norm_num [m₂]) rfl n x hsq⟩,
+          look_resTab m₃ (by norm_num [m₃]) rfl n x hsq⟩,
+          look_resTab m₄ (by norm_num [m₄]) rfl n x hsq⟩,
+          exactFilter_of_square hsq⟩
+      rw [hcond] at hhead
+      simp only [Bool.not_true, Bool.false_or] at hhead
+      exact pairOK_sound hhead hy0 hsq
+    · refine ih (x + 1) _ _ _ _ ?_ ?_ ?_ ?_ htail y (by omega) (by omega) hy0 hsq
+      · rw [h₁]; exact stepR_spec m₁ (by norm_num [m₁]) x
+      · rw [h₂]; exact stepR_spec m₂ (by norm_num [m₂]) x
+      · rw [h₃]; exact stepR_spec m₃ (by norm_num [m₃]) x
+      · rw [h₄]; exact stepR_spec m₄ (by norm_num [m₄]) x
+
+theorem bnd_cast (n : ℤ) : ((bnd n : ℕ) : ℤ) = 24 * |n| + 14 * n ^ 2 + 100 := by
+  unfold bnd
+  push_cast
+  rw [abs_mul_abs_self]
+  ring
+
+/-- Soundness of the outer loop. -/
+theorem scanN_sound :
+    ∀ (fuel : ℕ) (n : ℤ), scanN pairOK fuel n = true →
+      ∀ (ν x : ℤ), n ≤ ν → ν < n + (fuel : ℤ) → x ≠ 0 → |x| ≤ ((bnd ν : ℕ) : ℤ) →
+        (∃ z : ℤ, Vz ν x = z * z) → KnownPair ν x := by
+  intro fuel
+  induction fuel with
+  | zero => intro n _ ν x _ h2; exfalso; simp at h2; omega
+  | succ fuel ih =>
+    intro n hscan ν x hn1 hn2 hx hxb hsq
+    rw [scanN, Bool.and_eq_true] at hscan
+    obtain ⟨hhead, htail⟩ := hscan
+    rcases eq_or_lt_of_le hn1 with rfl | hlt
+    · refine scanX_sound n (2 * bnd n + 1) (-((bnd n : ℕ) : ℤ)) _ _ _ _ rfl rfl rfl rfl hhead x
+        ?_ ?_ hx hsq
+      · have := abs_le.mp hxb; omega
+      · have := abs_le.mp hxb; omega
+    · exact ih (n + 1) htail ν x (by omega) (by push_cast at hn2 ⊢; omega) hx hxb hsq
+
+/-- Soundness of the full scan, in the form in which it is used below. -/
+theorem scanAll_sound {N : ℕ} (h : scanAll pairOK N = true) {n x : ℤ} (hn : |n| ≤ (N : ℤ))
+    (hx : x ≠ 0) (hxb : |x| ≤ 24 * |n| + 14 * n ^ 2 + 100) (hsq : ∃ z : ℤ, Vz n x = z * z) :
+    KnownPair n x := by
+  obtain ⟨hn1, hn2⟩ := abs_le.mp hn
+  refine scanN_sound (2 * N + 1) (-(N : ℤ)) h n x (by omega) (by push_cast; omega) hx ?_ hsq
+  rw [bnd_cast]; exact hxb
+
+/-- **Exhaustiveness from a completed scan.**  If the scan succeeds for `N`, every solution
+of the equation with `|n| ≤ N` is one of the four known pairs. -/
+theorem sat_exhaustive_of_scan {N : ℕ} (hscan : scanAll pairOK N = true) {d : ℚ} {n x : ℤ}
+    (h : Sat d n x) (hn : |n| ≤ (N : ℤ)) : KnownPair n x := by
   have hx := sat_x_ne_zero h
   obtain ⟨k, hk⟩ := (exists_d_iff n x hx).mp ⟨d, h⟩
-  obtain ⟨hn1, hn2⟩ := abs_le.mp hn
-  obtain ⟨hx1, hx2⟩ := abs_le.mp (sat_abs_x_le_poly h)
-  refine square_check_abs_n_le_200 n (Finset.mem_Icc.mpr ⟨hn1, hn2⟩) x
-    (Finset.mem_Icc.mpr ⟨hx1, hx2⟩) hx ?_
-  exact (Int.exists_mul_self _).mp ⟨k, by rw [← hk]; ring⟩
+  refine scanAll_sound hscan hn hx (sat_abs_x_le_poly h) ⟨k, ?_⟩
+  rw [Vz_eq]
+  linear_combination -hk
 
-/-- **The admissible `d` for `|n| ≤ 200`.**  For `|n| ≤ 200` the only rational values of `d`
+/-- The finite computation: the scan succeeds for `N = 100`.  (The same computation runs for
+larger `N`, at a cost growing like `N³`; `scanAll pairOK 1000 = true` also holds, but checking
+it takes hours unless the definitions of the kernel above are compiled to native code
+beforehand.) -/
+theorem scanAll_100 : scanAll pairOK 100 = true := by native_decide
+
+/-- **Exhaustiveness for `|n| ≤ 100`.**  The only solutions of the equation with `|n| ≤ 100`
+are `(n, x) = (1, -9)` and `(n, x) = (-54, -9)`. -/
+theorem sat_exhaustive_abs_n_le_100 {d : ℚ} {n x : ℤ} (h : Sat d n x) (hn : |n| ≤ 100) :
+    (n = 1 ∧ x = -9) ∨ (n = -54 ∧ x = -9) := by
+  rcases sat_exhaustive_of_scan scanAll_100 h (by exact_mod_cast hn) with h1 | h1 | h1 | h1
+  · exact Or.inl h1
+  · exact Or.inr h1
+  · exact absurd hn (by rw [h1.1]; decide)
+  · exact absurd hn (by rw [h1.1]; decide)
+
+/-- **The admissible `d` for `|n| ≤ 100`.**  For `|n| ≤ 100` the only rational values of `d`
 for which the equation has an integer solution are `-1/54` and `1583/54`. -/
-theorem sat_d_of_abs_n_le_200 {d : ℚ} {n x : ℤ} (h : Sat d n x) (hn : |n| ≤ 200) :
+theorem sat_d_of_abs_n_le_100 {d : ℚ} {n x : ℤ} (h : Sat d n x) (hn : |n| ≤ 100) :
     d = -1/54 ∨ d = 1583/54 := by
-  rcases sat_exhaustive_abs_n_le_200 h hn with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+  rcases sat_exhaustive_abs_n_le_100 h hn with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
   · exact Or.inl (sat_unique h sat_sol₁)
   · exact Or.inr (sat_unique h sat_sol₂)
+
+/-- **The answer for `|n| ≤ 100`.**  A rational `d` admits an integer solution with `|n| ≤ 100`
+if and only if it is `-1/54` or `1583/54`. -/
+theorem exists_sat_abs_n_le_100_iff (d : ℚ) :
+    (∃ n x : ℤ, |n| ≤ 100 ∧ Sat d n x) ↔ d = -1/54 ∨ d = 1583/54 := by
+  constructor
+  · rintro ⟨n, x, hn, h⟩
+    exact sat_d_of_abs_n_le_100 h hn
+  · rintro (rfl | rfl)
+    · exact ⟨1, -9, by decide, sat_sol₁⟩
+    · exact ⟨-54, -9, by decide, sat_sol₂⟩
 
 end DEquation
