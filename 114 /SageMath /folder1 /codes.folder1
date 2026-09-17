@@ -1,236 +1,112 @@
-# =====================================================================
-# Complete solver: rational d (non-integer) with n=3m, x=12u+7
-#   36n^3 - 19 = -2d x^2 ( -(x+6n) + sqrt((x+6n)^2 + (36n^3-19)/x) )
+# SageMath code for finding rational d in
+# 36n^3 + 4d x^2 - 4d^2 x^3 = 19
+# via 36n^3 - 19 = a*b, x = ((b-a)/2)^2, d = 4b/(b-a)^3
 #
-# Exact reduction:  4 d x^2 ((d+1)x + 6n) = 36n^3 - 19
-# With n=3m, x=12u+7, T=972m^3-19:
-#   Let A = 4 d x^2 (rational). Then B = (d+1)x + 6n = T/A.
-#   So A must divide 4T (as rational -> integer A = divisor of 4T).
-#   Then 4x^2 + (24n - 4T/A) x + A = 0, discriminant:
-#       Delta = (24n - 4T/A)^2 - 16A  must be a perfect square.
-#   Then x = (4T/A - 24n ± sqrt(Delta)) / 8
-#   d = A / (4x^2)
-#
-# This finds ALL solutions and scales to any digit range.
-# =====================================================================
+# Run in chunks. Each chunk covers a digit range for n.
+# Usage: set DIGIT_LOW and DIGIT_HIGH, and CHUNK_SECONDS.
 
 import time, json, os
-from sage.all import Integer, QQ, is_square, gcd, primes, factor
+from sage.all import factor, Integer, QQ, gcd
 
-# ---------------- config ----------------
-DIGIT_LOW       = 1
-DIGIT_HIGH      = 30
-CHUNK_SECONDS   = 5400
-OUTFILE         = "rational_d_constrained.jsonl"
-STATE_FILE      = "search_state_constrained.json"
-CHECKPOINT_SEC  = 30
-TRIAL_LIMIT     = 10**6
-DIVISOR_MAX     = 50000   # skip T with too many divisors
+# ---------- configuration ----------
+DIGIT_LOW      = 10      # starting digit count for n
+DIGIT_HIGH     = 14      # ending digit count (exclusive)
+CHUNK_SECONDS  = 5400    # 1.5 hours per task
+OUTFILE        = "rational_d_solutions.jsonl"
+STATE_FILE     = "search_state.json"
 
-# ---------------- JSON helpers ----------------
-def make_default_state():
-    return {"digit": int(DIGIT_LOW), "m_start": int(10**(DIGIT_LOW-1))}
-
+# ---------- helpers ----------
 def load_state():
     if os.path.exists(STATE_FILE):
-        try:
-            with open(STATE_FILE) as f:
-                st = json.load(f)
-            if "digit" in st and "m_start" in st:
-                return {"digit": int(st["digit"]), "m_start": int(st["m_start"])}
-        except Exception as e:
-            print(f"[warn] bad state ({e}); fresh", flush=True)
-    return make_default_state()
+        with open(STATE_FILE) as f:
+            return json.load(f)
+    return {"digit": DIGIT_LOW, "n_start": 10**(DIGIT_LOW-1)}
 
 def save_state(st):
-    safe = {"digit": int(st["digit"]), "m_start": int(st["m_start"])}
-    tmp = STATE_FILE + ".tmp"
-    with open(tmp, "w") as f:
-        json.dump(safe, f)
-    os.replace(tmp, STATE_FILE)
+    with open(STATE_FILE, "w") as f:
+        json.dump(st, f)
 
 def append_solution(rec):
     with open(OUTFILE, "a") as f:
         f.write(json.dumps(rec) + "\n")
 
-def load_seen():
+def try_n(n, seen):
+    """Return list of new (d, n, x) for this n."""
+    m = 36*n**3 - 19
+    if m == 0:
+        return []
+    # factor m
+    try:
+        fac = factor(m)
+    except Exception:
+        return []
+    # generate all divisors
+    divs = [1]
+    for p, e in fac:
+        divs = [d * p**k for d in divs for k in range(e+1)]
+    out = []
+    for a in divs:
+        b = m // a
+        if (a & 1) == 0 or (b & 1) == 0:
+            continue  # need both odd
+        diff = b - a
+        if diff == 0:
+            continue
+        x = (diff // 2)**2
+        if x == 0:
+            continue
+        # d = 4b / diff^3
+        num = 4*b
+        den = diff**3
+        g = gcd(abs(num), abs(den))
+        num //= g; den //= g
+        if den < 0:
+            num, den = -num, -den
+        d = QQ(num) / QQ(den)
+        key = (str(d), int(n), int(x))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append({"d": str(d), "n": int(n), "x": int(x),
+                    "digits_n": len(str(abs(n))),
+                    "digits_x": len(str(abs(x)))})
+    return out
+
+# ---------- main ----------
+def main():
+    st = load_state()
     seen = set()
     if os.path.exists(OUTFILE):
         with open(OUTFILE) as f:
             for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    r = json.loads(line)
-                    seen.add((r["d"], int(r["m"]), int(r["u"])))
-                except Exception:
-                    continue
-    return seen
-
-# ---------------- verification ----------------
-def verify_solution(m, u, d):
-    n = 3*m
-    x = 12*u + 7
-    return 4*d*x*x*((d+1)*x + 6*n) == 36*n**3 - 19
-
-# ---------------- divisors of |N| ----------------
-def factor_partial(n_abs):
-    fac = []
-    mm = int(n_abs)
-    for p in primes(TRIAL_LIMIT):
-        if p*p > mm:
-            break
-        if mm % p == 0:
-            e = 0
-            while mm % p == 0:
-                mm //= p; e += 1
-            fac.append((int(p), e))
-        if mm == 1:
-            break
-    return fac, mm
-
-def all_divisors(fac, cofactor):
-    divs = [Integer(1)]
-    for p, e in fac:
-        new = []
-        pe = Integer(1)
-        for k in range(e+1):
-            for d in divs:
-                new.append(d*pe)
-            pe *= p
-        divs = new
-    if cofactor > 1:
-        try:
-            cf = factor(Integer(cofactor), proof=False)
-            for p, e in cf:
-                p = Integer(p); e = int(e)
-                new = []
-                pe = Integer(1)
-                for k in range(e+1):
-                    for d in divs:
-                        new.append(d*pe)
-                    pe *= p
-                divs = new
-        except Exception:
-            divs = divs + [d*Integer(cofactor) for d in divs]
-    return divs
-
-# ---------------- core: for given m, enumerate A | 4T ----------------
-def check_m(m, seen):
-    """
-    For given m, T = 972 m^3 - 19.
-    Enumerate divisors A of |4T| (both signs).
-    For each A: K = 4T/A. Solve 4x^2 + (72m - K) x + A = 0.
-    Require integer x with x ≡ 7 (mod 12).
-    Then d = A / (4x^2).
-    """
-    m = int(m)
-    T = 972 * m**3 - 19
-    if T == 0:
-        return []
-    N = abs(4*T)
-    try:
-        fac, cof = factor_partial(N)
-        divs = all_divisors(fac, cof)
-    except Exception:
-        return []
-    if len(divs) > DIVISOR_MAX:
-        return []
-    out = []
-    for Aabs in divs:
-        for A in (int(Aabs), -int(Aabs)):
-            if A == 0:
-                continue
-            if (4*T) % A != 0:
-                continue
-            K = (4*T) // A
-            # discriminant: (72m - K)^2 - 16 A
-            disc = (72*m - K)**2 - 16*A
-            if disc < 0:
-                continue
-            if not is_square(disc):
-                continue
-            sq = Integer(disc).isqrt()
-            # x = (K - 72m ± sq) / 8
-            for sign in (1, -1):
-                num = K - 72*m + sign*sq
-                if num % 8 != 0:
-                    continue
-                x = num // 8
-                if x == 0:
-                    continue
-                if x % 12 != 7:
-                    continue
-                u = (x - 7) // 12
-                if 12*u + 7 != x:
-                    continue
-                # d = A / (4 x^2)
-                den = 4 * x * x
-                g = gcd(abs(A), abs(den))
-                p_int, q_int = A // g, den // g
-                if q_int < 0:
-                    p_int, q_int = -p_int, -q_int
-                if q_int == 1:
-                    continue  # skip integer d
-                d = QQ(p_int) / QQ(q_int)
-                key = (str(d), m, u)
-                if key in seen:
-                    continue
-                if verify_solution(m, u, d):
-                    seen.add(key)
-                    out.append({
-                        "d": str(d),
-                        "m": m, "u": u,
-                        "n": 3*m, "x": int(x),
-                        "digits_n": len(str(abs(3*m))),
-                        "digits_x": len(str(abs(x))),
-                    })
-    return out
-
-# ---------------- main ----------------
-def main():
-    st = load_state()
-    seen = load_seen()
-    print(f"[start] digit={st['digit']} m_start={st['m_start']} seen={len(seen)}", flush=True)
+                r = json.loads(line)
+                seen.add((r["d"], r["n"], r["x"]))
 
     t0 = time.time()
-    last_ckpt = t0
-    last_verbose = t0
-    m = st["m_start"]
+    n = st["n_start"]
     digit = st["digit"]
-    m_count = 0
 
     while digit < DIGIT_HIGH:
         hi = 10**digit
-        while m < hi:
-            now = time.time()
-            if now - t0 > CHUNK_SECONDS:
-                save_state({"digit": digit, "m_start": m})
-                print(f"[pause] digit={digit} m={m} elapsed={now-t0:.0f}s seen={len(seen)}", flush=True)
+        while n < hi:
+            if time.time() - t0 > CHUNK_SECONDS:
+                st["digit"] = digit
+                st["n_start"] = n
+                save_state(st)
+                print(f"[pause] digit={digit} n={n} elapsed={time.time()-t0:.0f}s")
                 return
-            if now - last_ckpt > CHECKPOINT_SEC:
-                save_state({"digit": digit, "m_start": m})
-                last_ckpt = now
-            try:
-                hits = check_m(m, seen)
-            except Exception:
-                hits = []
-            for rec in hits:
+            for rec in try_n(n, seen):
                 append_solution(rec)
-                print("FOUND", rec, flush=True)
-            m += 1
-            m_count += 1
-            if now - last_verbose > 60:
-                print(f"[progress] digit={digit} m={m} rate={m_count/(now-t0):.1f} m/s seen={len(seen)}",
-                      flush=True)
-                last_verbose = now
+                print("FOUND", rec)
+            n += 1
         digit += 1
-        m = 10**(digit - 1)
-        save_state({"digit": digit, "m_start": m})
-        print(f"[digit] entering {digit}-digit m range", flush=True)
+        n = 10**(digit-1)
+        st["digit"] = digit
+        st["n_start"] = n
+        save_state(st)
+        print(f"[digit] now searching {digit}-digit n")
 
-    print("done", flush=True)
+    print("done")
 
 if __name__ == "__main__":
     main()
