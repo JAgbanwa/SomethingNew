@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+"""
+ENGINE D -- "divisors of K".
+
+For a solution, write  A = x(x+6n),  T = sqrt(D),  D = A^2 + xK,  K = 36n^3-65
+and  m = T - A.  The defining relation  T^2 = A^2 + xK  is equivalent to
+
+        K = 2 m (x + 6n) + m^2 / x            (*)
+
+so x always divides m^2.  The important structured sub-family is the one with
+x | m, say m = j x, for which (*) collapses to
+
+        36 n^3 - 65  =  x * ( 2 j x + 12 j n + j^2 )            (**)
+
+i.e.  x | K  and  K/x = j^2 + 2j(x+6n).  Equivalently: x runs over the
+DIVISORS of K and the test is
+
+        (x + 6n)^2 + K/x  must be a perfect square.
+
+That single test reaches divisors x as large as |K| ~ 3.6e16 for n ~ 1e5 --
+a region no (n,x) box scan could ever enumerate.  Cost per n is one
+factorisation of K (Pollard rho, sub-millisecond) plus tau(K) square tests.
+
+usage:  python3 engine_divK.py NMIN NMAX [workers]
+"""
+import sys, random
+from math import isqrt, gcd
+from fractions import Fraction
+from multiprocessing import Pool
+
+# ---------------------------------------------------------------- factoring
+def is_prime(n):
+    if n < 2: return False
+    for p in (2,3,5,7,11,13,17,19,23,29,31,37):
+        if n % p == 0: return n == p
+    d, s = n-1, 0
+    while d % 2 == 0: d //= 2; s += 1
+    for a in (2,3,5,7,11,13,17,19,23,29,31,37):
+        y = pow(a, d, n)
+        if y in (1, n-1): continue
+        for _ in range(s-1):
+            y = y*y % n
+            if y == n-1: break
+        else:
+            return False
+    return True
+
+def pollard(n):
+    if n % 2 == 0: return 2
+    while True:
+        x = random.randrange(2, n); y = x; c = random.randrange(1, n); d = 1
+        while d == 1:
+            x = (x*x + c) % n
+            y = (y*y + c) % n; y = (y*y + c) % n
+            d = gcd(abs(x-y), n)
+        if d != n: return d
+
+def factor(n, out=None):
+    if out is None: out = {}
+    if n == 1: return out
+    if is_prime(n):
+        out[n] = out.get(n, 0) + 1; return out
+    d = pollard(n)
+    factor(d, out); factor(n//d, out)
+    return out
+
+def divisors(n):
+    f = factor(abs(n)); ds = [1]
+    for p, e in f.items():
+        ds = [d * p**k for d in ds for k in range(e+1)]
+    return ds
+
+# ---------------------------------------------------------------- solver
+def K(n): return 36*n**3 - 65
+
+def d_of(n, x):
+    """exact rational d, or None when D is not a perfect square"""
+    if x == 0: return None
+    A = x*(x+6*n); D = A*A + x*K(n)
+    if D < 0: return None
+    T = isqrt(D)
+    if T*T != D: return None
+    return Fraction(-A - (1 if x > 0 else -1)*T, 2*x*x)
+
+def scan_n(n):
+    k = K(n)
+    if k == 0: return []
+    res = []
+    for a in divisors(k):
+        for x in (a, -a):
+            e = k // x
+            v = (x + 6*n)**2 + e
+            if v < 0: continue
+            t = isqrt(v)
+            if t*t == v:
+                d = d_of(n, x)
+                if d is not None:
+                    res.append((n, x, d))
+    return res
+
+def main():
+    nmin, nmax = int(sys.argv[1]), int(sys.argv[2])
+    workers = int(sys.argv[3]) if len(sys.argv) > 3 else 8
+    ns = [n for n in range(nmin, nmax+1) if n != 0]
+    with Pool(workers) as pool:
+        for batch in pool.imap_unordered(scan_n, ns, chunksize=16):
+            for (n, x, d) in batch:
+                print(f"SOL n={n} x={x} d={d}", flush=True)
+
+if __name__ == "__main__":
+    main()
