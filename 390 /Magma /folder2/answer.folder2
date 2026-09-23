@@ -1,0 +1,46 @@
+=== Search on Mordell curves ===
+K(k) = -432*k^3*(k^3+1560)
+
+k=1: K=-674352, rank=1
+  gen h=10.6578596560360339223601462131, trying m=1..7
+k=2: K=-5419008, rank=0
+k=3: K=-18510768, rank=0
+k=4: K=-44900352, rank=1
+  gen h=12.4983782302150108648090160180, trying m=1..7
+k=5: K=-90990000, rank=0
+k=6: K=-165722112, rank=0
+k=7: K=-281978928, rank=1
+  gen h=13.0613406136795743736262752478, trying m=1..7
+k=8: K=-458293248, rank=1
+  gen h=52.1976916350016643616882968411, trying m=1..6
+k=9: K=-720870192, rank=1
+  gen h=37.1561805476110199935015796452, trying m=1..6
+k=10: K=-1105920000, rank=0
+k=11: K=-1662301872, rank=1
+  gen h=52.1263444882643004542055383216, trying m=1..6
+k=12: K=-2454478848, rank=1
+  gen h=48.5771132065268940607822874219, trying m=1..6
+k=13: K=-3565783728, rank=0
+k=14: K=-5101996032, rank=1
+WARNING
+IntegralPoints could not determine the Mordell-Weil group.
+After applying all available tools,
+    1 <= rank <= 1.
+The known subgroup has rank 0, with generators:
+    [].
+Only integral points contained in this subgroup will be found.
+
+k=15: K=-7195230000, rank=1
+  gen h=14.3501007976419702229860331574, trying m=1..7
+k=16: K=-10008133632, rank=1
+  gen h=15.3817100637489228816653074480, trying m=1..7
+k=17: K=-13738398768, rank=1
+  gen h=116.414588836472560656521511256, trying m=1..6
+k=18: K=-18623582208, rank=0
+k=19: K=-24946237872, rank=1
+  gen h=66.4485525094353311890526821164, trying m=1..6
+k=20: K=-33039360000, rank=0
+k=21: K=-43292137392, rank=1
+  gen h=14.2955397480091085569132362297, trying m=1..7
+k=22: K=-56156018688, rank=1
+  gen h=39.6783759988457683656740589919, trying m=1..6
