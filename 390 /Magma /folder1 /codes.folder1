@@ -1,0 +1,315 @@
+////////////////////////////////////////////////////////////////////////
+// Magma Script: Finding rational non-integer d for the equation
+//   36n^3 - 65 = -2d * x^2 * (-(x+6n) + sqrt((x+6n)^2 + (36n^3-65)/x))
+//
+// with integer (n, x) satisfying:
+//   x ≡ 5, 17, 29 (mod 36)  [equivalently x ≡ 5 (mod 12)]
+//   x ≢ 0 (mod 7)
+//   |n| ~ 10^43,  x ~ n^(5/4)
+//
+////////////////////////////////////////////////////////////////////////
+// ALGEBRAIC SIMPLIFICATION
+//
+// Rationalizing (multiply by conjugate):
+//   36n^3 - 65 = 4*d*(d+1)*x^3 + 24*d*n*x^2
+//
+// Quadratic in d:
+//   4*x^3*d^2 + (4*x^3 + 24*n*x^2)*d - (36*n^3 - 65) = 0
+//
+// Discriminant = 16*x^3 * [x*(x+6n)^2 + 36*n^3 - 65]
+// d rational  <=>  x * [x*(x+6n)^2 + 36*n^3 - 65] is a perfect square
+//
+// Quartic model (elliptic curve for fixed n):
+//   y^2 = x^4 + 12*n*x^3 + 36*n^2*x^2 + (36*n^3 - 65)*x
+//
+// Weierstrass (via X=1/x, Y=y/x^2):
+//   Y^2 = (36n^3-65)*X^3 + 36n^2*X^2 + 12n*X + 1
+//
+// Short Weierstrass (scale U=A*X, V=A*Y; shift W=U+12n^2):
+//   V^2 = W^3 - 780n*W + (-3*(12n^3-65)^2 + 16900)
+//   a = -780n = -12*65*n,  b = -3*(12n^3-65)^2 + 4*65^2
+//
+// d = -(x+6n+k)/(2x)  where k = y/x (rational), sign ±
+////////////////////////////////////////////////////////////////////////
+// NEAR-SQUARE: y = x(x+6n)+t  =>  2t*x^2 + (12tn-A)*x + t^2 = 0
+//   x = (A - 12tn ± sqrt((12tn-A)^2 - 8t^3)) / (4t), A = 36n^3-65
+////////////////////////////////////////////////////////////////////////
+
+// ==================== CONFIGURATION ====================
+small_n_bound := 1000;
+small_x_bound := 5000;
+near_square_t_bound := 2000;
+test_n_values := [-5, 1, -1, 2, -2, 3, -3, 10, -10, 100, -100];
+
+// ==================== UTILITY FUNCTIONS ====================
+
+function check_modular(x_val)
+    if x_val mod 12 ne 5 then return false; end if;
+    if x_val mod 7 eq 0 then return false; end if;
+    return true;
+end function;
+
+function compute_d(n_val, x_val, y_val)
+    if x_val eq 0 then return []; end if;
+    results := [];
+    s := x_val + 6*n_val;
+    for sign in [1, -1] do
+        num := -(s * x_val + sign * y_val);
+        den := 2 * x_val * x_val;
+        g := Gcd(Abs(num) ne 0 select Abs(num) else 1, Abs(den));
+        d_num := num div g;  d_den := den div g;
+        if d_den lt 0 then d_num := -d_num; d_den := -d_den; end if;
+        if d_den ne 1 then Append(~results, [d_num, d_den, sign]); end if;
+    end for;
+    return results;
+end function;
+
+function verify_quartic(n_val, x_val, y_val)
+    A := 36*n_val^3 - 65;
+    val := x_val^4 + 12*n_val*x_val^3 + 36*n_val^2*x_val^2 + A*x_val;
+    return val eq y_val^2;
+end function;
+
+function construct_curve(n_val)
+    a := -780 * n_val;
+    c := 12*n_val^3 - 65;
+    b := -3*c^2 + 16900;
+    return EllipticCurve([a, b]);
+end function;
+
+function map_to_quartic(n_val, W_val, V_val)
+    A := 36*n_val^3 - 65;
+    if A eq 0 then return []; end if;
+    U := W_val - 12*n_val^2;
+    if U eq 0 then return []; end if;
+    x_val := A / U;
+    y_val := V_val * A / U^2;
+    return [x_val, y_val];
+end function;
+
+function near_square_search(n_val, t_range)
+    A := 36*n_val^3 - 65;
+    if A eq 0 then return []; end if;
+    results := [];
+    for t in [-t_range..t_range] do
+        if t eq 0 then continue; end if;
+        B := 12*t*n_val - A;
+        disc := B^2 - 8*t^3;
+        if disc lt 0 then continue; end if;
+        if not IsSquare(disc) then continue; end if;
+        sq := SquareRoot(disc);
+        for sign in [1, -1] do
+            num := A - 12*t*n_val + sign*sq;
+            den := 4*t;
+            if den eq 0 then continue; end if;
+            if num mod den ne 0 then continue; end if;
+            x_val := num div den;
+            if x_val eq 0 then continue; end if;
+            S := x_val*(x_val + 6*n_val);
+            val := S^2 + A*x_val;
+            if not IsSquare(val) then continue; end if;
+            y_val := SquareRoot(val);
+            if check_modular(x_val) then
+                d_list := compute_d(n_val, x_val, y_val);
+                for d_info in d_list do
+                    Append(~results,[d_info[1],d_info[2],n_val,x_val,y_val,t,d_info[3]]);
+                end for;
+            end if;
+        end for;
+    end for;
+    return results;
+end function;
+
+function brute_force_search(n_range, x_range)
+    results := [];
+    for n_val in [-n_range..n_range] do
+        if n_val eq 0 then continue; end if;
+        A := 36*n_val^3 - 65;
+        for x_val in [-x_range..x_range] do
+            if x_val eq 0 then continue; end if;
+            if x_val mod 12 ne 5 then continue; end if;
+            if x_val mod 7 eq 0 then continue; end if;
+            M := x_val^3+12*n_val*x_val^2+36*n_val^2*x_val+36*n_val^3-65;
+            prod := x_val*M;
+            if prod lt 0 then continue; end if;
+            if IsSquare(prod) then
+                y_val := SquareRoot(prod);
+                if verify_quartic(n_val,x_val,y_val) then
+                    d_list := compute_d(n_val,x_val,y_val);
+                    for d_info in d_list do
+                        Append(~results,[d_info[1],d_info[2],n_val,x_val,y_val,d_info[3]]);
+                    end for;
+                end if;
+            end if;
+        end for;
+    end for;
+    return results;
+end function;
+
+function elliptic_curve_search(n_val)
+    results := [];
+    A := 36*n_val^3 - 65;
+    if A eq 0 then return results; end if;
+    E := construct_curve(n_val);
+    printf "  E: %o\n", E;
+    printf "  Disc = %o,  Conductor = %o\n", Discriminant(E), Conductor(E);
+    printf "  Computing MW group...\n";
+    MW, mr := MordellWeilGroup(E);
+    printf "  Rank: %o\n", mr;
+    if mr eq 0 then return results; end if;
+    gens := Generators(E);
+    printf "  #Generators: %o\n", #gens;
+    for i in [1..#gens] do
+        P := gens[i];
+        printf "  gen %o: height=%o\n", i, Height(P);
+        for k in [1..50] do
+            Q := k*P;
+            coords := map_to_quartic(n_val, Q[1], Q[2]);
+            if #coords eq 2 then
+                x_v := coords[1]; y_v := coords[2];
+                if Denominator(x_v) eq 1 and Denominator(y_v) eq 1 then
+                    xi := Numerator(x_v); yi := Numerator(y_v);
+                    if check_modular(xi) then
+                        d_list := compute_d(n_val,xi,yi);
+                        for di in d_list do
+                            Append(~results,[di[1],di[2],n_val,xi,yi,k]);
+                            printf "  *** d=%o/%o n=%o x=%o y=%o (k=%o)\n",di[1],di[2],n_val,xi,yi,k;
+                        end for;
+                    end if;
+                end if;
+            end if;
+        end for;
+    end for;
+    return results;
+end function;
+
+function elliptic_surface_analysis()
+    printf "\n=== Elliptic Surface (Generic Fiber over Q(t)) ===\n";
+    Qn<t> := RationalFunctionField(Rationals());
+    a_t := -780*t;  c_t := 12*t^3-65;  b_t := -3*c_t^2+16900;
+    printf "E: V^2 = W^3 + (%o)*W + (%o)\n", a_t, b_t;
+    try
+        E_gen := EllipticCurve([a_t, b_t]);
+        printf "Disc = %o\n", Discriminant(E_gen);
+        printf "j    = %o\n", jInvariant(E_gen);
+        printf "\nAttempting MW group over Q(t)...\n";
+    catch err
+        printf "Generic fiber requires specialized handling.\n";
+    end try;
+    // Verify known section at n=-5
+    n0 := -5; A0 := 36*n0^3-65; x0:=81; y0:=4086;
+    X0:=RationalField()!1/x0; Y0:=RationalField()!y0/x0^2;
+    U0:=A0*X0; V0:=A0*Y0; W0:=U0+12*n0^2;
+    printf "Known section: W=%o, V=%o\n", W0, V0;
+    printf "Verify: %o\n", W0^3+(-780*n0)*W0+(-3*(12*n0^3-65)^2+16900) eq V0^2;
+end function;
+
+function crt_modular_analysis()
+    printf "\n=== CRT Modular Analysis (x ≡ 5 mod 12, 7∤x) ===\n";
+    for p in [2,3,5,7,11,13,23,29,31,37,41,43,47,53,59,61,67,71,73] do
+        cnt := 0;
+        for nm in [0..p-1] do for xm in [1..p-1] do
+            A := (36*nm^3-65) mod p;
+            val := (xm^4+12*nm*xm^3+36*nm^2*xm^2+A*xm) mod p;
+            if val eq 0 or IsSquare(GF(p)!val) then cnt +:= 1; end if;
+        end for; end for;
+        printf "  p=%o: %o/%o valid pairs\n", p, cnt, p*(p-1);
+    end for;
+end function;
+
+// ==================== MAIN ====================
+
+printf "================================================================\n";
+printf "  Search for rational non-integer d\n";
+printf "  Constraints: x≡5(mod12), 7∤x, |n|~10^43, x~n^(5/4)\n";
+printf "================================================================\n\n";
+
+// Phase 1: Brute force
+printf "=== Phase 1: Brute Force (|n|≤%o) ===\n", small_n_bound;
+bf := brute_force_search(small_n_bound, small_x_bound);
+printf "  Solutions with mod constraints: %o\n", #bf;
+for r in bf do
+    printf "    d=%o/%o n=%o x=%o y=%o\n", r[1],r[2],r[3],r[4],r[5];
+end for;
+
+// Phase 1b: Near-square
+printf "\n=== Phase 1b: Near-Square (|n|≤%o, |t|≤%o) ===\n", small_n_bound, near_square_t_bound;
+ns_total := 0;
+for n_val in [-small_n_bound..small_n_bound] do
+    if n_val eq 0 then continue; end if;
+    r := near_square_search(n_val, near_square_t_bound);
+    ns_total +:= #r;
+    for s in r do
+        printf "  d=%o/%o n=%o x=%o y=%o t=%o\n", s[1],s[2],s[3],s[4],s[5],s[6];
+    end for;
+end for;
+printf "  Total: %o\n", ns_total;
+
+// Phase 1c: Reference (no mod constraint)
+printf "\n=== Phase 1c: Reference (no mod, |n|≤200) ===\n";
+ref := [];
+for n_val in [-200..200] do if n_val eq 0 then continue; end if;
+    A := 36*n_val^3-65;
+    for t in [-500..500] do if t eq 0 then continue; end if;
+        B := 12*t*n_val-A; disc := B^2-8*t^3;
+        if disc lt 0 or not IsSquare(disc) then continue; end if;
+        sq := SquareRoot(disc);
+        for sgn in [1,-1] do
+            num := A-12*t*n_val+sgn*sq; den := 4*t;
+            if den eq 0 or num mod den ne 0 then continue; end if;
+            x_val := num div den; if x_val eq 0 then continue; end if;
+            val := (x_val*(x_val+6*n_val))^2+A*x_val;
+            if val lt 0 or not IsSquare(val) then continue; end if;
+            y_val := SquareRoot(val);
+            for di in compute_d(n_val,x_val,y_val) do if di[2] ne 1 then
+                Append(~ref,[di[1],di[2],n_val,x_val,y_val,t,x_val mod 12,x_val mod 7]);
+            end if; end for;
+        end for;
+    end for;
+end for;
+printf "  Found %o (no constraint):\n", #ref;
+for r in ref do
+    printf "    d=%o/%o n=%o x=%o t=%o x%%12=%o x%%7=%o\n", r[1],r[2],r[3],r[4],r[6],r[7],r[8];
+end for;
+
+// Phase 2: Elliptic curve search
+printf "\n=== Phase 2: Elliptic Curve Search ===\n";
+for n_val in test_n_values do
+    printf "\n--- n = %o ---\n", n_val;
+    r := elliptic_curve_search(n_val);
+    if #r eq 0 then printf "  No mod-constraint solutions.\n"; end if;
+end for;
+
+// Phase 3: Surface analysis
+elliptic_surface_analysis();
+
+// Phase 4: CRT
+crt_modular_analysis();
+
+// Phase 5: Group law from known point
+printf "\n=== Phase 5: Group Law from Known Point (n=-5) ===\n";
+n0 := -5; E0 := construct_curve(n0);
+printf "E_{-5}: %o\n", E0;
+printf "Rank: %o\n", Rank(E0);
+A0 := 36*n0^3-65; x0:=81; y0:=4086;
+W0 := A0/x0+12*n0^2; V0 := A0*y0/x0^2;
+printf "P0: W=%o V=%o\n", W0, V0;
+P0 := E0![W0,V0];
+printf "Height(P0) = %o\n\n", Height(P0);
+for k in [1..20] do
+    Q := k*P0; U := Q[1]-12*n0^2;
+    if U ne 0 then
+        xQ := A0/U; yQ := Q[2]*A0/U^2;
+        printf "  %o*P: x=%o/%o\n", k, Numerator(xQ), Denominator(xQ);
+    end if;
+end for;
+
+// Phase 6: Strategy for |n|~10^43
+printf "\n=== Phase 6: Strategy for |n| ~ 10^43 ===\n";
+printf "Generic fiber: E/Q(t): V^2=W^3-780tW+(-3(12t^3-65)^2+16900)\n";
+printf "1. Compute MW(E/Q(t)) — the known point gives a section.\n";
+printf "2. k*section yields (n_k, x_k); height ~ k^2 * h(section).\n";
+printf "3. For |n|~10^43: need k ~ sqrt(ln(10^43)/h) ~ sqrt(99/h).\n";
+printf "4. Sieve mod 84=lcm(12,7): keep only k with x_k ≡ 5 mod 12, 7∤x_k.\n";
+printf "5. Specialize and verify each surviving candidate.\n";
+printf "\n=== Complete ===\n";
