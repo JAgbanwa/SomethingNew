@@ -1,0 +1,203 @@
+// ============================================================================
+// Поиск рациональных нецелых d для уравнения
+// 36n^3 - 65 = -2d * x^2 * (-(x+6n) + sqrt((x+6n)^2 + (36n^3-65)/x))
+//
+// Сведение: k*x*(2x+12n+k) = 36n^3-65  <=>  кривая Морделла
+//   V^2 = w^3 - 432*k^3*(k^3+1560)
+//   w = 72*k*n + 12*k^2,  V = 36*k*y
+//   d = -(2x+12n+k)/(2x),  S = x+6n+k (корень — автоматически целый)
+//
+// Ограничения: n ≡ 1 (mod 3), x ≡ 5 (mod 12), x ≢ 0 (mod 7)
+// Асимптотика: |n| ~ 10^43, x ~ n^(5/4)
+// ============================================================================
+
+RF := RealField(30);
+
+function log10abs(n)
+    return Log(RF ! Abs(n)) / Log(RF ! 10);
+end function;
+
+// ---------- Проверка модулярных ограничений ----------
+function checkModular(n, x)
+    if n mod 3 ne 1 then return false; end if;
+    if x mod 12 ne 5 then return false; end if;
+    if x mod 7 eq 0 then return false; end if;
+    return true;
+end function;
+
+// ---------- Восстановление x из (n, k) ----------
+// 2k*x^2 + k*(12n+k)*x - (36n^3-65) = 0
+function recoverX(n, k)
+    results := [];
+    val := 36*n^3 - 65;
+    if val eq 0 or k eq 0 then return results; end if;
+    if val mod k ne 0 then return results; end if;
+    D := k^2*(12*n + k)^2 + 8*k*val;
+    if D lt 0 then return results; end if;
+    ok, sqrtD := IsSquare(D);
+    if not ok then return results; end if;
+    for sgn in [1, -1] do
+        num := -k*(12*n + k) + sgn*sqrtD;
+        denom := 4*k;
+        if denom ne 0 and num mod denom eq 0 then
+            x := num div denom;
+            if x ne 0 and val mod x eq 0 then
+                S_sq := (x + 6*n)^2 + val div x;
+                ok2, _ := IsSquare(S_sq);
+                if ok2 then
+                    Append(~results, x);
+                end if;
+            end if;
+        end if;
+    end for;
+    return results;
+end function;
+
+// ---------- Обработка точки (w, V) на кривой Морделла ----------
+function processPoint(w, V, k)
+    results := [];
+    nNum := w - 12*k^2;
+    nDen := 72*k;
+    if nDen eq 0 then return results; end if;
+    if nNum mod nDen ne 0 then return results; end if;
+    n := nNum div nDen;
+    xs := recoverX(n, k);
+    for x in xs do
+        dNum := -(2*x + 12*n + k);
+        dDen := 2*x;
+        if dDen ne 0 and dNum mod dDen ne 0 then
+            if checkModular(n, x) then
+                Append(~results, <n, x, k, dNum, dDen>);
+            end if;
+        end if;
+    end for;
+    return results;
+end function;
+
+// ---------- Верификация решения ----------
+function verify(n, x, k)
+    if k*x*(2*x+12*n+k) ne 36*n^3-65 then
+        error "Equation check failed";
+    end if;
+    S_sq := (x+6*n+k)^2;
+    expected := (x+6*n)^2 + (36*n^3-65) div x;
+    if S_sq ne expected then
+        error "Sqrt check failed";
+    end if;
+    dNum := -(2*x+12*n+k);
+    dDen := 2*x;
+    if dNum mod dDen eq 0 then
+        error "d is integer (should be non-integer)";
+    end if;
+    if not (n mod 3 eq 1 and x mod 12 eq 5 and x mod 7 ne 0) then
+        error "Modular check failed";
+    end if;
+    printf "VERIFIED: n=%o, x=%o, k=%o, d=%o/%o, |n|~10^%.1f\n",
+           n, x, k, dNum, dDen, log10abs(n);
+    return true;
+end function;
+
+// ==================== ОСНОВНОЙ ПОИСК ====================
+printf "=== Search on Mordell curves ===\n";
+printf "K(k) = -432*k^3*(k^3+1560)\n\n";
+
+allSolutions := [];
+
+for k := 1 to 100 do
+    K := -(432 * k^3 * (k^3 + 1560));
+    E := EllipticCurve([0, 0, 0, 0, K]);  // V^2 = w^3 + K
+
+    rk := Rank(E);
+    printf "k=%o: K=%o, rank=%o\n", k, K, rk;
+
+    // Получаем точки кручения через map из TorsionSubgroup
+    T, phi := TorsionSubgroup(E);
+    torsionPts := [phi(t) : t in T];
+
+    if rk eq 0 then
+        // Ранг 0: проверяем только точки кручения
+        for P in torsionPts do
+            if not IsIdentity(P) then
+                wc := P[1]; vc := P[2];
+                if Denominator(wc) eq 1 and Denominator(vc) eq 1 then
+                    res := processPoint(Numerator(wc), Numerator(vc), k);
+                    for r in res do
+                        printf "  TORSION: n=%o x=%o d=%o/%o\n", r[1], r[2], r[4], r[5];
+                        Append(~allSolutions, r);
+                    end for;
+                end if;
+            end if;
+        end for;
+        continue;
+    end if;
+
+    // Ранг > 0: получаем образующие Морделя-Вейля
+    gens := Generators(E);
+
+    // Этап 1: поиск целых точек (малые решения)
+    try
+        intPts := IntegralPoints(E);
+        for P in intPts do
+            if not IsIdentity(P) then
+                wc := P[1]; vc := P[2];
+                if Denominator(wc) eq 1 and Denominator(vc) eq 1 then
+                    res := processPoint(Numerator(wc), Numerator(vc), k);
+                    for r in res do
+                        printf "  INTEGRAL: n=%o x=%o d=%o/%o\n", r[1], r[2], r[4], r[5];
+                        Append(~allSolutions, r);
+                    end for;
+                end if;
+            end if;
+        end for;
+    catch e
+        printf "  IntegralPoints skipped: %o\n", e;
+    end try;
+
+    // Этап 2: кратные образующих для достижения |n| ~ 10^43
+    // log|w| ~ 3*m^2*h_hat(P), цель: log|w| ~ log(72*k) + 43*log(10)
+    for P in gens do
+        hHat := Height(P);
+        if hHat le 0.0 then
+            continue;
+        end if;
+
+        target := Log(RF ! (72*k*10^43));
+        mMax := Ceiling(Sqrt(target / (3*hHat))) + 5;
+        if mMax gt 50 then mMax := 50; end if;
+        if mMax lt 1 then mMax := 1; end if;
+
+        printf "  gen h=%o, trying m=1..%o\n", hHat, mMax;
+
+        for m := 1 to mMax do
+            Q := m*P;
+            // Добавляем сдвиги на точки кручения
+            for tPt in torsionPts do
+                R := Q + tPt;
+                if IsIdentity(R) then
+                    continue;
+                end if;
+                wc := R[1]; vc := R[2];
+                if Denominator(wc) eq 1 and Denominator(vc) eq 1 then
+                    res := processPoint(Numerator(wc), Numerator(vc), k);
+                    for r in res do
+                        printf "  m=%o: n=%o x=%o d=%o/%o |n|~10^%.1f\n",
+                               m, r[1], r[2], r[4], r[5], log10abs(r[1]);
+                        Append(~allSolutions, r);
+                    end for;
+                end if;
+            end for;
+        end for;
+    end for;
+end for;
+
+// ==================== ИТОГИ ====================
+printf "\n=== TOTAL: %o solutions found ===\n", #allSolutions;
+for s in allSolutions do
+    verify(s[1], s[2], s[3]);
+    n_val := s[1];
+    x_val := s[2];
+    n_real := RF ! Abs(n_val);
+    n54 := n_real * Sqrt(Sqrt(n_real));  // n^(5/4)
+    ratio := RF ! x_val / n54;
+    printf "  x/|n|^(5/4) = %o\n", ratio;
+end for;
