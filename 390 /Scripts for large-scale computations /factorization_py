@@ -1,0 +1,329 @@
+"""
+Факторизационный поиск решений.
+
+Ключевое уравнение:
+  y^2 = [x(x+6n)]^2 + (36n^3 - 65) * x
+
+Обозначим w = x(x + 6n). Тогда:
+  (y - w)(y + w) = (36n^3 - 65) * x
+
+Для каждого делителя a числа (36n^3-65)*x:
+  y - w = a
+  y + w = (36n^3 - 65) * x / a
+  => y = (a + (36n^3-65)*x/a) / 2
+  => w = ((36n^3-65)*x/a - a) / 2
+
+Условие: a и (36n^3-65)*x/a должны быть одинаковой чётности.
+
+Дополнительно: w = x(x+6n), так что:
+  x(x+6n) = ((36n^3-65)*x/a - a) / 2
+  6n = ((36n^3-65)*x/a - a) / (2x) - x
+  n = [((36n^3-65)*x/a - a) / (2x) - x] / 6
+
+Это даёт замкнутое уравнение для n (кубическое), которое можно решать
+для заданных (a, x).
+"""
+
+from math import gcd, isqrt
+from typing import List, Tuple, Dict, Optional, Iterator
+import sys
+
+
+def get_divisors(n: int) -> List[int]:
+    """Возвращает все положительные делители n."""
+    if n == 0:
+        return []
+    n = abs(n)
+    divs = []
+    i = 1
+    while i * i <= n:
+        if n % i == 0:
+            divs.append(i)
+            if i != n // i:
+                divs.append(n // i)
+        i += 1
+    return sorted(divs)
+
+
+def get_divisors_up_to(n: int, limit: int) -> List[int]:
+    """Возвращает делители n, не превышающие limit."""
+    if n == 0:
+        return []
+    n = abs(n)
+    divs = []
+    i = 1
+    while i * i <= n:
+        if n % i == 0:
+            if i <= limit:
+                divs.append(i)
+            if i != n // i and n // i <= limit:
+                divs.append(n // i)
+        i += 1
+    return sorted(divs)
+
+
+def check_divisor(a: int, n: int, x: int) -> Optional[Tuple[int, int]]:
+    """
+    Проверяет, даёт ли делитель a целые y и w.
+
+    Возвращает (y, w) если успешно, иначе None.
+    """
+    val = 36 * n**3 - 65
+    product = val * x
+
+    if product % a != 0:
+        return None
+
+    b = product // a  # = y + w
+
+    # y = (a + b) / 2, w = (b - a) / 2
+    if (a + b) % 2 != 0:
+        return None
+
+    y = (a + b) // 2
+    w = (b - a) // 2
+
+    # Проверка: w = x(x + 6n)
+    if w != x * (x + 6 * n):
+        return None
+
+    return (y, w)
+
+
+def compute_d_from_solution(n: int, x: int, y: int, root: str = 'near_zero') -> Optional[Tuple[int, int]]:
+    """
+    Вычисляет d из найденного решения (n, x, y).
+
+    d = (y - w) / (2*x^2)  для корня d ≈ 0
+    d = -(y + w) / (2*x^2)  для корня d ≈ -1
+
+    где w = x(x + 6n).
+
+    Возвращает d как (числитель, знаменатель) или None.
+    """
+    w = x * (x + 6 * n)
+
+    if root == 'near_zero':
+        num = y - w
+    else:
+        num = -(y + w)
+
+    den = 2 * x * x
+
+    if den == 0:
+        return None
+
+    g = gcd(abs(num), abs(den))
+    return (num // g, den // g)
+
+
+def search_for_fixed_nx(n: int, x: int) -> List[Dict]:
+    """
+    Для заданных (n, x) находит все d, при которых sqrt(...) целое.
+
+    Перебирает делители (36n^3-65)*x и проверяет условия.
+    """
+    val = 36 * n**3 - 65
+    product = val * x
+
+    if product == 0:
+        return []
+
+    solutions = []
+    divisors = get_divisors(abs(product))
+
+    for a in divisors:
+        # Проверяем положительный делитель
+        result = check_divisor(a, n, x)
+        if result is not None:
+            y, w = result
+            # Корень d ≈ 0
+            d1 = compute_d_from_solution(n, x, y, 'near_zero')
+            if d1 is not None:
+                solutions.append({
+                    'd': d1,
+                    'd_float': d1[0] / d1[1],
+                    'root': 'near_zero',
+                    'y': y,
+                    'w': w,
+                    'n': n,
+                    'x': x,
+                })
+
+        # Проверяем отрицательный делитель
+        result = check_divisor(-a, n, x)
+        if result is not None:
+            y, w = result
+            # Корень d ≈ -1
+            d2 = compute_d_from_solution(n, x, y, 'near_minus_one')
+            if d2 is not None:
+                solutions.append({
+                    'd': d2,
+                    'd_float': d2[0] / d2[1],
+                    'root': 'near_minus_one',
+                    'y': y,
+                    'w': w,
+                    'n': n,
+                    'x': x,
+                })
+
+    return solutions
+
+
+def search_x_for_fixed_n(n: int,
+                         x_min: int = 1,
+                         x_max: int = 10**6,
+                         require_x_divides: bool = True) -> List[Dict]:
+    """
+    Для заданного n перебирает x в диапазоне и ищет решения.
+
+    Параметры:
+      n: фиксированное значение n
+      x_min, x_max: диапазон поиска x
+      require_x_divides: если True, требует x | (36n^3 - 65)
+    """
+    val = 36 * n**3 - 65
+    solutions = []
+
+    if require_x_divides:
+        # Ищем только делители val
+        if val == 0:
+            return []
+        divisors = get_divisors_up_to(abs(val), x_max)
+        candidates = [x for x in divisors if x >= x_min]
+    else:
+        candidates = range(x_min, x_max + 1)
+
+    for x in candidates:
+        # Быстрые модульные фильтры
+        if x % 12 != 5:
+            continue
+        if x % 7 == 0:
+            continue
+
+        sols = search_for_fixed_nx(n, x)
+        solutions.extend(sols)
+
+    return solutions
+
+
+def search_with_modular_prefilter(n: int,
+                                   x_min: int = 1,
+                                   x_max: int = 10**6,
+                                   sieve_mods: List[int] = None) -> List[Dict]:
+    """
+    Поиск с модульным предфильтром.
+    Для каждого простого p из sieve_mods проверяет, что
+    (36n^3 - 65) * x является квадратичным вычетом по mod p.
+    """
+    if sieve_mods is None:
+        sieve_mods = [5, 11, 13, 17, 19, 23, 29, 31]
+
+    val = 36 * n**3 - 65
+    solutions = []
+
+    # Предвычисляем n^3 mod p для каждого p
+    n_residues = {}
+    for p in sieve_mods:
+        n_residues[p] = (36 * pow(n % p, 3, p) - 65) % p
+
+    if val == 0:
+        return []
+
+    divisors = get_divisors_up_to(abs(val), x_max)
+    candidates = [x for x in divisors if x >= x_min]
+
+    for x in candidates:
+        if x % 12 != 5:
+            continue
+        if x % 7 == 0:
+            continue
+
+        # Модульный предфильтр
+        passes = True
+        for p in sieve_mods:
+            v = (n_residues[p] * (x % p)) % p
+            if v != 0 and pow(v, (p - 1) // 2, p) == p - 1:  # не квадратичный вычет
+                passes = False
+                break
+
+        if not passes:
+            continue
+
+        sols = search_for_fixed_nx(n, x)
+        solutions.extend(sols)
+
+    return solutions
+
+
+def verify_solution(n: int, x: int, d_num: int, d_den: int) -> bool:
+    """
+    Полная проверка решения (n, x, d) в исходном уравнении.
+
+    Проверяет:
+      1. n, x — целые
+      2. x | (36n^3 - 65) — неявно через целостность sqrt
+      3. sqrt(...) — целое
+      4. Исходное уравнение выполняется
+    """
+    from fractions import Fraction
+
+    d = Fraction(d_num, d_den)
+
+    # Вычисляем подкоренное выражение
+    A = x + 6 * n
+    radicand = A * A + (36 * n**3 - 65) / x
+
+    # Проверка целостности
+    if radicand != int(radicand):
+        return False
+    if radicand < 0:
+        return False
+
+    S = isqrt(int(radicand))
+    if S * S != int(radicand):
+        return False
+
+    # Проверка исходного уравнения
+    lhs = 36 * n**3 - 65
+    rhs = -2 * d * x * x * (-(x + 6 * n) + S)
+
+    return lhs == rhs
+
+
+def run_factorization_demo():
+    """Демонстрация факторизационного поиска на малых примерах."""
+    print("=" * 60)
+    print("ДЕМО: Факторизационный поиск")
+    print("=" * 60)
+
+    # Тест: ищем малые решения
+    print("\nПоиск решений для малых n:")
+
+    for n in range(1, 50):
+        n = -n  # пробуем отрицательные n (асимптотически минимальное |n| велико)
+        sols = search_with_modular_prefilter(n, x_max=10**5)
+        if sols:
+            for s in sols:
+                d = s['d']
+                print(f"  n={s['n']}, x={s['x']}, d={d[0]}/{d[1]}={s['d_float']:.6f}, "
+                      f"root={s['root']}, y={s['y']}")
+                # Верификация
+                ok = verify_solution(s['n'], s['x'], d[0], d[1])
+                print(f"    Верификация: {'✓' if ok else '✗'}")
+
+    # Демонстрация для положительных n
+    print("\nПоиск для положительных n (1..50):")
+    for n in range(1, 50):
+        sols = search_with_modular_prefilter(n, x_max=10**5)
+        if sols:
+            for s in sols:
+                d = s['d']
+                print(f"  n={s['n']}, x={s['x']}, d={d[0]}/{d[1]}={s['d_float']:.6f}, "
+                      f"root={s['root']}")
+                ok = verify_solution(s['n'], s['x'], d[0], d[1])
+                print(f"    Верификация: {'✓' if ok else '✗'}")
+
+
+if __name__ == "__main__":
+    run_factorization_demo()
