@@ -1,0 +1,670 @@
+// ============================================================================
+// Поиск рациональных нецелых d: 36n^3-65 = k*x*(2x+12n+k)
+//   sqrt((x+6n)^2 + (36n^3-65)/x) = |x+6n+k| — целый при целом k
+//   d = -(2x+12n+k)/(2x) — рациональное нецелое
+//
+// Ограничения: n ≡ 1 (mod 3), x ≡ 5 (mod 12), x ≢ 0 (mod 7)
+// Асимптотика: |n| ~ 10^43, x ~ n^(5/4) (требует k ~ 2√n)
+//   или x ~ n^(3/2) (кривые Морделла с фиксированным k)
+// ============================================================================
+
+RF := RealField(30);
+
+function log10abs(n)
+    if n eq 0 then return 0; end if;
+    return Log(RF ! Abs(n)) / Log(RF ! 10);
+end function;
+
+function checkModular(n, x)
+    if n mod 3 ne 1 then return false; end if;
+    if x mod 12 ne 5 then return false; end if;
+    if x mod 7 eq 0 then return false; end if;
+    return true;
+end function;
+
+// Восстановление x из (n, k): 2k*x^2 + k(12n+k)*x - (36n^3-65) = 0
+function recoverX(n, k)
+    results := [];
+    val := 36*n^3 - 65;
+    if val eq 0 or k eq 0 then return results; end if;
+    if val mod k ne 0 then return results; end if;
+    D := k^2*(12*n + k)^2 + 8*k*val;
+    if D lt 0 then return results; end if;
+    ok, sqrtD := IsSquare(D);
+    if not ok then return results; end if;
+    for sgn in [1, -1] do
+        num := -k*(12*n + k) + sgn*sqrtD;
+        denom := 4*k;
+        if denom ne 0 and num mod denom eq 0 then
+            x := num div denom;
+            if x ne 0 and val mod x eq 0 then
+                S_sq := (x + 6*n)^2 + val div x;
+                ok2, _ := IsSquare(S_sq);
+                if ok2 then
+                    Append(~results, x);
+                end if;
+            end if;
+        end if;
+    end for;
+    return results;
+end function;
+
+function trySolution(n, x, k)
+    results := [];
+    dNum := -(2*x + 12*n + k);
+    dDen := 2*x;
+    if dDen eq 0 then return results; end if;
+    if dNum mod dDen eq 0 then return results; end if;  // d целое — пропускаем
+    if not checkModular(n, x) then return results; end if;
+    // Полная верификация
+    if k*x*(2*x+12*n+k) ne 36*n^3-65 then return results; end if;
+    S := x + 6*n + k;
+    if S^2 ne (x+6*n)^2 + (36*n^3-65) div x then return results; end if;
+    Append(~results, <n, x, k, dNum, dDen>);
+    return results;
+end function;
+
+function processPoint(w, V, k)
+    results := [];
+    if k eq 0 then return results; end if;
+    nNum := w - 12*k^2;
+    nDen := 72*k;
+    if nDen eq 0 or nNum mod nDen ne 0 then return results; end if;
+    n := nNum div nDen;
+    for x in recoverX(n, k) do
+        sols := trySolution(n, x, k);
+        for s in sols do
+            Append(~results, s);
+        end for;
+    end for;
+    return results;
+end function;
+
+// ==================== ЧАСТЬ A: Кривые Морделла ====================
+printf "=== Часть A: Поиск на кривых Морделла ===\n";
+printf "Фиксированное k => x ~ n^(3/2)\n\n";
+
+allSolutions := [];
+
+for k := 1 to 200 do
+    K := -(432 * k^3 * (k^3 + 1560));
+    E := EllipticCurve([0, 0, 0, 0, K]);
+
+    rk := Rank(E);
+    if rk eq 0 then continue; end if;
+
+    printf "k=%o: rank=%o", k, rk;
+
+    // Получаем образующие
+    gens := Generators(E);
+    T, phi := TorsionSubgroup(E);
+    torsionPts := [phi(t) : t in T];
+
+    // Печатаем координаты образующих
+    for i := 1 to #gens do
+        P := gens[i];
+        h := Height(P);
+        w := P[1]; V := P[2];
+        isInt := (Denominator(w) eq 1) and (Denominator(V) eq 1);
+        printf "\n  gen[%o]: h=%o, w=%o/%o, V=%o/%o, integer=%o",
+               i, h, Numerator(w), Denominator(w),
+               Numerator(V), Denominator(V), isInt;
+
+        // Оценка |n| для m=1
+        if h gt 0 then
+            estN := RF ! 2 * h / Log(RF ! 10) - log10abs(72*k);
+            printf ", est|n|~10^%o", estN;
+        end if;
+
+        // Если образующая целая — проверяем напрямую
+        if isInt then
+            sols := processPoint(Numerator(w), Numerator(V), k);
+            for s in sols do
+                printf "\n  *** SOLUTION (gen): n=%o x=%o d=%o/%o |n|~10^%o",
+                       s[1], s[2], s[4], s[5], log10abs(s[1]);
+                Append(~allSolutions, s);
+            end for;
+        end if;
+    end for;
+
+    // Ищем целые точки (если возможно)
+    intFound := false;
+    try
+        intPts := IntegralPoints(E);
+        for P in intPts do
+            if not IsIdentity(P) then
+                w := P[1]; V := P[2];
+                if Denominator(w) eq 1 and Denominator(V) eq 1 then
+                    sols := processPoint(Numerator(w), Numerator(V), k);
+                    for s in sols do
+                        printf "\n  *** SOLUTION (integral): n=%o x=%o d=%o/%o |n|~10^%o",
+                               s[1], s[2], s[4], s[5], log10abs(s[1]);
+                        Append(~allSolutions, s);
+                        intFound := true;
+                    end for;
+                end if;
+            end if;
+        end for;
+    catch e
+        printf "\n  IntegralPoints: skipped (%o)", e`string;
+    end try;
+
+    // Кратные образующих (m=1..10) с проверкой целочисленности
+    for P in gens do
+        for m := 1 to 10 do
+            Q := m*P;
+            // Добавляем сдвиги на кручение
+            for tPt in torsionPts do
+                R := Q + tPt;
+                if IsIdentity(R) then continue; end if;
+                w := R[1]; V := R[2];
+                if Denominator(w) eq 1 and Denominator(V) eq 1 then
+                    sols := processPoint(Numerator(w), Numerator(V), k);
+                    for s in sols do
+                        printf "\n  *** SOLUTION (m=%o): n=%o x=%o d=%o/%o |n|~10^%o x/n^(5/4)~10^%o",
+                               m, s[1], s[2], s[4], s[5],
+                               log10abs(s[1]),
+                               log10abs(s[2]) - 5*log10abs(s[1])/4;
+                        Append(~allSolutions, s);
+                    end for;
+                end if;
+            end for;
+        end for;
+    end for;
+
+    printf "\n";
+end for;
+
+printf "\nЧасть A: найдено %o решений\n\n", #allSolutions;
+
+// ==================== ЧАСТЬ B: Прямой параметрический поиск ====================
+printf "=== Часть B: Прямой поиск (n~t^4, k~2t^2, x~3t^5) ===\n";
+printf "Асимптотика x ~ n^(5/4)\n";
+printf "Модулярное решето + проверка полного квадрата\n\n";
+
+// Для каждого t: n = t^4, k = 2*t^2 + j
+// D(j) = k^2*(12n+k)^2 + 8*k*(36n^3-65) должно быть полным квадратом
+// Решето: D(j) mod p должно быть квадратичным вычетом
+
+primes := [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37];
+
+function isQRmod(n, p)
+    if p eq 2 then return n mod 2 in [0, 1]; end if;
+    r := n mod p;
+    if r eq 0 then return true; end if;
+    return (r^((p-1) div 2) mod p) eq 1;
+end function;
+
+directSolutions := [];
+
+// Поиск по t (начинаем с малого для теста, затем увеличиваем)
+for t := 1 to 5000 do
+    n := t^4;
+    if n mod 3 ne 1 then continue; end if;  // n ≡ 1 (mod 3)
+    val := 36*n^3 - 65;
+
+    k0 := 2*t^2;
+    // Окно поиска по j: [-2t, 2t] (шире для малых t)
+    window := Max(2*t, 10);
+
+    for j := -window to window do
+        k := k0 + j;
+        if k le 0 then continue; end if;
+
+        D := k^2*(12*n + k)^2 + 8*k*val;
+
+        if D lt 0 then continue; end if;
+
+        // Быстрое решето по малым простым
+        passesSieve := true;
+        for p in primes do
+            if not isQRmod(D, p) then
+                passesSieve := false;
+                break;
+            end if;
+        end for;
+
+        if not passesSieve then continue; end if;
+
+        // Точная проверка
+        ok, sqrtD := IsSquare(D);
+        if not ok then continue; end if;
+
+        // Восстановление x
+        for sgn in [1, -1] do
+            num := -k*(12*n + k) + sgn*sqrtD;
+            denom := 4*k;
+            if denom ne 0 and num mod denom eq 0 then
+                x := num div denom;
+                if x ne 0 and val mod x eq 0 then
+                    sols := trySolution(n, x, k);
+                    for s in sols do
+                        ratio := log10abs(x) - 5*log10abs(n)/4;
+                        printf "FOUND: t=%o, n=%o, x=%o, k=%o, d=%o/%o, |n|~10^%o, x/n^(5/4)~10^%o\n",
+                               t, n, x, k, s[4], s[5], log10abs(n), ratio;
+                        Append(~directSolutions, s);
+                    end for;
+                end if;
+            end if;
+        end for;
+    end for;
+end for;
+
+printf "\nЧасть B (малые t): найдено %o решений\n\n", #directSolutions;
+
+// ==================== ЧАСТЬ C: Увеличенный t с узким окном ====================
+printf "=== Часть C: Увеличенный t (10^4 .. 10^6) ===\n";
+printf "Узкое окно j, усиленное решето\n\n";
+
+bigPrimes := primes cat [41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
+
+for t := 10000 to 100000 do
+    n := t^4;
+    if n mod 3 ne 1 then continue; end if;
+    val := 36*n^3 - 65;
+
+    k0 := 2*t^2;
+    // Узкое окно: j in [-5, 5]
+    for j := -5 to 5 do
+        k := k0 + j;
+        if k le 0 then continue; end if;
+
+        D := k^2*(12*n + k)^2 + 8*k*val;
+        if D lt 0 then continue; end if;
+
+        passesSieve := true;
+        for p in bigPrimes do
+            if not isQRmod(D, p) then
+                passesSieve := false;
+                break;
+            end if;
+        end for;
+
+        if not passesSieve then continue; end if;
+
+        ok, sqrtD := IsSquare(D);
+        if ok then
+            for sgn in [1, -1] do
+                num := -k*(12*n + k) + sgn*sqrtD;
+                denom := 4*k;
+                if denom ne 0 and num mod denom eq 0 then
+                    x := num div denom;
+                    if x ne 0 and val mod x eq 0 then
+                        sols := trySolution(n, x, k);
+                        for s in sols do
+                            ratio := log10abs(x) - 5*log10abs(n)/4;
+                            printf "FOUND: t=%o, n=%o, x=%o, k=%o, d=%o/%o |n|~10^%o x/n^(5/4)~10^%o\n",
+                                   t, n, x, k, s[4], s[5], log10abs(n), ratio;
+                            Append(~directSolutions, s);
+                        end for;
+                    end if;
+                end if;
+            end for;
+        end if;
+    end for;
+end for;
+
+// ==================== ИТОГИ ====================
+total := #allSolutions + #directSolutions;
+printf "\n========================================\n";
+printf "ВСЕГО НАЙДЕНО: %o решений\n", total;
+printf "  Кривые Морделла (x~n^(3/2)): %o\n", #allSolutions;
+printf "  Прямой поиск (x~n^(5/4)):    %o\n", #directSolutions;
+printf "========================================\n\n";
+
+for s in allSolutions cat directSolutions do
+    n := s[1]; x := s[2]; k := s[3];
+    printf "n=%o\n  x=%o\n  k=%o\n  d=%o/%o\n  |n|~10^%o\n  x/n^(5/4)~10^%o\n  n%%3=%o x%%12=%o x%%7=%o\n\n",
+           n, x, k, s[4], s[5], log10abs(n),
+           log10abs(x) - 5*log10abs(n)/4,
+           n mod 3, x mod 12, x mod 7;
+end for;
+
+// ==================== ДИАГНОСТИКА ====================
+printf "=== ДИАГНОСТИКА ===\n";
+printf "Для достижения |n| ~ 10^43 с x ~ n^(5/4):\n";
+printf "  Нужно t ~ 10^(43/4) ~ 10^10.75, k ~ 2*10^21.5\n";
+printf "  Вероятность D = кв. квадрат ~ 10^(-75) на каждое (t,j)\n";
+printf "  => прямой перебор невозможен без доп. структуры\n\n";
+printf "  Кривые Морделла с k=8,11 (h~52) дают |n|~10^43 при m=1,\n";
+printf "  но генераторы обычно имеют РАЦИОНАЛЬНЫЕ координаты.\n";
+printf "  Целые точки на таких кривых — необходимое условие.\n";
+printf "  IntegralPoints() находит их, когда Mordell-Weil группа известна.\n\n";
+printf "Для k ~ 10^21 (нужно для x~n^(5/4)):\n";
+printf "  Кривая имеет проводник ~ 10^130, Rank() невычислим.\n";
+printf "  Требуется 3-descent или специализированные методы.\n";
+// ============================================================================
+// Поиск рациональных нецелых d: 36n^3-65 = k*x*(2x+12n+k)
+//   sqrt((x+6n)^2 + (36n^3-65)/x) = |x+6n+k| — целый при целом k
+//   d = -(2x+12n+k)/(2x) — рациональное нецелое
+//
+// Ограничения: n ≡ 1 (mod 3), x ≡ 5 (mod 12), x ≢ 0 (mod 7)
+// Асимптотика: |n| ~ 10^43, x ~ n^(5/4) (требует k ~ 2√n)
+//   или x ~ n^(3/2) (кривые Морделла с фиксированным k)
+// ============================================================================
+
+RF := RealField(30);
+
+function log10abs(n)
+    if n eq 0 then return 0; end if;
+    return Log(RF ! Abs(n)) / Log(RF ! 10);
+end function;
+
+function checkModular(n, x)
+    if n mod 3 ne 1 then return false; end if;
+    if x mod 12 ne 5 then return false; end if;
+    if x mod 7 eq 0 then return false; end if;
+    return true;
+end function;
+
+// Восстановление x из (n, k): 2k*x^2 + k(12n+k)*x - (36n^3-65) = 0
+function recoverX(n, k)
+    results := [];
+    val := 36*n^3 - 65;
+    if val eq 0 or k eq 0 then return results; end if;
+    if val mod k ne 0 then return results; end if;
+    D := k^2*(12*n + k)^2 + 8*k*val;
+    if D lt 0 then return results; end if;
+    ok, sqrtD := IsSquare(D);
+    if not ok then return results; end if;
+    for sgn in [1, -1] do
+        num := -k*(12*n + k) + sgn*sqrtD;
+        denom := 4*k;
+        if denom ne 0 and num mod denom eq 0 then
+            x := num div denom;
+            if x ne 0 and val mod x eq 0 then
+                S_sq := (x + 6*n)^2 + val div x;
+                ok2, _ := IsSquare(S_sq);
+                if ok2 then
+                    Append(~results, x);
+                end if;
+            end if;
+        end if;
+    end for;
+    return results;
+end function;
+
+function trySolution(n, x, k)
+    results := [];
+    dNum := -(2*x + 12*n + k);
+    dDen := 2*x;
+    if dDen eq 0 then return results; end if;
+    if dNum mod dDen eq 0 then return results; end if;  // d целое — пропускаем
+    if not checkModular(n, x) then return results; end if;
+    // Полная верификация
+    if k*x*(2*x+12*n+k) ne 36*n^3-65 then return results; end if;
+    S := x + 6*n + k;
+    if S^2 ne (x+6*n)^2 + (36*n^3-65) div x then return results; end if;
+    Append(~results, <n, x, k, dNum, dDen>);
+    return results;
+end function;
+
+function processPoint(w, V, k)
+    results := [];
+    if k eq 0 then return results; end if;
+    nNum := w - 12*k^2;
+    nDen := 72*k;
+    if nDen eq 0 or nNum mod nDen ne 0 then return results; end if;
+    n := nNum div nDen;
+    for x in recoverX(n, k) do
+        sols := trySolution(n, x, k);
+        for s in sols do
+            Append(~results, s);
+        end for;
+    end for;
+    return results;
+end function;
+
+// ==================== ЧАСТЬ A: Кривые Морделла ====================
+printf "=== Часть A: Поиск на кривых Морделла ===\n";
+printf "Фиксированное k => x ~ n^(3/2)\n\n";
+
+allSolutions := [];
+
+for k := 1 to 200 do
+    K := -(432 * k^3 * (k^3 + 1560));
+    E := EllipticCurve([0, 0, 0, 0, K]);
+
+    rk := Rank(E);
+    if rk eq 0 then continue; end if;
+
+    printf "k=%o: rank=%o", k, rk;
+
+    // Получаем образующие
+    gens := Generators(E);
+    T, phi := TorsionSubgroup(E);
+    torsionPts := [phi(t) : t in T];
+
+    // Печатаем координаты образующих
+    for i := 1 to #gens do
+        P := gens[i];
+        h := Height(P);
+        w := P[1]; V := P[2];
+        isInt := (Denominator(w) eq 1) and (Denominator(V) eq 1);
+        printf "\n  gen[%o]: h=%o, w=%o/%o, V=%o/%o, integer=%o",
+               i, h, Numerator(w), Denominator(w),
+               Numerator(V), Denominator(V), isInt;
+
+        // Оценка |n| для m=1
+        if h gt 0 then
+            estN := RF ! 2 * h / Log(RF ! 10) - log10abs(72*k);
+            printf ", est|n|~10^%o", estN;
+        end if;
+
+        // Если образующая целая — проверяем напрямую
+        if isInt then
+            sols := processPoint(Numerator(w), Numerator(V), k);
+            for s in sols do
+                printf "\n  *** SOLUTION (gen): n=%o x=%o d=%o/%o |n|~10^%o",
+                       s[1], s[2], s[4], s[5], log10abs(s[1]);
+                Append(~allSolutions, s);
+            end for;
+        end if;
+    end for;
+
+    // Ищем целые точки (если возможно)
+    intFound := false;
+    try
+        intPts := IntegralPoints(E);
+        for P in intPts do
+            if not IsIdentity(P) then
+                w := P[1]; V := P[2];
+                if Denominator(w) eq 1 and Denominator(V) eq 1 then
+                    sols := processPoint(Numerator(w), Numerator(V), k);
+                    for s in sols do
+                        printf "\n  *** SOLUTION (integral): n=%o x=%o d=%o/%o |n|~10^%o",
+                               s[1], s[2], s[4], s[5], log10abs(s[1]);
+                        Append(~allSolutions, s);
+                        intFound := true;
+                    end for;
+                end if;
+            end if;
+        end for;
+    catch e
+        printf "\n  IntegralPoints: skipped (%o)", e`string;
+    end try;
+
+    // Кратные образующих (m=1..10) с проверкой целочисленности
+    for P in gens do
+        for m := 1 to 10 do
+            Q := m*P;
+            // Добавляем сдвиги на кручение
+            for tPt in torsionPts do
+                R := Q + tPt;
+                if IsIdentity(R) then continue; end if;
+                w := R[1]; V := R[2];
+                if Denominator(w) eq 1 and Denominator(V) eq 1 then
+                    sols := processPoint(Numerator(w), Numerator(V), k);
+                    for s in sols do
+                        printf "\n  *** SOLUTION (m=%o): n=%o x=%o d=%o/%o |n|~10^%o x/n^(5/4)~10^%o",
+                               m, s[1], s[2], s[4], s[5],
+                               log10abs(s[1]),
+                               log10abs(s[2]) - 5*log10abs(s[1])/4;
+                        Append(~allSolutions, s);
+                    end for;
+                end if;
+            end for;
+        end for;
+    end for;
+
+    printf "\n";
+end for;
+
+printf "\nЧасть A: найдено %o решений\n\n", #allSolutions;
+
+// ==================== ЧАСТЬ B: Прямой параметрический поиск ====================
+printf "=== Часть B: Прямой поиск (n~t^4, k~2t^2, x~3t^5) ===\n";
+printf "Асимптотика x ~ n^(5/4)\n";
+printf "Модулярное решето + проверка полного квадрата\n\n";
+
+// Для каждого t: n = t^4, k = 2*t^2 + j
+// D(j) = k^2*(12n+k)^2 + 8*k*(36n^3-65) должно быть полным квадратом
+// Решето: D(j) mod p должно быть квадратичным вычетом
+
+primes := [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37];
+
+function isQRmod(n, p)
+    if p eq 2 then return n mod 2 in [0, 1]; end if;
+    r := n mod p;
+    if r eq 0 then return true; end if;
+    return (r^((p-1) div 2) mod p) eq 1;
+end function;
+
+directSolutions := [];
+
+// Поиск по t (начинаем с малого для теста, затем увеличиваем)
+for t := 1 to 5000 do
+    n := t^4;
+    if n mod 3 ne 1 then continue; end if;  // n ≡ 1 (mod 3)
+    val := 36*n^3 - 65;
+
+    k0 := 2*t^2;
+    // Окно поиска по j: [-2t, 2t] (шире для малых t)
+    window := Max(2*t, 10);
+
+    for j := -window to window do
+        k := k0 + j;
+        if k le 0 then continue; end if;
+
+        D := k^2*(12*n + k)^2 + 8*k*val;
+
+        if D lt 0 then continue; end if;
+
+        // Быстрое решето по малым простым
+        passesSieve := true;
+        for p in primes do
+            if not isQRmod(D, p) then
+                passesSieve := false;
+                break;
+            end if;
+        end for;
+
+        if not passesSieve then continue; end if;
+
+        // Точная проверка
+        ok, sqrtD := IsSquare(D);
+        if not ok then continue; end if;
+
+        // Восстановление x
+        for sgn in [1, -1] do
+            num := -k*(12*n + k) + sgn*sqrtD;
+            denom := 4*k;
+            if denom ne 0 and num mod denom eq 0 then
+                x := num div denom;
+                if x ne 0 and val mod x eq 0 then
+                    sols := trySolution(n, x, k);
+                    for s in sols do
+                        ratio := log10abs(x) - 5*log10abs(n)/4;
+                        printf "FOUND: t=%o, n=%o, x=%o, k=%o, d=%o/%o, |n|~10^%o, x/n^(5/4)~10^%o\n",
+                               t, n, x, k, s[4], s[5], log10abs(n), ratio;
+                        Append(~directSolutions, s);
+                    end for;
+                end if;
+            end if;
+        end for;
+    end for;
+end for;
+
+printf "\nЧасть B (малые t): найдено %o решений\n\n", #directSolutions;
+
+// ==================== ЧАСТЬ C: Увеличенный t с узким окном ====================
+printf "=== Часть C: Увеличенный t (10^4 .. 10^6) ===\n";
+printf "Узкое окно j, усиленное решето\n\n";
+
+bigPrimes := primes cat [41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
+
+for t := 10000 to 100000 do
+    n := t^4;
+    if n mod 3 ne 1 then continue; end if;
+    val := 36*n^3 - 65;
+
+    k0 := 2*t^2;
+    // Узкое окно: j in [-5, 5]
+    for j := -5 to 5 do
+        k := k0 + j;
+        if k le 0 then continue; end if;
+
+        D := k^2*(12*n + k)^2 + 8*k*val;
+        if D lt 0 then continue; end if;
+
+        passesSieve := true;
+        for p in bigPrimes do
+            if not isQRmod(D, p) then
+                passesSieve := false;
+                break;
+            end if;
+        end for;
+
+        if not passesSieve then continue; end if;
+
+        ok, sqrtD := IsSquare(D);
+        if ok then
+            for sgn in [1, -1] do
+                num := -k*(12*n + k) + sgn*sqrtD;
+                denom := 4*k;
+                if denom ne 0 and num mod denom eq 0 then
+                    x := num div denom;
+                    if x ne 0 and val mod x eq 0 then
+                        sols := trySolution(n, x, k);
+                        for s in sols do
+                            ratio := log10abs(x) - 5*log10abs(n)/4;
+                            printf "FOUND: t=%o, n=%o, x=%o, k=%o, d=%o/%o |n|~10^%o x/n^(5/4)~10^%o\n",
+                                   t, n, x, k, s[4], s[5], log10abs(n), ratio;
+                            Append(~directSolutions, s);
+                        end for;
+                    end if;
+                end if;
+            end for;
+        end if;
+    end for;
+end for;
+
+// ==================== ИТОГИ ====================
+total := #allSolutions + #directSolutions;
+printf "\n========================================\n";
+printf "ВСЕГО НАЙДЕНО: %o решений\n", total;
+printf "  Кривые Морделла (x~n^(3/2)): %o\n", #allSolutions;
+printf "  Прямой поиск (x~n^(5/4)):    %o\n", #directSolutions;
+printf "========================================\n\n";
+
+for s in allSolutions cat directSolutions do
+    n := s[1]; x := s[2]; k := s[3];
+    printf "n=%o\n  x=%o\n  k=%o\n  d=%o/%o\n  |n|~10^%o\n  x/n^(5/4)~10^%o\n  n%%3=%o x%%12=%o x%%7=%o\n\n",
+           n, x, k, s[4], s[5], log10abs(n),
+           log10abs(x) - 5*log10abs(n)/4,
+           n mod 3, x mod 12, x mod 7;
+end for;
+
+// ==================== ДИАГНОСТИКА ====================
+printf "=== ДИАГНОСТИКА ===\n";
+printf "Для достижения |n| ~ 10^43 с x ~ n^(5/4):\n";
+printf "  Нужно t ~ 10^(43/4) ~ 10^10.75, k ~ 2*10^21.5\n";
+printf "  Вероятность D = кв. квадрат ~ 10^(-75) на каждое (t,j)\n";
+printf "  => прямой перебор невозможен без доп. структуры\n\n";
+printf "  Кривые Морделла с k=8,11 (h~52) дают |n|~10^43 при m=1,\n";
+printf "  но генераторы обычно имеют РАЦИОНАЛЬНЫЕ координаты.\n";
+printf "  Целые точки на таких кривых — необходимое условие.\n";
+printf "  IntegralPoints() находит их, когда Mordell-Weil группа известна.\n\n";
+printf "Для k ~ 10^21 (нужно для x~n^(5/4)):\n";
+printf "  Кривая имеет проводник ~ 10^130, Rank() невычислим.\n";
+printf "  Требуется 3-descent или специализированные методы.\n";
