@@ -8,7 +8,7 @@ The scripts in Magma as found in the sub-folders of this folder can be independe
 
 The original equation:
 
-$$36n^3 - 65 = -2d\,x^2\!\left(-(x+6n)+\sqrt{(x+6n)^2+\frac{36n^3-65}{x}}\right)$$
+$$36n^3 - 65 = -2d\,x^2\\left(-(x+6n)+\sqrt{(x+6n)^2+\frac{36n^3-65}{x}}\right)$$
 
 Let $A = x+6n$, $B = \frac{36n^3-65}{x}$, and $k = \sqrt{A^2+B}$. Then the equation can be rewritten as
 
