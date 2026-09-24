@@ -1,232 +1,228 @@
+#!/usr/bin/env python3
 """
-Верификация найденных решений.
+verify.py
+=========
 
-Полная проверка пары (n, x, d) в исходном уравнении:
+Complete verification of candidate solutions (n, x, d).
 
-  36n^3 - 65 = -2d * x^2 * (-(x+6n) + sqrt((x+6n)^2 + (36n^3-65)/x))
+Given a candidate triple (n, x, d) where d = d_num/d_den is rational,
+this module checks ALL conditions:
 
-Проверяет:
-  1. n, x — целые числа
-  2. x ≠ 0
-  3. x | (36n^3 - 65) (для целостности подкоренного выражения)
-  4. (36n^3 - 65) / x — целое
-  5. (x+6n)^2 + (36n^3-65)/x ≥ 0 (вещественность)
-  6. sqrt(...) — целое
-  7. Исходное уравнение выполняется
-  8. Модульные условия: n ≡ 1 (mod 3), x ≡ 5 (mod 12), x ≢ 0 (mod 7)
+  1. n is integer, x is integer
+  2. n ≡ 1 (mod 3)
+  3. x ≡ 5 (mod 12)
+  4. x ≢ 0 (mod 7)
+  5. x divides 36*n^3 - 65
+  6. sqrt((x + 6n)^2 + (36n^3 - 65)/x) is integer
+  7. The original equation is satisfied:
+     36*n^3 - 65 = -2*d*x^2 * (-(x + 6n) + sqrt(...))
+  8. d is rational (non-integer expected)
+
+The module also computes d from (n, x) and checks consistency.
 """
 
+from math import gcd, isqrt
 from fractions import Fraction
-from math import isqrt
-from typing import Tuple, Dict, Optional
-import json
 
 
-def verify_full(n: int, x: int, d_num: int, d_den: int,
-                check_modular: bool = True) -> Dict:
+def verify_solution(n: int, x: int, d_num: int = None, d_den: int = None, verbose=True):
     """
-    Полная верификация решения.
+    Verify a candidate solution (n, x, d_num/d_den).
 
-    Параметры:
-      n: целое значение n
-      x: целое значение x
-      d_num: числитель d
-      d_den: знаменатель d
-      check_modular: проверять ли модульные условия
+    If d_num and d_den are not provided, they are computed from (n, x).
 
-    Возвращает словарь с результатами всех проверок.
+    Returns (is_valid, details_dict).
     """
-    result = {
-        'n': n,
-        'x': x,
-        'd': f"{d_num}/{d_den}",
-        'd_value': Fraction(d_num, d_den),
-        'checks': {},
-        'valid': True,
-        'errors': [],
-    }
+    details = {}
+    errors = []
 
-    # 1. Целостность
-    if not isinstance(n, int) or not isinstance(x, int):
-        result['checks']['integers'] = False
-        result['errors'].append('n и x должны быть целыми')
-        result['valid'] = False
-        return result
-    result['checks']['integers'] = True
+    if verbose:
+        print("=" * 60)
+        print("SOLUTION VERIFICATION")
+        print("=" * 60)
+        print(f"  n = {n}")
+        print(f"  x = {x}")
 
-    # 2. x ≠ 0
-    if x == 0:
-        result['checks']['x_nonzero'] = False
-        result['errors'].append('x не должно быть равно 0')
-        result['valid'] = False
-        return result
-    result['checks']['x_nonzero'] = True
+    # 1. Integer check
+    details["n_integer"] = isinstance(n, int)
+    details["x_integer"] = isinstance(x, int)
 
-    # 3. Модульные условия
-    if check_modular:
-        mod_n = (n % 3 == 1)
-        mod_x = (x % 12 == 5)
-        mod_x7 = (x % 7 != 0)
-        result['checks']['n_mod_3'] = mod_n
-        result['checks']['x_mod_12'] = mod_x
-        result['checks']['x_not_mod_7'] = mod_x7
-        if not mod_n:
-            result['errors'].append(f'n ≡ {n % 3} (mod 3), должно быть 1')
-            result['valid'] = False
-        if not mod_x:
-            result['errors'].append(f'x ≡ {x % 12} (mod 12), должно быть 5')
-            result['valid'] = False
-        if not mod_x7:
-            result['errors'].append(f'x ≡ 0 (mod 7), не должно быть')
-            result['valid'] = False
+    # 2. n ≡ 1 (mod 3)
+    details["n_mod3"] = n % 3
+    details["n_mod3_ok"] = (n % 3 == 1)
+    if not details["n_mod3_ok"]:
+        errors.append(f"n ≡ {n%3} (mod 3), expected 1")
 
-    # 4. x | (36n^3 - 65)
-    val = 36 * n**3 - 65
-    if val % x != 0:
-        result['checks']['x_divides'] = False
-        result['errors'].append(f'x не делит (36n^3 - 65) = {val}')
-        result['valid'] = False
-        return result
-    result['checks']['x_divides'] = True
+    # 3. x ≡ 5 (mod 12)
+    details["x_mod12"] = x % 12
+    details["x_mod12_ok"] = (x % 12 == 5)
+    if not details["x_mod12_ok"]:
+        errors.append(f"x ≡ {x%12} (mod 12), expected 5")
 
-    # 5. Подкоренное выражение
-    A = x + 6 * n
-    fraction_part = val // x  # целое по предыдущей проверке
-    radicand = A * A + fraction_part
+    # 4. x ≢ 0 (mod 7)
+    details["x_mod7"] = x % 7
+    details["x_mod7_ok"] = (x % 7 != 0)
+    if not details["x_mod7_ok"]:
+        errors.append(f"x ≡ 0 (mod 7), expected nonzero")
 
-    result['checks']['radicand'] = radicand
+    # 5. x divides 36*n^3 - 65
+    K = 36 * n**3 - 65
+    details["K"] = K
+    details["x_divides_K"] = (K % x == 0)
+    if not details["x_divides_K"]:
+        errors.append(f"x={x} does not divide K=36*n^3-65={K}")
 
-    if radicand < 0:
-        result['checks']['nonneg'] = False
-        result['errors'].append(f'Подкоренное выражение отрицательно: {radicand}')
-        result['valid'] = False
-        return result
-    result['checks']['nonneg'] = True
+    if verbose:
+        print(f"  K = 36*n^3 - 65 = {K}")
+        print(f"  K/x = {K // x if x != 0 and K % x == 0 else 'NOT INTEGER'}")
 
-    # 6. sqrt — целое
-    if radicand == 0:
-        S = 0
-        result['checks']['sqrt_integer'] = True
+    # 6. Square root is integer
+    if x != 0 and K % x == 0:
+        A = x + 6 * n
+        inner = A * A + K // x
+        details["inner"] = inner
+        sq = isqrt(inner) if inner >= 0 else None
+        details["sqrt_integer"] = (sq is not None and sq * sq == inner)
+        details["sqrt_value"] = sq if details["sqrt_integer"] else None
+
+        if details["sqrt_integer"]:
+            S = sq
+            if verbose:
+                print(f"  A = x + 6n = {A}")
+                print(f"  A^2 + K/x = {inner}")
+                print(f"  sqrt(...) = {S} ✓ (integer)")
+        else:
+            errors.append(f"sqrt({inner}) is not integer")
+            S = None
     else:
-        S = isqrt(radicand)
-        if S * S != radicand:
-            result['checks']['sqrt_integer'] = False
-            result['errors'].append(f'sqrt({radicand}) не целое (ближайший квадрат: {S}^2 = {S*S})')
-            result['valid'] = False
-            return result
-        result['checks']['sqrt_integer'] = True
+        details["sqrt_integer"] = False
+        details["sqrt_value"] = None
+        S = None
+        if x == 0:
+            errors.append("x = 0")
 
-    result['S'] = S
+    # 7. Compute d from (n, x) and check equation
+    if S is not None:
+        A = x + 6 * n
+        # Original equation: 36*n^3 - 65 = -2*d*x^2 * (-(x + 6n) + S)
+        # => K = -2*d*x^2 * (S - A)
+        # => d = K / (-2*x^2 * (S - A)) = -K / (2*x^2*(S - A))
 
-    # 7. Проверка исходного уравнения
-    d = Fraction(d_num, d_den)
-    lhs = Fraction(36 * n**3 - 65)
-    inner = -(x + 6 * n) + S
-    rhs = -2 * d * x * x * inner
+        denom_part = 2 * x * x * (S - A)
+        if denom_part != 0:
+            d_computed = Fraction(-K, denom_part)
+            details["d_computed"] = d_computed
+            details["d_computed_str"] = f"{d_computed.numerator}/{d_computed.denominator}"
 
-    result['checks']['equation'] = (lhs == rhs)
-    if lhs != rhs:
-        result['errors'].append(
-            f'Уравнение не выполняется: LHS={lhs}, RHS={rhs}'
-        )
-        result['valid'] = False
+            if verbose:
+                print(f"  d (computed) = {d_computed.numerator}/{d_computed.denominator}")
 
-    # 8. Дополнительная информация
-    w = x * (x + 6 * n)
-    y = S
-    result['info'] = {
-        'A': A,
-        'S': S,
-        'w': w,
-        'radicand': radicand,
-        'y_minus_w': y - w,
-        'y_plus_w': y + w,
-        'd_from_y_w': f"{y - w}/{2 * x * x}",
-        'd_from_neg_y_w': f"{-(y + w)}/{2 * x * x}",
-    }
+            # Check if d matches provided values
+            if d_num is not None and d_den is not None:
+                d_provided = Fraction(d_num, d_den)
+                details["d_provided"] = d_provided
+                details["d_match"] = (d_computed == d_provided)
 
-    return result
+                if verbose:
+                    print(f"  d (provided) = {d_num}/{d_den}")
+                    if details["d_match"]:
+                        print(f"  d values MATCH ✓")
+                    else:
+                        print(f"  d values DO NOT MATCH ✗")
+                        errors.append("Computed d does not match provided d")
+            else:
+                details["d_match"] = True  # No provided value to check against
+
+            # Check d is non-integer (rational but not integer)
+            details["d_is_rational"] = True
+            details["d_is_integer"] = (d_computed.denominator == 1)
+            if verbose:
+                if details["d_is_integer"]:
+                    print(f"  Note: d is integer (expected non-integer)")
+                else:
+                    print(f"  d is non-integer ✓ (rational)")
+
+            # Verify original equation directly
+            lhs = K
+            rhs = -2 * d_computed * x * x * (-(A) + S)
+            # Use Fraction arithmetic
+            rhs_exact = Fraction(-2) * d_computed * x * x * (S - A)
+            details["equation_check"] = (Fraction(lhs) == rhs_exact)
+
+            if verbose:
+                print(f"  LHS = 36*n^3 - 65 = {lhs}")
+                print(f"  RHS = -2*d*x^2*(S - A) = {rhs_exact}")
+                if details["equation_check"]:
+                    print(f"  Equation satisfied ✓")
+                else:
+                    print(f"  Equation NOT satisfied ✗")
+                    errors.append("Original equation not satisfied")
+
+        else:
+            errors.append("Denominator part is zero (S - A = 0)")
+            details["equation_check"] = False
+
+    # 8. Asymptotic check (optional)
+    if abs(n) > 0:
+        ratio = abs(x) / abs(n)**1.25 if abs(n) > 1 else float('inf')
+        details["x_over_n_5_4"] = ratio
+        if verbose:
+            print(f"  x / n^(5/4) = {ratio:.6f} (asymptotic ratio)")
+
+    # Summary
+    all_ok = (details.get("n_mod3_ok", False) and
+              details.get("x_mod12_ok", False) and
+              details.get("x_mod7_ok", False) and
+              details.get("x_divides_K", False) and
+              details.get("sqrt_integer", False) and
+              details.get("equation_check", False) and
+              details.get("d_match", True))
+
+    if verbose:
+        print("-" * 60)
+        if all_ok:
+            print("  ✓ ALL CHECKS PASSED — VALID SOLUTION")
+        else:
+            print("  ✗ SOME CHECKS FAILED:")
+            for err in errors:
+                print(f"    - {err}")
+        print("=" * 60)
+
+    return all_ok, details
 
 
-def verify_batch(solutions: List[Tuple[int, int, int, int]]) -> List[Dict]:
-    """Пакетная верификация решений."""
+def batch_verify(solutions, verbose=False):
+    """
+    Verify a batch of candidate solutions.
+
+    solutions: list of (n, x) or (n, x, d_num, d_den) tuples.
+    Returns list of (is_valid, details) for each.
+    """
     results = []
-    for n, x, d_num, d_den in solutions:
-        r = verify_full(n, x, d_num, d_den)
-        results.append(r)
+    for sol in solutions:
+        if len(sol) == 2:
+            n, x = sol
+            result = verify_solution(n, x, verbose=verbose)
+        elif len(sol) == 4:
+            n, x, d_num, d_den = sol
+            result = verify_solution(n, x, d_num, d_den, verbose=verbose)
+        else:
+            continue
+        results.append(result)
+
+    valid_count = sum(1 for ok, _ in results if ok)
+    print(f"\nBatch verification: {valid_count}/{len(results)} valid")
+
     return results
 
 
-def format_result(result: Dict, verbose: bool = False) -> str:
-    """Форматирование результата верификации."""
-    lines = []
-    status = "✓ ВАЛИДНО" if result['valid'] else "✗ НЕВАЛИДНО"
-    lines.append(f"  Решение (n={result['n']}, x={result['x']}, d={result['d']}): {status}")
-
-    if result['errors']:
-        for err in result['errors']:
-            lines.append(f"    ✗ {err}")
-
-    if verbose and result['valid']:
-        info = result.get('info', {})
-        lines.append(f"    S = {info.get('S', '?')}")
-        lines.append(f"    w = x(x+6n) = {info.get('w', '?')}")
-        lines.append(f"    y - w = {info.get('y_minus_w', '?')}")
-        lines.append(f"    y + w = {info.get('y_plus_w', '?')}")
-
-    return "\n".join(lines)
-
-
-# Тип для аннотации
-from typing import List
-
-
-def run_verify_demo():
-    """Демонстрация верификации."""
-    print("=" * 60)
-    print("ДЕМО: Верификация решений")
-    print("=" * 60)
-
-    # Тест с заведомо валидным решением (если найдём)
-    print("\n1. Проверка валидного решения:")
-
-    # Тривиальный случай: n=1, пробуем разные x
-    for n in [1, -1, 4, -4, 7, -7]:
-        for x in range(-100, 101):
-            if x == 0 or x % 12 != 5 or x % 7 == 0:
-                continue
-            val = 36 * n**3 - 65
-            if val % x != 0:
-                continue
-            A = x + 6 * n
-            radicand = A * A + val // x
-            if radicand < 0:
-                continue
-            S = isqrt(radicand)
-            if S * S == radicand:
-                # Нашли кандидат: вычисляем d
-                w = x * (x + 6 * n)
-                # d = (y - w) / (2x^2)
-                d_num = S - w
-                d_den = 2 * x * x
-                from math import gcd
-                g = gcd(abs(d_num), abs(d_den))
-                d_num //= g
-                d_den //= g
-
-                result = verify_full(n, x, d_num, d_den)
-                print(f"\n{format_result(result, verbose=True)}")
-
-    # Тест с невалидным решением
-    print("\n2. Проверка невалидного решения:")
-    result = verify_full(10, 17, 1, 3)  # случайные значения
-    print(format_result(result, verbose=True))
-
-    print("\n3. Проверка тривиального d=0:")
-    # d=0: 36n^3 - 65 = 0 -> n = (65/36)^{1/3} — не целое
-    result = verify_full(1, 5, 0, 1)
-    print(format_result(result, verbose=True))
-
-
 if __name__ == "__main__":
-    run_verify_demo()
+    # Demo: verify a known-bad solution (should fail most checks)
+    print("--- Demo: n=1, x=5 (expected to fail) ---\n")
+    verify_solution(1, 5, verbose=True)
+
+    print()
+
+    # Demo: verify with computed d
+    print("--- Demo: n=4, x=5 (expected to fail) ---\n")
+    verify_solution(4, 5, verbose=True)
