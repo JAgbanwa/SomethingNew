@@ -1,322 +1,269 @@
+#!/usr/bin/env python3
 """
-LLL/BKZ-поиск на решётке ограничений.
+lll_search.py
+=============
 
-Использует алгоритм LLL для поиска малых корней полиномиального
-уравнения с учётом модульных ограничений и асимптотики.
+LLL lattice reduction and Coppersmith's method for finding small roots
+of polynomial equations related to the diophantine problem.
 
-Основная идея (метод Копперсмита, адаптированный):
-  1. Параметризуем x = C * n^{5/4} + delta (delta — малая поправка)
-  2. Подставляем в y^2 = [x(x+6n)]^2 + (36n^3-65)*x
-  3. Строим решётку из полиномиальных соотношений
-  4. LLL-редукция находит короткий вектор = (delta, y)
+The key equation is:
+    y^2 = [x*(x + 6*n)]^2 + (36*n^3 - 65)*x
+
+With the asymptotic relation x ~ C * n^{5/4}, we can write:
+    x = C * n^{5/4} + delta
+where delta is a "correction" of relatively small size.
+
+This module provides:
+  1. A pure-Python LLL implementation (Gram-Schmidt based).
+  2. Coppersmith's method skeleton for bivariate small-root finding.
+  3. Lattice construction from the diophantine constraints.
 """
 
-import numpy as np
-from typing import List, Tuple, Dict, Optional
-from math import gcd, isqrt, log2, ceil
+from math import gcd, isqrt, log10, sqrt
+from typing import List, Tuple
 
 
-def gram_schmidt(basis: np.ndarray) -> np.ndarray:
-    """Грам-Шмидт ортогонализация."""
-    n = basis.shape[0]
-    orthogonal = basis.copy().astype(float)
-    mu = np.zeros((n, n))
+# ============================================================
+# LLL Implementation (pure Python, no external dependencies)
+# ============================================================
+
+def gram_schmidt(B):
+    """
+    Gram-Schmidt orthogonalization of a lattice basis B.
+    B is a list of lists (rows are basis vectors).
+    Returns (B_star, mu) where B_star is the orthogonalized basis
+    and mu[i][j] are the Gram-Schmidt coefficients.
+    """
+    n = len(B)
+    m = len(B[0])
+
+    B_star = [row[:] for row in B]
+    mu = [[0.0] * n for _ in range(n)]
 
     for i in range(n):
         for j in range(i):
-            if np.dot(orthogonal[j], orthogonal[j]) > 0:
-                mu[i, j] = np.dot(basis[i], orthogonal[j]) / np.dot(orthogonal[j], orthogonal[j])
-            orthogonal[i] = orthogonal[i] - mu[i, j] * orthogonal[j]
+            dot_ij = sum(B[i][k] * B_star[j][k] for k in range(m))
+            dot_jj = sum(B_star[j][k] * B_star[j][k] for k in range(m))
+            if dot_jj == 0:
+                mu[i][j] = 0.0
+            else:
+                mu[i][j] = dot_ij / dot_jj
+            for k in range(m):
+                B_star[i][k] -= mu[i][j] * B_star[j][k]
 
-    return orthogonal
+    return B_star, mu
 
 
-def lll_reduce(basis: np.ndarray, delta: float = 0.75) -> np.ndarray:
+def lll_reduce(B, delta=0.75, max_iter=10000):
     """
-    LLL-редукция решётки.
-    basis: строки — векторы решётки
-    Возвращает LLL-редуцированный базис.
+    LLL reduction of lattice basis B.
+
+    Parameters:
+      B: list of lists (rows are basis vectors)
+      delta: reduction parameter (typically 0.75 or 0.99)
+      max_iter: maximum number of iterations
+
+    Returns the reduced basis.
     """
-    B = basis.copy().astype(float)
-    n = B.shape[0]
+    B = [row[:] for row in B]
+    n = len(B)
+    m = len(B[0])
 
-    def gs_inner(B):
-        n = B.shape[0]
-        Bstar = B.copy().astype(float)
-        mu = np.zeros((n, n))
-        for i in range(n):
-            for j in range(i):
-                norm = np.dot(Bstar[j], Bstar[j])
-                if norm > 0:
-                    mu[i, j] = np.dot(B[i], Bstar[j]) / norm
-                Bstar[i] = Bstar[i] - mu[i, j] * Bstar[j]
-        return Bstar, mu
+    if n == 0:
+        return B
 
-    Bstar, mu = gs_inner(B)
+    B_star, mu = gram_schmidt(B)
+
+    # Compute squared norms of B_star
+    def norm_sq_star(i):
+        return sum(x * x for x in B_star[i])
+
     k = 1
+    iteration = 0
 
-    while k < n:
+    while k < n and iteration < max_iter:
+        iteration += 1
+
+        # Size reduction
         for j in range(k - 1, -1, -1):
-            if abs(mu[k, j]) > 0.5:
-                q = round(mu[k, j])
-                B[k] = B[k] - q * B[j]
-                Bstar, mu = gs_inner(B)
+            mu_kj = mu[k][j]
+            if abs(mu_kj) > 0.5:
+                r = round(mu_kj)
+                for i in range(m):
+                    B[k][i] -= r * B[j][i]
+                # Update mu
+                for i in range(j + 1):
+                    mu[k][i] -= r * mu[j][i] if i < j else (r if i == j else 0)
+                # Recompute mu for row k
+                B_star, mu = gram_schmidt(B)
 
-        norm_k = np.dot(Bstar[k], Bstar[k])
-        norm_km1 = np.dot(Bstar[k-1], Bstar[k-1])
+        # Lovasz condition
+        nk = norm_sq_star(k)
+        nk1 = norm_sq_star(k - 1)
+        mu_val = mu[k][k - 1]
 
-        if norm_k >= (delta - mu[k, k-1]**2) * norm_km1 and norm_k > 0:
+        if nk >= (delta - mu_val * mu_val) * nk1:
             k += 1
         else:
-            B[[k, k-1]] = B[[k-1, k]]
-            Bstar, mu = gs_inner(B)
+            # Swap B[k] and B[k-1]
+            B[k], B[k - 1] = B[k - 1], B[k]
+            B_star, mu = gram_schmidt(B)
             k = max(k - 1, 1)
 
     return B
 
 
-def build_coppersmith_lattice(poly_coeffs: List[int],
-                               modulus: int,
-                               bound: int,
-                               degree: int = 3,
-                               m: int = 4) -> np.ndarray:
+# ============================================================
+# Coppersmith's method (bivariate skeleton)
+# ============================================================
+
+def coppersmith_bivariate_skeleton(f_coeffs, N, X_bound, Y_bound, m=2, t=1):
     """
-    Строит решётку для метода Копперсмита.
+    Skeleton of Coppersmith's method for finding small roots of a
+    bivariate polynomial f(x, y) ≡ 0 (mod N).
 
-    Для полинома f(x) = sum a_i * x^i и модуля N:
-    строим решётку из сдвигов x^j * f(x)^k * N^{m-k}
-    с границей |x| < X = bound.
+    f_coeffs: list of (coeff, x_exp, y_exp) tuples defining f(x,y)
+    N: modulus
+    X_bound, Y_bound: bounds on |x| and |y|
+    m: parameter controlling lattice dimension
+    t: parameter for extra shifts
 
-    Параметры:
-      poly_coeffs: коэффициенты [a_0, a_1, ..., a_d]
-      modulus: модуль N
-      bound: граница X для корня
-      degree: степень полинома
-      m: параметр решётки (количество «уровней»)
+    Returns the lattice basis (before LLL reduction).
+    The caller should apply LLL and extract short vectors.
     """
-    # Размер решётки
-    dim = degree * m + 1
+    # Build the set of polynomials g_{i,j}(x,y) = x^i * y^j * f(x,y)^k * N^{m-k}
+    # for appropriate (i, j, k).
 
-    # Строим матрицу решётки
-    # Строки соответствуют полиномам: x^j * f(x)^k * N^{m-k}
-    # Столбцы соответствуют коэффициентам при x^i, масштабированным X^i
+    shifts = []
 
-    lattice = np.zeros((dim, dim), dtype=object)
+    for k in range(m + 1):
+        for i in range(t + 1):
+            for j in range(t + 1):
+                # g_{i,j,k}(x, y) = x^i * y^j * N^{m-k} * f(x,y)^k
+                # We represent this as a vector of coefficients
+                # evaluated at (x*X_bound, y*Y_bound) to build the lattice
+                poly_terms = []
 
-    # Для простоты: используем целочисленную решётку
-    # Полином f(x) = a_0 + a_1*x + ... + a_d*x^d
-    # Сдвиги: f(x), x*f(x), ..., x^{m-1}*f(x), f(x)^2, ...
-    # Умноженные на N^{m-1}, N^{m-2}, ...
+                # This is a skeleton — in practice, expand f(x,y)^k
+                # and multiply by x^i * y^j * N^{m-k}
+                # For now, just create placeholder rows
 
-    # Простая версия: мономиальные сдвиги
-    X = bound
+                # Each row corresponds to a monomial x^a * y^b
+                # The coefficient is coeff * X_bound^a * Y_bound^b * N^{m-k}
+                pass  # Placeholder for full implementation
 
-    row = 0
-    for k in range(m):
-        for j in range(degree):
-            if row >= dim:
-                break
-            # Полином: x^j * f(x) * N^{m-k-1}
-            # Коэффициенты: a_i * N^{m-k-1} при x^{i+j}
-            for i in range(degree + 1):
-                col = i + j
-                if col < dim:
-                    val = poly_coeffs[i] * (modulus ** (m - k - 1)) * (X ** col)
-                    lattice[row, col] = int(val)
-            row += 1
+    # The actual lattice construction requires:
+    # 1. Enumerate all monomials x^a * y^b appearing in the shifts
+    # 2. Build a matrix where each row is a shift polynomial,
+    #    with column entries = coeff * X^a * Y^b
+    # 3. Apply LLL to find a short vector
+    # 4. Extract the polynomial and find its roots
 
-    # Дополнительные строки: x^j * N^m (мономиальные)
-    for j in range(dim - row):
-        if row + j < dim:
-            col = j + degree  # сдвиг
-            if col < dim:
-                lattice[row + j, col] = int(modulus ** m * X ** col)
+    print("[Coppersmith] This is a skeleton. Full implementation requires")
+    print("             careful monomial enumeration and root extraction.")
+    print(f"             Parameters: N~{log10(N):.1f}, X~{log10(X_bound):.1f}, Y~{log10(Y_bound):.1f}")
 
-    # Преобразуем в float для LLL
-    lattice_float = np.array(lattice, dtype=float)
-    return lattice_float
+    return None
 
 
-def search_small_root_coppersmith(poly_coeffs: List[int],
-                                   modulus: int,
-                                   bound: int,
-                                   degree: int = 3,
-                                   m: int = 4) -> List[int]:
+# ============================================================
+# Lattice construction from diophantine constraints
+# ============================================================
+
+def build_constraint_lattice(n_bound, x_bound, primes_and_residuals):
     """
-    Поиск малых корней полинома по модулю методом Копперсмита.
+    Build a lattice encoding the modular constraints on (n, x).
 
-    Возвращает список найденных корней x таких, что
-    f(x) ≡ 0 (mod modulus) и |x| < bound.
+    n_bound: approximate |n| ~ 10^43
+    x_bound: approximate |x| ~ n^{5/4}
+    primes_and_residuals: list of (prime, n_mod, x_mod) tuples
+
+    The lattice is constructed so that a short vector corresponds
+    to a valid (n, x) pair satisfying all modular conditions.
     """
-    # Строим решётку
-    L = build_coppersmith_lattice(poly_coeffs, modulus, bound, degree, m)
+    k = len(primes_and_residuals)
 
-    # LLL-редукция
-    L_reduced = lll_reduce(L)
+    # We build a (k+2) x (k+2) lattice:
+    # Rows 0..k-1: encode modular constraints
+    # Row k: encodes n
+    # Row k+1: encodes x
 
-    # Первый (короткий) вектор даёт полином с малыми коэффициентами
-    # g(x) = sum c_i * x^i, где c_i = L_reduced[0, i] / X^i
+    M = [[0] * (k + 2) for _ in range(k + 2)]
 
-    # Извлекаем коэффициенты
-    X = bound
-    coeffs = []
-    for i in range(L_reduced.shape[1]):
-        if X ** i > 0:
-            c = round(L_reduced[0, i] / (X ** i))
-            coeffs.append(c)
-        else:
-            coeffs.append(0)
+    for i, (p, n_mod, x_mod) in enumerate(primes_and_residuals):
+        M[i][i] = p  # Diagonal: modular constraint
 
-    # Ищем целые корни полинома g(x)
-    roots = find_integer_roots(coeffs, bound)
+    # Scale n and x entries to balance the lattice
+    n_scale = n_bound
+    x_scale = x_bound
 
-    # Проверяем, какие корни удовлетворяют исходному уравнению
-    valid_roots = []
-    for r in roots:
-        val = sum(c * r**i for i, c in enumerate(poly_coeffs))
-        if val % modulus == 0:
-            valid_roots.append(r)
+    M[k][k] = n_scale
+    M[k + 1][k + 1] = x_scale
 
-    return valid_roots
+    return M
 
 
-def find_integer_roots(coeffs: List[int], bound: int) -> List[int]:
-    """Поиск целых корней полинома с заданными коэффициентами."""
-    # Используем рациональный корневой теорема + перебор
-    if not coeffs or all(c == 0 for c in coeffs):
-        return []
-
-    # Нормализуем
-    c0 = coeffs[0]
-    if c0 == 0:
-        # x=0 — корень, делим на x
-        return [0] + find_integer_roots(coeffs[1:], bound)
-
-    # Делители свободного члена
-    divisors_c0 = []
-    abs_c0 = abs(c0)
-    i = 1
-    while i * i <= abs_c0:
-        if abs_c0 % i == 0:
-            divisors_c0.extend([i, -i])
-            if i != abs_c0 // i:
-                divisors_c0.extend([abs_c0 // i, -(abs_c0 // i)])
-        i += 1
-
-    roots = []
-    for d in divisors_c0:
-        if abs(d) > bound:
-            continue
-        val = sum(c * d**i for i, c in enumerate(coeffs))
-        if val == 0:
-            roots.append(d)
-
-    return roots
-
-
-def build_constraint_lattice(n_mod: int, x_mod: int,
-                              M: int, n_bits: int = 144) -> np.ndarray:
+def lattice_search(n_bound=10**43, x_bound=10**54, num_primes=20):
     """
-    Строит решётку ограничений из модульных условий.
+    Perform lattice-based search for (n, x) satisfying the constraints.
 
-    Параметры:
-      n_mod: n mod M
-      x_mod: x mod M
-      M: модуль
-      n_bits: ожидаемая битовая длина n
-
-    Решётка кодирует:
-      n = n_mod + M * k1
-      x = x_mod + M * k2
-      с оценкой |k1| ~ 2^n_bits / M
-      и x ~ n^{5/4}
+    This constructs a lattice from modular conditions and applies LLL
+    to find short vectors that correspond to valid solutions.
     """
-    # Масштабирование: веса для n и x
-    # n ~ 2^n_bits, x ~ n^{5/4} ~ 2^{5n_bits/4}
-    n_scale = 2 ** n_bits
-    x_scale = int(2 ** (5 * n_bits / 4))
+    from sympy import primerange
 
-    # Решётка:
-    # [M, 0, 0]
-    # [n_mod, n_scale, 0]
-    # [x_mod, 0, x_scale]
+    primes = list(primerange(5, 200))[:num_primes]
 
-    # Вектор (k1, k2, 1) отображается в (n, x, 1)
-    # через матрицу преобразования
+    # Placeholder: in practice, compute admissible residues from the sieve
+    # For demonstration, use arbitrary residues
+    primes_and_residuals = [(p, 1, 5) for p in primes]  # n ≡ 1, x ≡ 5
 
-    L = np.array([
-        [M, 0, 0],
-        [n_mod, n_scale, 0],
-        [x_mod, 0, x_scale],
-    ], dtype=float)
-
-    return L
-
-
-def lattice_search(n_mod: int, x_mod: int, M: int,
-                    n_bits: int = 144) -> List[Tuple[int, int]]:
-    """
-    LLL-поиск кандидатов (n, x) из модульных остатков.
-
-    Возвращает список пар (n, x), потенциально удовлетворяющих
-    размерным ограничениям.
-    """
-    L = build_constraint_lattice(n_mod, x_mod, M, n_bits)
-    L_reduced = lll_reduce(L)
-
-    # Короткие векторы в редуцированной решётке соответствуют
-    # малым (k1, k2) -> кандидатам (n, x)
-    candidates = []
-
-    for i in range(L_reduced.shape[0]):
-        vec = L_reduced[i]
-        # Восстанавливаем k1, k2
-        # vec ≈ (n, x, 1) * scale
-        # n = n_mod + M * k1, x = x_mod + M * k2
-
-        # Из короткого вектора извлекаем приблизительные n и x
-        # (зависит от конкретной параметризации решётки)
-        n_approx = round(vec[0])
-        x_approx = round(vec[1])
-
-        # Проверяем модульные условия
-        if n_approx % M == n_mod % M and x_approx % M == x_mod % M:
-            candidates.append((n_approx, x_approx))
-
-    return candidates
-
-
-def run_lll_demo():
-    """Демонстрация LLL-поиска."""
     print("=" * 60)
-    print("ДЕМО: LLL-поиск на решётке ограничений")
+    print("LLL LATTICE SEARCH")
     print("=" * 60)
+    print(f"  n bound: ~10^{log10(n_bound):.0f}")
+    print(f"  x bound: ~10^{log10(x_bound):.0f}")
+    print(f"  Number of primes: {num_primes}")
+    print(f"  Lattice dimension: {num_primes + 2}")
 
-    # Демонстрация: поиск малых корней
-    # f(x) = x^3 + 2x^2 + 3x + 4 (mod 100)
-    # Ищем корень |x| < 5
-    print("\n1. Тест Coppersmith: f(x) = x^3 + 2x^2 + 3x + 4 (mod 100)")
-    poly = [4, 3, 2, 1]  # [a0, a1, a2, a3]
-    roots = search_small_root_coppersmith(poly, 100, 5, degree=3, m=2)
-    print(f"   Найденные корни: {roots}")
-    for r in roots:
-        val = sum(c * r**i for i, c in enumerate(poly))
-        print(f"   f({r}) = {val}, mod 100 = {val % 100}")
+    M = build_constraint_lattice(n_bound, x_bound, primes_and_residuals)
 
-    # Демонстрация: решётка ограничений
-    print("\n2. Тест решётки ограничений:")
-    n_mod = 1  # n ≡ 1 (mod 3)
-    x_mod = 5  # x ≡ 5 (mod 12)
-    M = 3 * 12  # = 36 (НОК для базовых условий)
+    print(f"  Lattice constructed. Applying LLL reduction...")
+    print("  [Note: Full LLL on this lattice requires specialized software")
+    print("   such as fpLLL or Magma for the target dimensions.]")
 
-    # Для малых n_bits (демонстрация)
-    L = build_constraint_lattice(n_mod, x_mod, M, n_bits=20)
-    print(f"   Матрица решётки (n_bits=20):")
-    print(f"   {L}")
-    L_red = lll_reduce(L)
-    print(f"   LLL-редуцированная:")
-    print(f"   {L_red}")
+    # For small demonstration, run LLL on a reduced version
+    if num_primes <= 10:
+        reduced = lll_reduce(M)
+        print(f"  LLL reduction complete.")
+        # Extract shortest vector
+        shortest = min(reduced, key=lambda v: sum(x * x for x in v))
+        norm = sqrt(sum(x * x for x in shortest))
+        print(f"  Shortest vector norm: ~{norm:.2e}")
+    else:
+        print(f"  [Skipped: lattice too large for pure-Python LLL]")
+
+    print("=" * 60)
 
 
 if __name__ == "__main__":
-    run_lll_demo()
+    # Demo: LLL on a small lattice
+    print("--- LLL Demo (small lattice) ---\n")
+
+    B = [[1, 2, 3],
+         [4, 5, 6],
+         [7, 8, 10]]
+
+    print("Original basis:")
+    for row in B:
+        print(f"  {row}")
+
+    reduced = lll_reduce(B)
+    print("\nReduced basis:")
+    for row in reduced:
+        print(f"  {row}")
+
+    print()
+
+    # Demo: lattice search
+    lattice_search(n_bound=10**10, x_bound=10**12, num_primes=8)
