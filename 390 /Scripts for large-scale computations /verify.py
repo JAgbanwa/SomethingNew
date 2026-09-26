@@ -1,228 +1,197 @@
 #!/usr/bin/env python3
-"""
-verify.py
-=========
+"""Independently verify CE390 JSONL certificates using Python integer arithmetic.
 
-Complete verification of candidate solutions (n, x, d).
-
-Given a candidate triple (n, x, d) where d = d_num/d_den is rational,
-this module checks ALL conditions:
-
-  1. n is integer, x is integer
-  2. n ≡ 1 (mod 3)
-  3. x ≡ 5 (mod 12)
-  4. x ≢ 0 (mod 7)
-  5. x divides 36*n^3 - 65
-  6. sqrt((x + 6n)^2 + (36n^3 - 65)/x) is integer
-  7. The original equation is satisfied:
-     36*n^3 - 65 = -2*d*x^2 * (-(x + 6n) + sqrt(...))
-  8. d is rational (non-integer expected)
-
-The module also computes d from (n, x) and checks consistency.
+No worker code, floating-point arithmetic, numerical tolerances, or third-party
+packages are used here.  Default bounds and congruences are the production
+campaign.  A successful check certifies individual solutions, not search
+coverage or the existence of a solution in an unsearched region.
 """
 
-from math import gcd, isqrt
+from __future__ import annotations
+
+import argparse
+from dataclasses import dataclass
 from fractions import Fraction
+import json
+from math import isqrt
+from pathlib import Path
+import re
+import sys
+from typing import Any
 
 
-def verify_solution(n: int, x: int, d_num: int = None, d_den: int = None, verbose=True):
+DECIMAL = re.compile(r"-?(?:0|[1-9][0-9]*)\Z")
+
+
+class VerificationError(ValueError):
+    """A candidate is not an exact certificate under the requested policy."""
+
+
+@dataclass(frozen=True)
+class Bounds:
+    n_min: int = 10**43
+    n_max: int = 10**45
+    x_min: int = 10**54
+    x_max: int = 10**55
+
+    def __post_init__(self) -> None:
+        if self.n_min > self.n_max or self.x_min > self.x_max:
+            raise ValueError("bounds must be ordered inclusive intervals")
+
+
+def integer(value: Any, field: str) -> int:
+    """Accept decimal strings and JSON integers, never floats or booleans."""
+    if isinstance(value, bool):
+        raise VerificationError(f"{field}: booleans are not integers")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and DECIMAL.fullmatch(value):
+        return int(value)
+    raise VerificationError(f"{field}: expected an integer or decimal integer string")
+
+
+def rational(record: dict[str, Any], prefix: str) -> Fraction:
+    try:
+        numerator = integer(record[f"{prefix}_num"], f"{prefix}_num")
+        denominator = integer(record[f"{prefix}_den"], f"{prefix}_den")
+    except KeyError as exc:
+        raise VerificationError(f"missing required field: {exc.args[0]}") from exc
+    if denominator <= 0:
+        raise VerificationError(f"{prefix}_den: denominator must be positive")
+    value = Fraction(numerator, denominator)
+    if (value.numerator, value.denominator) != (numerator, denominator):
+        raise VerificationError(f"{prefix}: numerator/denominator must be reduced")
+    return value
+
+
+def verify_record(
+    record: dict[str, Any],
+    bounds: Bounds | None = None,
+    *,
+    require_congruences: bool = True,
+    require_noninteger_d: bool = True,
+    require_integer_sqrt: bool = False,
+) -> dict[str, Any]:
+    """Check one solution against the original radical equation.
+
+    Passing custom signed bounds is supported for regression fixtures.  It is
+    never implicit: omitted bounds always select the positive production box.
+    The principal square root is required, including in signed test fixtures.
     """
-    Verify a candidate solution (n, x, d_num/d_den).
+    if not isinstance(record, dict):
+        raise VerificationError("certificate must be a JSON object")
+    bounds = bounds or Bounds()
+    try:
+        n = integer(record["n"], "n")
+        x = integer(record["x"], "x")
+    except KeyError as exc:
+        raise VerificationError(f"missing required field: {exc.args[0]}") from exc
+    if x == 0:
+        raise VerificationError("x must be nonzero")
+    if not bounds.n_min <= n <= bounds.n_max:
+        raise VerificationError("n is outside the inclusive requested bounds")
+    if not bounds.x_min <= x <= bounds.x_max:
+        raise VerificationError("x is outside the inclusive requested bounds")
+    if require_congruences and not (n % 3 == 1 and x % 12 == 5 and x % 7 != 0):
+        raise VerificationError("the production congruences fail")
 
-    If d_num and d_den are not provided, they are computed from (n, x).
+    d = rational(record, "d")
+    y = rational(record, "y")
+    if require_noninteger_d and d.denominator == 1:
+        raise VerificationError("d is an integer")
+    if y < 0:
+        raise VerificationError("y is not the principal (nonnegative) square root")
 
-    Returns (is_valid, details_dict).
-    """
-    details = {}
-    errors = []
+    t = 36 * n**3 - 65
+    a = x + 6 * n
+    m_squared = x * x * a * a + t * x
+    if m_squared < 0:
+        raise VerificationError("the original radicand is negative")
+    m = isqrt(m_squared)
+    if m * m != m_squared:
+        raise VerificationError("the original radical is not rational")
+    exact_y = Fraction(m, abs(x))
+    if y != exact_y:
+        raise VerificationError("the reported y does not equal the original radical")
+    # Both checks are deliberately retained.  The first tests the radical;
+    # the second checks the original unsquared equation and its branch.
+    if y * y != a * a + Fraction(t, x):
+        raise VerificationError("the original radical identity fails")
+    if Fraction(t) != -2 * d * x * x * (y - a):
+        raise VerificationError("the original unsquared equation fails")
+    if d != -(y + a) / (2 * x):
+        raise VerificationError("the rationalized d identity fails")
+    if require_integer_sqrt and y.denominator != 1:
+        raise VerificationError("the radical is rational but not an integer")
+    if "sqrt_integer" in record:
+        if not isinstance(record["sqrt_integer"], bool):
+            raise VerificationError("sqrt_integer must be a JSON boolean")
+        if record["sqrt_integer"] != (y.denominator == 1):
+            raise VerificationError("sqrt_integer does not match the exact radical")
 
-    if verbose:
-        print("=" * 60)
-        print("SOLUTION VERIFICATION")
-        print("=" * 60)
-        print(f"  n = {n}")
-        print(f"  x = {x}")
+    if ("gap_num" in record) != ("gap_den" in record):
+        raise VerificationError("gap_num and gap_den must be supplied together")
+    if "gap_num" in record and rational(record, "gap") != y - a:
+        raise VerificationError("gap does not equal y-(x+6n)")
+    if ("a" in record) != ("q" in record):
+        raise VerificationError("a and q must be supplied together")
+    if "a" in record:
+        fiber_a = integer(record["a"], "a")
+        fiber_q = integer(record["q"], "q")
+        if fiber_a <= 0 or fiber_q <= 0:
+            raise VerificationError("fiber a and q must be positive")
+        if Fraction(-1) - Fraction(fiber_a, 2 * fiber_q) != d:
+            raise VerificationError("the fiber a,q do not reproduce d")
 
-    # 1. Integer check
-    details["n_integer"] = isinstance(n, int)
-    details["x_integer"] = isinstance(x, int)
-
-    # 2. n ≡ 1 (mod 3)
-    details["n_mod3"] = n % 3
-    details["n_mod3_ok"] = (n % 3 == 1)
-    if not details["n_mod3_ok"]:
-        errors.append(f"n ≡ {n%3} (mod 3), expected 1")
-
-    # 3. x ≡ 5 (mod 12)
-    details["x_mod12"] = x % 12
-    details["x_mod12_ok"] = (x % 12 == 5)
-    if not details["x_mod12_ok"]:
-        errors.append(f"x ≡ {x%12} (mod 12), expected 5")
-
-    # 4. x ≢ 0 (mod 7)
-    details["x_mod7"] = x % 7
-    details["x_mod7_ok"] = (x % 7 != 0)
-    if not details["x_mod7_ok"]:
-        errors.append(f"x ≡ 0 (mod 7), expected nonzero")
-
-    # 5. x divides 36*n^3 - 65
-    K = 36 * n**3 - 65
-    details["K"] = K
-    details["x_divides_K"] = (K % x == 0)
-    if not details["x_divides_K"]:
-        errors.append(f"x={x} does not divide K=36*n^3-65={K}")
-
-    if verbose:
-        print(f"  K = 36*n^3 - 65 = {K}")
-        print(f"  K/x = {K // x if x != 0 and K % x == 0 else 'NOT INTEGER'}")
-
-    # 6. Square root is integer
-    if x != 0 and K % x == 0:
-        A = x + 6 * n
-        inner = A * A + K // x
-        details["inner"] = inner
-        sq = isqrt(inner) if inner >= 0 else None
-        details["sqrt_integer"] = (sq is not None and sq * sq == inner)
-        details["sqrt_value"] = sq if details["sqrt_integer"] else None
-
-        if details["sqrt_integer"]:
-            S = sq
-            if verbose:
-                print(f"  A = x + 6n = {A}")
-                print(f"  A^2 + K/x = {inner}")
-                print(f"  sqrt(...) = {S} ✓ (integer)")
-        else:
-            errors.append(f"sqrt({inner}) is not integer")
-            S = None
-    else:
-        details["sqrt_integer"] = False
-        details["sqrt_value"] = None
-        S = None
-        if x == 0:
-            errors.append("x = 0")
-
-    # 7. Compute d from (n, x) and check equation
-    if S is not None:
-        A = x + 6 * n
-        # Original equation: 36*n^3 - 65 = -2*d*x^2 * (-(x + 6n) + S)
-        # => K = -2*d*x^2 * (S - A)
-        # => d = K / (-2*x^2 * (S - A)) = -K / (2*x^2*(S - A))
-
-        denom_part = 2 * x * x * (S - A)
-        if denom_part != 0:
-            d_computed = Fraction(-K, denom_part)
-            details["d_computed"] = d_computed
-            details["d_computed_str"] = f"{d_computed.numerator}/{d_computed.denominator}"
-
-            if verbose:
-                print(f"  d (computed) = {d_computed.numerator}/{d_computed.denominator}")
-
-            # Check if d matches provided values
-            if d_num is not None and d_den is not None:
-                d_provided = Fraction(d_num, d_den)
-                details["d_provided"] = d_provided
-                details["d_match"] = (d_computed == d_provided)
-
-                if verbose:
-                    print(f"  d (provided) = {d_num}/{d_den}")
-                    if details["d_match"]:
-                        print(f"  d values MATCH ✓")
-                    else:
-                        print(f"  d values DO NOT MATCH ✗")
-                        errors.append("Computed d does not match provided d")
-            else:
-                details["d_match"] = True  # No provided value to check against
-
-            # Check d is non-integer (rational but not integer)
-            details["d_is_rational"] = True
-            details["d_is_integer"] = (d_computed.denominator == 1)
-            if verbose:
-                if details["d_is_integer"]:
-                    print(f"  Note: d is integer (expected non-integer)")
-                else:
-                    print(f"  d is non-integer ✓ (rational)")
-
-            # Verify original equation directly
-            lhs = K
-            rhs = -2 * d_computed * x * x * (-(A) + S)
-            # Use Fraction arithmetic
-            rhs_exact = Fraction(-2) * d_computed * x * x * (S - A)
-            details["equation_check"] = (Fraction(lhs) == rhs_exact)
-
-            if verbose:
-                print(f"  LHS = 36*n^3 - 65 = {lhs}")
-                print(f"  RHS = -2*d*x^2*(S - A) = {rhs_exact}")
-                if details["equation_check"]:
-                    print(f"  Equation satisfied ✓")
-                else:
-                    print(f"  Equation NOT satisfied ✗")
-                    errors.append("Original equation not satisfied")
-
-        else:
-            errors.append("Denominator part is zero (S - A = 0)")
-            details["equation_check"] = False
-
-    # 8. Asymptotic check (optional)
-    if abs(n) > 0:
-        ratio = abs(x) / abs(n)**1.25 if abs(n) > 1 else float('inf')
-        details["x_over_n_5_4"] = ratio
-        if verbose:
-            print(f"  x / n^(5/4) = {ratio:.6f} (asymptotic ratio)")
-
-    # Summary
-    all_ok = (details.get("n_mod3_ok", False) and
-              details.get("x_mod12_ok", False) and
-              details.get("x_mod7_ok", False) and
-              details.get("x_divides_K", False) and
-              details.get("sqrt_integer", False) and
-              details.get("equation_check", False) and
-              details.get("d_match", True))
-
-    if verbose:
-        print("-" * 60)
-        if all_ok:
-            print("  ✓ ALL CHECKS PASSED — VALID SOLUTION")
-        else:
-            print("  ✗ SOME CHECKS FAILED:")
-            for err in errors:
-                print(f"    - {err}")
-        print("=" * 60)
-
-    return all_ok, details
+    return {
+        "n": str(n), "x": str(x),
+        "d_num": str(d.numerator), "d_den": str(d.denominator),
+        "y_num": str(y.numerator), "y_den": str(y.denominator),
+        "sqrt_integer": y.denominator == 1,
+    }
 
 
-def batch_verify(solutions, verbose=False):
-    """
-    Verify a batch of candidate solutions.
-
-    solutions: list of (n, x) or (n, x, d_num, d_den) tuples.
-    Returns list of (is_valid, details) for each.
-    """
-    results = []
-    for sol in solutions:
-        if len(sol) == 2:
-            n, x = sol
-            result = verify_solution(n, x, verbose=verbose)
-        elif len(sol) == 4:
-            n, x, d_num, d_den = sol
-            result = verify_solution(n, x, d_num, d_den, verbose=verbose)
-        else:
-            continue
-        results.append(result)
-
-    valid_count = sum(1 for ok, _ in results if ok)
-    print(f"\nBatch verification: {valid_count}/{len(results)} valid")
-
-    return results
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("input", type=Path, help="runner hits.jsonl file (one certificate per line)")
+    parser.add_argument("--n-min", type=int, default=10**43)
+    parser.add_argument("--n-max", type=int, default=10**45)
+    parser.add_argument("--x-min", type=int, default=10**54)
+    parser.add_argument("--x-max", type=int, default=10**55)
+    parser.add_argument("--relax-congruences", action="store_true",
+                        help="TEST ONLY: allow certificates outside production residue classes")
+    parser.add_argument("--allow-integer-d", action="store_true")
+    parser.add_argument("--require-integer-sqrt", action="store_true")
+    args = parser.parse_args(argv)
+    try:
+        bounds = Bounds(args.n_min, args.n_max, args.x_min, args.x_max)
+        count = 0
+        seen: set[tuple[str, str, str, str]] = set()
+        with args.input.open(encoding="utf-8") as stream:
+            for line_number, line in enumerate(stream, 1):
+                if not line.strip():
+                    continue
+                try:
+                    result = verify_record(
+                        json.loads(line), bounds,
+                        require_congruences=not args.relax_congruences,
+                        require_noninteger_d=not args.allow_integer_d,
+                        require_integer_sqrt=args.require_integer_sqrt,
+                    )
+                except (VerificationError, json.JSONDecodeError) as exc:
+                    raise VerificationError(f"line {line_number}: {exc}") from exc
+                count += 1
+                seen.add((result["n"], result["x"], result["d_num"], result["d_den"]))
+        print(json.dumps({"status": "verified", "certificates": count,
+                          "unique_solutions": len(seen),
+                          "duplicates": count - len(seen),
+                          "note": "Individual certificates only; this does not certify search coverage."},
+                         sort_keys=True))
+        return 0
+    except (OSError, ValueError) as exc:
+        print(json.dumps({"status": "error", "error": str(exc)}, sort_keys=True), file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
-    # Demo: verify a known-bad solution (should fail most checks)
-    print("--- Demo: n=1, x=5 (expected to fail) ---\n")
-    verify_solution(1, 5, verbose=True)
-
-    print()
-
-    # Demo: verify with computed d
-    print("--- Demo: n=4, x=5 (expected to fail) ---\n")
-    verify_solution(4, 5, verbose=True)
+    raise SystemExit(main())

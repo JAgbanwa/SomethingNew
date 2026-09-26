@@ -1,153 +1,150 @@
-# Diophantine Equation Solver
+# CE390 — exact continued-fraction search
 
-## Problem
-
-Find rational (non-integer) values of `d` such that the pair `(n, x)`
-consists of integers, and the expression
+Research compute package for the equation
 
 ```
-sqrt((x + 6n)^2 + (36n^3 - 65) / x)
+36*n^3 - 65 = -2*d*x^2 * (sqrt((x+6*n)^2 + (36*n^3-65)/x) - (x+6*n))
 ```
 
-is also an integer, satisfying the equation:
+**Target:** positive integers `10^43 <= n <= 10^45`,
+`10^54 <= x <= 10^55`, with `n % 3 == 1`, `x % 12 == 5`,
+`x % 7 != 0`; rational `d`. Bounds are inclusive and all large
+numbers are decimal integer strings. The principal, nonnegative square root
+is used. Outputs are written to **`/local/output/`**.
+
+This release implements a targeted research search. It does **not** claim
+that a solution exists in this rectangle, that the stated asymptotic scale is
+a proven lower bound, or that a finite sample of rational parameters exhausts
+the rectangle. No target solution is bundled or claimed.
+
+## What is actually searched
+
+Every target solution has `-2 < d < -1`. Write, in lowest terms,
 
 ```
-36n^3 - 65 = -2d * x^2 * (-(x + 6n) + sqrt((x + 6n)^2 + (36n^3 - 65)/x))
+d = -1 - a/(2*q),     a > 0, q > 0, a and q odd, gcd(a,q) = 1.
 ```
 
-### Constraints
-
-- `n ≡ 1 (mod 3)`
-- `x ≡ 5 (mod 12)`
-- `x ≢ 0 (mod 7)`
-- Asymptotically: `|n| ~ 10^43`, `x ~ n^(5/4)`
-
-### Key Result: Reduction to a Thue Equation
-
-After algebraic manipulation, the equation reduces to the cubic Thue form:
+For each explicitly assigned `(a,q)`, the native GMP engine solves
 
 ```
-36*n^3 - 24*d*n*x^2 - 4*d*(1+d)*x^3 = 65
+F(n,x) = 36*q^2*n^3 + 12*q*(2*q+a)*n*x^2 - a*(2*q+a)*x^3
+       = 65*q^2.
 ```
 
-For rational `d = p/q`, multiplying by `q^2` gives an integer Thue equation.
+It computes certified continued-fraction convergents of the unique positive
+root of `F(z,1)=0`, reconstructs the possible common divisor of `(n,x)` by an
+exact perfect-cube test, and verifies every candidate in the original equation.
+It neither loops across the integer rectangle nor factors its 130-digit
+values of `36*n^3-65`. All mathematical accept/reject decisions use arbitrary
+precision integers. Timing measurements alone use floating point.
 
-### Key Result: CM Elliptic Curve (j = 0)
+**Coverage guarantee:** a successfully completed fiber covers every target
+solution for that single rational `d`; a successfully completed task covers
+its assigned fibers. A partial task does not certify its unfinished fiber.
+The proof, scope of the small-bound test fallback, and derivation are in
+[MATHEMATICS.md](MATHEMATICS.md).
 
-The associated elliptic curve has j-invariant 0, giving it complex
-multiplication by Z[omega] (ring of integers of Q(sqrt(-3))).
+The default accepts rational square roots, as required for rational `d` in
+the stated equation. Set `require_integer_sqrt` to true to restrict the search
+to integer square roots. That stricter problem gives integer cubes summing to
+390; allowing rational square roots is a larger problem.
 
----
+## Build and validate
 
-## File Structure
+A C++17 compiler, GNU make, GMP development libraries, and Python 3.10+ are
+required. The Python tooling uses only the standard library. On a Debian or
+Ubuntu build host, install `g++ make libgmp-dev python3`, then run:
 
-| File | Purpose |
-|------|---------|
-| `modular_sieve.py` | Modular sieve: filter (n, x) by primes, estimate density, CRT combination |
-| `thue_param.py` | Parameterize d = -1 - p/q, generate Thue forms, produce PARI/GP and Magma commands |
-| `factorization_search.py` | Factorization search via (y-w)(y+w) = (36n^3-65)*x, with modular pre-filter |
-| `mw_sieve.py` | Mordell-Weil sieve: elliptic curve arithmetic over F_p, local filtering |
-| `cm_descent.py` | 3-descent on CM curve j=0: Z[omega] arithmetic, factorization, Selmer group |
-| `lll_search.py` | LLL reduction and Coppersmith's method for small root finding |
-| `verify.py` | Full solution verification: all conditions, integrality, original equation |
-| `main.py` | Orchestrator: `--mode demo/sieve/factor/search-small/search-large/verify` |
-| `README.md` | This file |
-
----
-
-## Usage
-
-### Demo (all algorithms)
 ```bash
-python main.py --mode demo
+make
+python3 -m unittest discover -s tests -v
 ```
 
-### Modular sieve report
+See [VALIDATION.md](VALIDATION.md) for the checks actually run for this
+release and the limits of that validation. `Dockerfile` supplies the same
+build environment for Charity Engine. Native builds and container builds
+are different validation claims; consult the release record before dispatch.
+
+## Run independent jobs
+
+Use [CE_OPERATIONS.md](CE_OPERATIONS.md) for exact job creation, command
+lines, calibration, resumption, and collection. Each task uses one worker
+process and one CPU core. Give every task an isolated `/local/output/`.
+Choose its finite fiber count from measured throughput on representative
+Charity Engine CPUs. The default soft budget is 3,000 seconds for a one-hour
+reservation; 6,000 seconds is appropriate for a two-hour reservation.
+
+Each task records its input and exact coverage, checkpoints the next
+uncompleted fiber, and writes a continuation when the soft deadline interrupts
+it. Retrieve **all** output files, including empty hit files, completion
+status, and continuations. An empty hits file by itself is not evidence of
+complete coverage. A replay may repeat arithmetic; it must not advance the
+coverage cursor past an incomplete fiber.
+
+The campaign generator is paged: it writes only the requested job page.
+Starting another numerator range or increasing parameter bounds creates a
+new campaign; it must not silently redefine old task identities. No script
+submits paid jobs or sends messages automatically.
+
+`examples/pilot/` contains one small calibration task. `examples/50min/`
+and `examples/100min/` contain example first pages with those soft budgets;
+their fixed counts are starting points to recalibrate, not promised durations.
+Only the included page is assigned, not every task in its broader parameter
+interval. Do not submit the overlapping example campaigns together.
+
+After retrieving pilot results into a directory such as `returned/`, run:
+
 ```bash
-python main.py --mode sieve
+python3 collector.py --page examples/pilot/page-000000000000.json \
+  --results-dir returned --output-dir collected
+python3 verify.py collected/hits.jsonl
 ```
 
-### Factorization search (small n)
-```bash
-python main.py --mode factor
+The collector validates task identities, checks certificates, merges returned
+coverage intervals, and reports gaps. It exits 0 for complete selected-page
+coverage, 2 for valid partial returns, and 1 for invalid data. An empty result
+file is normal. To collect multiple pages, repeat `--page`.
+
+## Choosing rational parameters
+
+The supplied bounds imply approximately
+
+```
+1.2e-11 < a/q < 1.2000000000000000018e-8.
 ```
 
-### Small solution search (|n| <= 10^6)
-```bash
-python main.py --mode search-small
-```
+This ratio only identifies potentially relevant fibers. It does not bound
+`a` or `q` individually, and small numerators are a search preference, not a
+completeness theorem or an evidence-based prediction of where a solution is.
+You can search large decimal parameters; avoid describing a
+small-numerator pilot as a comprehensive campaign. First benchmark a small
+representative page, then agree a finite campaign and CPU budget with the
+Charity Engine team. The files support such campaigns without asserting a
+known practical route to a first solution.
 
-### Large solution parameters (~10^43)
-```bash
-python main.py --mode search-large
-```
+A result certificate contains exact `n`, `x`, rational `d`, and rational
+square root. Independently recheck returned hits using `verify.py` before
+reporting any mathematical discovery. Keep the task and its status alongside
+the hits to distinguish discovery verification from coverage accounting.
 
-### Verify a specific solution
-```bash
-python main.py --mode verify <n> <x> [<d_num> <d_den>]
-```
+## Files and provenance
 
----
+- `src/cf_worker.cpp`: native exact search engine.
+- `campaign.py`, `run_task.py`, `run_task.sh`: bounded independent tasks.
+- `verify.py`: independent exact result verification.
+- `collector.py`: validate returned certificates and detect gaps in a job page.
+- `tests/`: differential, arithmetic, and task-lifecycle tests.
+- `MATHEMATICS.md`: derivation and completeness proof per fiber.
+- `CE_OPERATIONS.md`: Charity Engine handoff instructions.
+- `VALIDATION.md`, `validation/`: release evidence.
+- `SHA256SUMS`: hashes of delivered source and evidence files.
 
-## Recommended Strategy
-
-For the target scale |n| ~ 10^43, a hybrid approach is recommended:
-
-| Step | Method | Module | Purpose |
-|------|--------|--------|---------|
-| 1 | Parameterize d = -1 - p/q (small p) | `thue_param.py` | Narrow d space |
-| 2 | Modular sieve (30-50 primes) | `modular_sieve.py` | Narrow (n, x) mod M |
-| 3 | 3-descent on CM curve (j=0) | `cm_descent.py` | Find E(Q) for fixed x |
-| 4 | Mordell-Weil sieve | `mw_sieve.py` | Compress candidates to O(1) |
-| 5 | Tzanakis-de Weger (PARI/Magma) | `thue_param.py` | Exact solution for final d |
-| 6 | Factorization check | `factorization_search.py` | Validate found (n, x) |
-| 7 | Full verification | `verify.py` | Confirm all conditions |
-
-### Why start with d ≈ -1?
-
-For the root d ≈ -1, the denominator q ~ 10^11, which is significantly
-smaller than q ~ 10^32 for the root d ≈ 0. This makes the associated
-cubic field discriminant more tractable and the 3-descent more feasible.
-
----
-
-## External Tools
-
-For the actual large-scale computations, these Python modules serve as
-pre-processing, command generation, and verification tools. The heavy
-lifting should be done in:
-
-- **PARI/GP**: `thue()` for solving Thue equations
-- **Magma**: `Thue()`, `RankBounds()`, `IntegralPoints()`, `HeegnerPoint()`
-- **SageMath**: `EllipticCurve()`, `integral_points()`, `descent()`
-- **fpLLL**: BKZ reduction for large lattices
-
----
-
-## Complexity Estimates
-
-| Component | Complexity | Notes |
-|-----------|-----------|-------|
-| Modular sieve (per prime) | O(p^2) | Small primes, parallelizable |
-| Thue equation (Tzanakis-de Weger) | O(sqrt(|Delta|)) | Delta ~ 10^46 for d ≈ -1 |
-| 3-descent (j=0) | Polynomial in |k| | k ~ x^3 ~ 10^159 (hard) |
-| Mordell-Weil sieve | O(|E(F_p)| * num_primes) | Parallelizable across primes |
-| LLL/BKZ | O(n^6 * log B) | n = lattice dimension, B = entry size |
-| Factorization check | O(|K|^{1/2}) | K = 36n^3 - 65 |
-
-### Parallelization
-
-The modular sieve and Mordell-Weil sieve are embarrassingly parallel:
-each prime can be processed independently. The Thue equation solving
-and 3-descent are sequential per parameter set, but different parameter
-sets (different p values) can be distributed across cores.
-
----
-
-## Dependencies
-
-- Python 3.8+
-- `sympy` (for prime generation, factorization, modular arithmetic)
-- Standard library: `math`, `fractions`, `argparse`, `collections`
-
-No additional packages required for core functionality.
+This is a replacement of the former demonstration package, not a claim to
+implement a CM descent, Mordell–Weil sieve, or Coppersmith method. The
+continued-fraction algorithm is derived in this release. The integer-radical
+connection to sums of three cubes is contextualized by Booker and Sutherland,
+[On a question of Mordell](https://arxiv.org/abs/2007.01209); their full
+algorithm is not implemented here. Charity Engine I/O and task conventions
+were checked against its [computing documentation](https://www.charityengine.com/docs/Computing%2Bwith%2BCharity%2BEngine)
+on 2026-09-26.

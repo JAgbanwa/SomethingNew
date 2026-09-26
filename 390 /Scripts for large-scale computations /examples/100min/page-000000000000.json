@@ -1,0 +1,22 @@
+{
+  "campaign_id": "ce390-100min-001",
+  "candidates_per_task": "100000000",
+  "coverage_note": "Finite selected rational-d fibers only. No claim to exhaust the full n,x rectangle.",
+  "next_page_start": "1",
+  "page_start": "0",
+  "page_task_count": 1,
+  "schema": "ce390-page-v1",
+  "tasks": [
+    {
+      "file": "task-000000000000-16fb0a39ff40a6aa.json",
+      "ordinal": "0",
+      "slice": {
+        "start": "0",
+        "stop": "100000000"
+      },
+      "task_id": "16fb0a39ff40a6aafcd12878a6511289eada5e15105f2862b347671ac445b1c0"
+    }
+  ],
+  "total_candidate_indices": "49950000001",
+  "total_tasks": "500"
+}

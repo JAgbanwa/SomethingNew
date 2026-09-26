@@ -1,0 +1,29 @@
+{
+  "campaign_id": "ce390-50min-001",
+  "execution": {
+    "checkpoint_seconds": 5,
+    "max_precision_bits": 16384,
+    "precision_bits": 512,
+    "time_limit_seconds": 3000
+  },
+  "fibers": {
+    "a_values": [
+      "1"
+    ],
+    "q_max": "100000000001",
+    "q_min": "100000001"
+  },
+  "parameterization": "d=-1-a/(2q);positive-odd-coprime-a-q",
+  "schema": "ce390-task-v1",
+  "search": {
+    "n_max": "1000000000000000000000000000000000000000000000",
+    "n_min": "10000000000000000000000000000000000000000000",
+    "x_max": "10000000000000000000000000000000000000000000000000000000",
+    "x_min": "1000000000000000000000000000000000000000000000000000000"
+  },
+  "slice": {
+    "start": "0",
+    "stop": "50000000"
+  },
+  "task_id": "37bb3667a8f071eebe127c6df28d3116c3081aede7c1be419a0829a18d34f6aa"
+}

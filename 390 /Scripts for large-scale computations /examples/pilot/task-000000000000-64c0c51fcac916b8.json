@@ -1,0 +1,29 @@
+{
+  "campaign_id": "ce390-pilot-001",
+  "execution": {
+    "checkpoint_seconds": 5,
+    "max_precision_bits": 16384,
+    "precision_bits": 512,
+    "time_limit_seconds": 3000
+  },
+  "fibers": {
+    "a_values": [
+      "1"
+    ],
+    "q_max": "100100001",
+    "q_min": "100000001"
+  },
+  "parameterization": "d=-1-a/(2q);positive-odd-coprime-a-q",
+  "schema": "ce390-task-v1",
+  "search": {
+    "n_max": "1000000000000000000000000000000000000000000000",
+    "n_min": "10000000000000000000000000000000000000000000",
+    "x_max": "10000000000000000000000000000000000000000000000000000000",
+    "x_min": "1000000000000000000000000000000000000000000000000000000"
+  },
+  "slice": {
+    "start": "0",
+    "stop": "30000"
+  },
+  "task_id": "64c0c51fcac916b863d116ce690b4f68509ee4ee3d4f7e19d62dc630fb0d29e5"
+}
