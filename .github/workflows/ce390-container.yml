@@ -24,7 +24,8 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: '390 /Scripts for large-scale computations '
+        # Preserve the repository directory's trailing space through runner normalization.
+        working-directory: '390 /Scripts for large-scale computations /.'
     env:
       CE390_IMAGE: ce390:${{ github.sha }}
     steps:
@@ -138,4 +139,3 @@ jobs:
             "$release_dir/ce390-linux-amd64.tar" \
             "$release_dir/container-evidence.zip" \
             "$release_dir/SHA256SUMS"
-
