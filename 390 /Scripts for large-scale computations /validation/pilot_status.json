@@ -1,17 +1,17 @@
 {
-  "campaign_id": "ce390-pilot-001",
+  "campaign_id": "ce390-signed-pilot-001",
   "complete": true,
   "counters_this_invocation": {
     "bounds_excluded": "0",
-    "cf_fibers_completed": "10000",
-    "congruence_excluded": "20000",
-    "convergents": "173782",
-    "fibers_completed": "10000",
+    "cf_fibers_completed": "20000",
+    "congruence_excluded": "10000",
+    "convergents": "347558",
+    "fibers_completed": "20000",
     "new_hits": "0",
     "non_coprime_skipped": "0"
   },
-  "coverage_note": "Only the selected rational-d fibers are covered; this is not an exhaustive search of the n,x rectangle.",
-  "elapsed_seconds": 0.700486,
+  "coverage_note": "Only the selected absolute-slope fibers and requested signs are covered; this is not an exhaustive search of the signed n,x magnitude regions.",
+  "elapsed_seconds": 1.608281,
   "invocation_coverage": {
     "start": "0",
     "stop": "30000"
@@ -23,16 +23,16 @@
   },
   "reason": "selected_fibers_exhausted",
   "remaining_indices": "0",
-  "schema": "ce390-status-v1",
+  "schema": "ce390-status-v2",
   "slice": {
     "start": "0",
     "stop": "30000"
   },
-  "started_utc": "2026-09-26T21:15:53.967213+00:00",
+  "started_utc": "2026-09-27T08:57:05.972426+00:00",
   "state": "complete",
-  "task_id": "64c0c51fcac916b863d116ce690b4f68509ee4ee3d4f7e19d62dc630fb0d29e5",
+  "task_id": "7eecbfadd14726ffd42a58b3643c379d78fb9cebce2d094ed9fa8964b1e74fda",
   "time_limit_seconds": 3000,
   "unique_hits_in_this_output": "0",
-  "updated_utc": "2026-09-26T21:15:54.667700+00:00",
-  "worker_sha256": "db637a883a99401ae133f9c73d98cceef97369003e9338c00354ca8b4d6118f8"
+  "updated_utc": "2026-09-27T08:57:07.580705+00:00",
+  "worker_sha256": "4094460226cc692b5996cda4bcb40ef2ea75be2c6505929fbb709c3eff6a59d9"
 }

@@ -1,4 +1,4 @@
-# CE390 — exact continued-fraction search
+# CE390 3.1.0 — exact continued-fraction search
 
 Research compute package for the equation
 
@@ -6,11 +6,14 @@ Research compute package for the equation
 36*n^3 - 65 = -2*d*x^2 * (sqrt((x+6*n)^2 + (36*n^3-65)/x) - (x+6*n))
 ```
 
-**Target:** positive integers `10^43 <= n <= 10^45`,
-`10^54 <= x <= 10^55`, with `n % 3 == 1`, `x % 12 == 5`,
+**Target:** integers `10^43 <= abs(n) <= 10^45`,
+`10^54 <= abs(x) <= 10^55`, with `n % 3 == 1`, `x % 12 == 5`,
 `x % 7 != 0`; rational `d`. Bounds are inclusive and all large
 numbers are decimal integer strings. The principal, nonnegative square root
-is used. Outputs are written to **`/local/output/`**.
+is used. **All four sign combinations are searched by default:** `(+,+)`,
+`(+,-)`, `(-,+)`, and `(-,-)`. Congruences apply to the signed integers;
+for example, a negative `x` must still satisfy `x % 12 == 5`.
+Outputs are written to **`/local/output/`**.
 
 This release implements a targeted research search. It does **not** claim
 that a solution exists in this rectangle, that the stated asymptotic scale is
@@ -19,29 +22,37 @@ the rectangle. No target solution is bundled or claimed.
 
 ## What is actually searched
 
-Every target solution has `-2 < d < -1`. Write, in lowest terms,
+Write `N=abs(n)`, `X=abs(x)`, `tau=sign(n*x)` and let `y` be the
+principal square root. Every target solution has a unique reduced slope
 
 ```
-d = -1 - a/(2*q),     a > 0, q > 0, a and q odd, gcd(a,q) = 1.
+a/q = abs(y/X - 1 + 6*n/x),     0 < a < q,
+a and q odd, gcd(a,q) = 1.
 ```
 
-For each explicitly assigned `(a,q)`, the native GMP engine solves
+For each explicitly assigned `(a,q)`, the native GMP engine considers
+both `tau=+1` and `tau=-1` and solves
 
 ```
-F(n,x) = 36*q^2*n^3 + 12*q*(2*q+a)*n*x^2 - a*(2*q+a)*x^3
-       = 65*q^2.
+H_tau(N,X) = 36*q^2*N^3 + 12*q*(2*q+tau*a)*N*X^2
+             - a*(2*q+tau*a)*X^3
+           = sign(n)*65*q^2.
 ```
 
 It computes certified continued-fraction convergents of the unique positive
-root of `F(z,1)=0`, reconstructs the possible common divisor of `(n,x)` by an
-exact perfect-cube test, and verifies every candidate in the original equation.
+root of each `H_tau(z,1)=0`, reconstructs the possible common divisor of
+`(n,x)` by an exact perfect-cube test, and recovers both signs from the
+polynomial residual. It computes `d=-(y+x+6*n)/(2*x)` and verifies every
+candidate in the original equation.
 It neither loops across the integer rectangle nor factors its 130-digit
 values of `36*n^3-65`. All mathematical accept/reject decisions use arbitrary
 precision integers. Timing measurements alone use floating point.
 
 **Coverage guarantee:** a successfully completed fiber covers every target
-solution for that single rational `d`; a successfully completed task covers
-its assigned fibers. A partial task does not certify its unfinished fiber.
+solution with that auxiliary slope `a/q`, in the requested sign combinations
+and magnitude bounds; a successfully completed task covers its assigned
+fibers. A fiber does not fix `d` when `x<0`. A partial task does not certify
+its unfinished fiber.
 The proof, scope of the small-bound test fallback, and derivation are in
 [MATHEMATICS.md](MATHEMATICS.md).
 
@@ -60,6 +71,25 @@ Ubuntu build host, install `g++ make libgmp-dev python3`, then run:
 make
 python3 -m unittest discover -s tests -v
 ```
+
+On your Apple Silicon Mac with **Intel GMP already installed under
+`/usr/local`**, use:
+
+```bash
+export PATH="$(brew --prefix python@3.12)/libexec/bin:$PATH"
+export CXX="clang++ -arch x86_64"
+export CXXFLAGS="-O3 -std=c++17 -Wall -Wextra -Wpedantic"
+export CPPFLAGS="-I$(brew --prefix gmp)/include"
+export LDFLAGS="-L$(brew --prefix gmp)/lib"
+export LDLIBS="-lgmpxx -lgmp"
+make clean && make &&
+"$(brew --prefix python@3.12)/bin/python3.12" -m unittest discover -s tests -v
+```
+
+Intel executables on Apple Silicon require Rosetta. With native ARM GMP
+under `/opt/homebrew`, use `export CXX=clang++` instead. The configuration
+above passed the previous 3.0.0 test suite on the user's Mac; the revised
+3.1.0 suite must be rerun there. Local tests do not submit CE jobs.
 
 See [VALIDATION.md](VALIDATION.md) for the checks actually run for this
 release and the limits of that validation. `Dockerfile` supplies the same
@@ -111,7 +141,7 @@ file is normal. To collect multiple pages, repeat `--page`.
 The supplied bounds imply approximately
 
 ```
-1.2e-11 < a/q < 1.2000000000000000018e-8.
+12*10^-12 < a/q < 12*10^-9 + 37*10^-27 < 1.
 ```
 
 This ratio only identifies potentially relevant fibers. It does not bound
@@ -122,6 +152,12 @@ small-numerator pilot as a comprehensive campaign. First benchmark a small
 representative page, then agree a finite campaign and CPU budget with the
 Charity Engine team. The files support such campaigns without asserting a
 known practical route to a first solution.
+
+**Upgrade from 3.0.0:** regenerate tasks using the new generator. The
+`ce390-task-v2` schema records magnitude bounds and a sign policy, and uses
+the new auxiliary-slope parameterization. Old tasks and checkpoints are
+rejected rather than silently given broader coverage. Earlier positive-only
+test and pilot results do not establish completion of the signed campaign.
 
 A result certificate contains exact `n`, `x`, rational `d`, and rational
 square root. Independently recheck returned hits using `verify.py` before

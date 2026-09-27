@@ -25,7 +25,7 @@ class SupervisorTests(unittest.TestCase):
         self.task={"schema":run_task.SCHEMA,"parameterization":run_task.PARAMETERIZATION,
                    "campaign_id":"test-supervisor", "search":{
                        "n_min":str(10**43),"n_max":str(10**45),
-                       "x_min":str(10**54),"x_max":str(10**55)},
+                       "x_min":str(10**54),"x_max":str(10**55),"signs":"all"},
                    "fibers":{"a_values":["1"],"q_min":"5","q_max":"17"},
                    "slice":{"start":"0","stop":"7"},
                    "execution":{"time_limit_seconds":1,"precision_bits":512}}
@@ -45,8 +45,10 @@ class SupervisorTests(unittest.TestCase):
             "for line in sys.stdin:\n"
             " a,q=line.split()\n"
             " if mode=='hang' or (mode=='partial' and q=='11' and not marker.exists()): time.sleep(3600)\n"
-            " row={'a':a,'q':q,'status':'error' if mode=='error' else 'complete','hits':[],'convergents':'1','congruences_enforced':mode!='relaxed','integer_sqrt_required':'--integer-sqrt' in sys.argv,'excluded_by_bounds':False,'excluded_by_congruence':False}\n"
+            " row={'a':a,'q':q,'status':'error' if mode=='error' else 'complete','parameterization':'absolute-slope-a-over-q-v1','hits':[],'convergents':'1','congruences_enforced':mode!='relaxed','integer_sqrt_required':'--integer-sqrt' in sys.argv,'excluded_by_bounds':False,'excluded_by_congruence':False,'signs':sys.argv[sys.argv.index('--signs')+1]}\n"
             " if mode=='wrong': row['q']='999'\n"
+            " if mode=='positive_only': row['signs']='pp'\n"
+            " if mode=='old_parameterization': row['parameterization']='d=-1-a/(2q);positive-odd-coprime-a-q'\n"
             " print(json.dumps(row),flush=True)\n",encoding="utf-8")
         self.worker.chmod(0o755)
 
@@ -124,6 +126,43 @@ class SupervisorTests(unittest.TestCase):
         run=self.run_supervisor()
         self.assertEqual(run.returncode,2,run.stderr+run.stdout)
         self.assertEqual(self.status()["next_index"],"0")
+
+    def test_old_parameterization_worker_cannot_certify_new_task(self):
+        self.mock("old_parameterization")
+        run=self.run_supervisor()
+        self.assertEqual(run.returncode,2,run.stderr+run.stdout)
+        self.assertEqual(self.status()["next_index"],"0")
+        self.assertEqual(self.status()["state"],"error")
+
+    def test_positive_only_worker_cannot_certify_all_signs(self):
+        self.mock("positive_only")
+        run=self.run_supervisor()
+        self.assertEqual(run.returncode,2,run.stderr+run.stdout)
+        self.assertEqual(self.status()["next_index"],"0")
+        self.assertEqual(self.status()["state"],"error")
+
+    def test_each_requested_quadrant_is_forwarded_to_worker(self):
+        self.mock()
+        for signs in ("pp","pn","np","nn"):
+            with self.subTest(signs=signs):
+                self.output=self.folder/("out-"+signs)
+                self.task["search"]["signs"]=signs
+                self.task["task_id"]=run_task.task_identity(self.task)
+                self.write_task()
+                run=self.run_supervisor()
+                self.assertEqual(run.returncode,0,run.stderr+run.stdout)
+                self.assertTrue(self.status()["complete"])
+                stored=json.loads((self.output/"task.json").read_text())
+                self.assertEqual(stored["search"]["signs"],signs)
+
+    def test_v1_task_cannot_be_silently_broadened_to_signed_search(self):
+        old=copy.deepcopy(self.task)
+        old["schema"]="ce390-task-v1"
+        old["parameterization"]="d=-1-a/(2q);positive-odd-coprime-a-q"
+        old["search"].pop("signs")
+        old["task_id"]=run_task.task_identity(old)
+        with self.assertRaisesRegex(ValueError,"v1 positive-only"):
+            run_task.validate_task(old)
 
     def test_signal_saves_checkpoint_without_advancing_current_fiber(self):
         self.mock("hang")

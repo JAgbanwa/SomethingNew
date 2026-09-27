@@ -33,10 +33,16 @@ class Bounds:
     n_max: int = 10**45
     x_min: int = 10**54
     x_max: int = 10**55
+    magnitudes: bool = False
+    signs: str = "all"
 
     def __post_init__(self) -> None:
         if self.n_min > self.n_max or self.x_min > self.x_max:
             raise ValueError("bounds must be ordered inclusive intervals")
+        if self.magnitudes and (self.n_min < 1 or self.x_min < 1):
+            raise ValueError("magnitude bounds must be positive")
+        if self.signs not in {"all", "pp", "pn", "np", "nn"}:
+            raise ValueError("signs must be all, pp, pn, np or nn")
 
 
 def integer(value: Any, field: str) -> int:
@@ -74,13 +80,13 @@ def verify_record(
 ) -> dict[str, Any]:
     """Check one solution against the original radical equation.
 
-    Passing custom signed bounds is supported for regression fixtures.  It is
-    never implicit: omitted bounds always select the positive production box.
-    The principal square root is required, including in signed test fixtures.
+    Omitted bounds select production magnitudes and all four sign combinations.
+    Explicit Bounds retain signed interval semantics unless magnitudes=True.
+    The principal square root is required in every sign combination.
     """
     if not isinstance(record, dict):
         raise VerificationError("certificate must be a JSON object")
-    bounds = bounds or Bounds()
+    bounds = bounds or Bounds(magnitudes=True)
     try:
         n = integer(record["n"], "n")
         x = integer(record["x"], "x")
@@ -88,10 +94,15 @@ def verify_record(
         raise VerificationError(f"missing required field: {exc.args[0]}") from exc
     if x == 0:
         raise VerificationError("x must be nonzero")
-    if not bounds.n_min <= n <= bounds.n_max:
+    bounded_n = abs(n) if bounds.magnitudes else n
+    bounded_x = abs(x) if bounds.magnitudes else x
+    if not bounds.n_min <= bounded_n <= bounds.n_max:
         raise VerificationError("n is outside the inclusive requested bounds")
-    if not bounds.x_min <= x <= bounds.x_max:
+    if not bounds.x_min <= bounded_x <= bounds.x_max:
         raise VerificationError("x is outside the inclusive requested bounds")
+    signs = ("p" if n > 0 else "n") + ("p" if x > 0 else "n")
+    if bounds.signs != "all" and signs != bounds.signs:
+        raise VerificationError("n,x do not match the requested signs")
     if require_congruences and not (n % 3 == 1 and x % 12 == 5 and x % 7 != 0):
         raise VerificationError("the production congruences fail")
 
@@ -138,10 +149,14 @@ def verify_record(
     if "a" in record:
         fiber_a = integer(record["a"], "a")
         fiber_q = integer(record["q"], "q")
-        if fiber_a <= 0 or fiber_q <= 0:
-            raise VerificationError("fiber a and q must be positive")
-        if Fraction(-1) - Fraction(fiber_a, 2 * fiber_q) != d:
-            raise VerificationError("the fiber a,q do not reproduce d")
+        if not 0 < fiber_a < fiber_q:
+            raise VerificationError("fiber a,q must satisfy 0 < a < q")
+        slope = Fraction(fiber_a, fiber_q)
+        if (slope.numerator, slope.denominator) != (fiber_a, fiber_q):
+            raise VerificationError("fiber a,q must be coprime")
+        actual_slope = abs(y / abs(x) - 1 + Fraction(6 * n, x))
+        if slope != actual_slope:
+            raise VerificationError("the fiber a,q do not reproduce the absolute slope")
 
     return {
         "n": str(n), "x": str(x),
@@ -158,13 +173,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--n-max", type=int, default=10**45)
     parser.add_argument("--x-min", type=int, default=10**54)
     parser.add_argument("--x-max", type=int, default=10**55)
+    parser.add_argument("--signs", choices=("all", "pp", "pn", "np", "nn"), default="all",
+                        help="allowed signs of n,x; bounds otherwise apply to their magnitudes")
+    parser.add_argument("--signed-intervals", action="store_true",
+                        help="TEST ONLY: interpret bounds as signed intervals instead of magnitudes")
     parser.add_argument("--relax-congruences", action="store_true",
                         help="TEST ONLY: allow certificates outside production residue classes")
     parser.add_argument("--allow-integer-d", action="store_true")
     parser.add_argument("--require-integer-sqrt", action="store_true")
     args = parser.parse_args(argv)
     try:
-        bounds = Bounds(args.n_min, args.n_max, args.x_min, args.x_max)
+        bounds = Bounds(args.n_min, args.n_max, args.x_min, args.x_max,
+                        magnitudes=not args.signed_intervals, signs=args.signs)
         count = 0
         seen: set[tuple[str, str, str, str]] = set()
         with args.input.open(encoding="utf-8") as stream:

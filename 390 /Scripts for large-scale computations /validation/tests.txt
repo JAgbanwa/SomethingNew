@@ -1,6 +1,13 @@
+mkdir -p bin
+g++ -I/workspace/scratch/8e93bad8416a/build_deps/root/usr/include -I/workspace/scratch/8e93bad8416a/build_deps/root/usr/include/x86_64-linux-gnu -O3 -std=c++17 -Wall -Wextra -Wpedantic src/cf_worker.cpp -L/workspace/scratch/8e93bad8416a/build_deps/root/usr/lib/x86_64-linux-gnu -lgmpxx -lgmp -o bin/cf_worker
+python3 -m unittest discover -s tests -v
+test_auxiliary_slope_domain_and_positive_magnitudes_are_enforced (test_campaign.CampaignTests.test_auxiliary_slope_domain_and_positive_magnitudes_are_enforced) ... ok
 test_integer_radical_campaign_has_distinct_task_identity (test_campaign.CampaignTests.test_integer_radical_campaign_has_distinct_task_identity) ... ok
 test_invalid_page_and_conflicting_task_file_are_rejected (test_campaign.CampaignTests.test_invalid_page_and_conflicting_task_file_are_rejected) ... ok
 test_page_boundaries_are_gap_free_nonoverlapping_and_deterministic (test_campaign.CampaignTests.test_page_boundaries_are_gap_free_nonoverlapping_and_deterministic) ... ok
+test_sign_policy_is_explicit_and_part_of_task_identity (test_campaign.CampaignTests.test_sign_policy_is_explicit_and_part_of_task_identity) ... ok
+test_changed_returned_sign_policy_cannot_claim_original_task (test_collector.CollectorTests.test_changed_returned_sign_policy_cannot_claim_original_task) ... ok
+test_collected_task_reports_all_sign_coverage_policy (test_collector.CollectorTests.test_collected_task_reports_all_sign_coverage_policy) ... ok
 test_different_binary_hashes_for_one_task_are_rejected (test_collector.CollectorTests.test_different_binary_hashes_for_one_task_are_rejected) ... ok
 test_disjoint_host_returns_union_to_full_selected_coverage (test_collector.CollectorTests.test_disjoint_host_returns_union_to_full_selected_coverage) ... ok
 test_hit_file_loss_cannot_be_silently_counted_as_complete (test_collector.CollectorTests.test_hit_file_loss_cannot_be_silently_counted_as_complete) ... ok
@@ -13,24 +20,35 @@ test_binary_change_invalidates_checkpoint (test_runner.SupervisorTests.test_bina
 test_complete_empty_task_records_exact_selected_coverage (test_runner.SupervisorTests.test_complete_empty_task_records_exact_selected_coverage) ... ok
 test_continuation_on_new_host_does_not_claim_unreturned_prefix (test_runner.SupervisorTests.test_continuation_on_new_host_does_not_claim_unreturned_prefix) ... ok
 test_duplicate_json_keys_are_rejected (test_runner.SupervisorTests.test_duplicate_json_keys_are_rejected) ... ok
+test_each_requested_quadrant_is_forwarded_to_worker (test_runner.SupervisorTests.test_each_requested_quadrant_is_forwarded_to_worker) ... ok
 test_immutable_task_definition_cannot_be_silently_changed (test_runner.SupervisorTests.test_immutable_task_definition_cannot_be_silently_changed) ... ok
 test_interrupted_trailing_append_is_recovered (test_runner.SupervisorTests.test_interrupted_trailing_append_is_recovered) ... ok
 test_lost_whole_hit_records_in_prior_output_are_detected (test_runner.SupervisorTests.test_lost_whole_hit_records_in_prior_output_are_detected) ... ok
 test_mismatched_worker_response_is_not_accepted (test_runner.SupervisorTests.test_mismatched_worker_response_is_not_accepted) ... ok
+test_old_parameterization_worker_cannot_certify_new_task (test_runner.SupervisorTests.test_old_parameterization_worker_cannot_certify_new_task) ... ok
+test_positive_only_worker_cannot_certify_all_signs (test_runner.SupervisorTests.test_positive_only_worker_cannot_certify_all_signs) ... ok
 test_relaxed_worker_mode_cannot_certify_production_coverage (test_runner.SupervisorTests.test_relaxed_worker_mode_cannot_certify_production_coverage) ... ok
 test_signal_saves_checkpoint_without_advancing_current_fiber (test_runner.SupervisorTests.test_signal_saves_checkpoint_without_advancing_current_fiber) ... ok
 test_soft_deadline_replays_incomplete_fiber_and_resumes (test_runner.SupervisorTests.test_soft_deadline_replays_incomplete_fiber_and_resumes) ... ok
+test_v1_task_cannot_be_silently_broadened_to_signed_search (test_runner.SupervisorTests.test_v1_task_cannot_be_silently_broadened_to_signed_search) ... ok
 test_worker_error_never_advances_cursor (test_runner.SupervisorTests.test_worker_error_never_advances_cursor) ... ok
+test_absolute_slope_metadata_is_verified (test_verify.CertificateTests.test_absolute_slope_metadata_is_verified) ... ok
+test_bounds_validation_rejects_bad_magnitudes_and_signs (test_verify.CertificateTests.test_bounds_validation_rejects_bad_magnitudes_and_signs) ... ok
 test_cli_accepts_fixture_and_reports_exact_count (test_verify.CertificateTests.test_cli_accepts_fixture_and_reports_exact_count) ... ok
 test_cli_empty_file_does_not_claim_a_hit (test_verify.CertificateTests.test_cli_empty_file_does_not_claim_a_hit) ... ok
+test_cli_magnitude_defaults_accept_negative_n (test_verify.CertificateTests.test_cli_magnitude_defaults_accept_negative_n) ... ok
+test_congruences_apply_to_signed_values_not_magnitudes (test_verify.CertificateTests.test_congruences_apply_to_signed_values_not_magnitudes) ... ok
 test_congruences_are_enforced_by_default (test_verify.CertificateTests.test_congruences_are_enforced_by_default) ... ok
+test_default_magnitude_policy_reaches_radical_check_in_all_quadrants (test_verify.CertificateTests.test_default_magnitude_policy_reaches_radical_check_in_all_quadrants) ... ok
 test_inclusive_custom_bounds (test_verify.CertificateTests.test_inclusive_custom_bounds) ... ok
+test_magnitude_bounds_accept_signed_historical_solutions (test_verify.CertificateTests.test_magnitude_bounds_accept_signed_historical_solutions) ... ok
 test_noncanonical_and_bad_numbers_rejected (test_verify.CertificateTests.test_noncanonical_and_bad_numbers_rejected) ... ok
 test_nonprimitive_fixture (test_verify.CertificateTests.test_nonprimitive_fixture) ... ok
 test_other_algebraic_d_branch_rejected (test_verify.CertificateTests.test_other_algebraic_d_branch_rejected) ... ok
 test_production_bounds_are_enforced_by_default (test_verify.CertificateTests.test_production_bounds_are_enforced_by_default) ... ok
 test_production_size_near_square_cannot_pass (test_verify.CertificateTests.test_production_size_near_square_cannot_pass) ... ok
 test_rational_sqrt_is_not_silently_called_integer (test_verify.CertificateTests.test_rational_sqrt_is_not_silently_called_integer) ... ok
+test_requested_signs_are_enforced (test_verify.CertificateTests.test_requested_signs_are_enforced) ... ok
 test_seven_original_equation_certificates (test_verify.CertificateTests.test_seven_original_equation_certificates) ... ok
 test_signed_x_uses_absolute_denominator_for_principal_sqrt (test_verify.CertificateTests.test_signed_x_uses_absolute_denominator_for_principal_sqrt) ... ok
 test_tampered_d_rejected (test_verify.CertificateTests.test_tampered_d_rejected) ... ok
@@ -38,12 +56,13 @@ test_tampered_y_rejected (test_verify.CertificateTests.test_tampered_y_rejected)
 test_wrong_sqrt_branch_rejected (test_verify.CertificateTests.test_wrong_sqrt_branch_rejected) ... ok
 test_zero_x_rejected_before_division (test_verify.CertificateTests.test_zero_x_rejected_before_division) ... ok
 test_actual_gmp_helpers_against_independent_brackets_and_fixtures (test_worker.WorkerTests.test_actual_gmp_helpers_against_independent_brackets_and_fixtures) ... ok
-test_fibers_against_exhaustive_integer_polynomial (test_worker.WorkerTests.test_fibers_against_exhaustive_integer_polynomial) ... ok
+test_fibers_against_exhaustive_original_radical_all_quadrants (test_worker.WorkerTests.test_fibers_against_exhaustive_original_radical_all_quadrants) ... ok
 test_invalid_fibers_do_not_poison_following_valid_query (test_worker.WorkerTests.test_invalid_fibers_do_not_poison_following_valid_query) ... ok
+test_nonempty_signed_fibers_and_every_sign_selector (test_worker.WorkerTests.test_nonempty_signed_fibers_and_every_sign_selector) ... ok
 test_precision_cap_is_reported_as_error_not_empty_complete (test_worker.WorkerTests.test_precision_cap_is_reported_as_error_not_empty_complete) ... ok
 test_production_precision_refines_without_changing_results (test_worker.WorkerTests.test_production_precision_refines_without_changing_results) ... ok
 
 ----------------------------------------------------------------------
-Ran 44 tests in 6.839s
+Ran 60 tests in 7.716s
 
 OK

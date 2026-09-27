@@ -17,7 +17,7 @@ def arguments(output_dir, **changes):
                  candidates_per_task="4",page_start="0",task_count=2,
                  seconds=3000,precision_bits=512,max_precision_bits=16384,checkpoint_seconds=5,
                  n_min=str(10**43),n_max=str(10**45),x_min=str(10**54),x_max=str(10**55),
-                 require_integer_sqrt=False,output_dir=output_dir)
+                 require_integer_sqrt=False,signs="all",output_dir=output_dir)
     options.update(changes)
     return argparse.Namespace(**options)
 
@@ -48,6 +48,29 @@ class CampaignTests(unittest.TestCase):
             rational=campaign.generate(arguments(folder/"rational",task_count=1))
             integer=campaign.generate(arguments(folder/"integer",task_count=1,require_integer_sqrt=True))
             self.assertNotEqual(rational["tasks"][0]["task_id"],integer["tasks"][0]["task_id"])
+
+    def test_sign_policy_is_explicit_and_part_of_task_identity(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder=Path(temp)
+            identifiers=[]
+            for signs in ("all","pp","pn","np","nn"):
+                page=campaign.generate(arguments(folder/signs,task_count=1,signs=signs))
+                task=json.loads((folder/signs/page["tasks"][0]["file"]).read_text())
+                self.assertEqual(task["schema"],"ce390-task-v2")
+                self.assertEqual(task["search"]["signs"],signs)
+                self.assertEqual(run_task.validate_task(task)["signs"],signs)
+                identifiers.append(task["task_id"])
+            self.assertEqual(len(set(identifiers)),5)
+
+    def test_auxiliary_slope_domain_and_positive_magnitudes_are_enforced(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder=Path(temp)
+            with self.assertRaisesRegex(ValueError,"smaller than q_min"):
+                campaign.generate(arguments(folder,a_values="5",q_min="5"))
+            with self.assertRaises(ValueError):
+                campaign.generate(arguments(folder,n_min="-100"))
+            with self.assertRaisesRegex(ValueError,"search.signs"):
+                campaign.generate(arguments(folder,signs="both"))
 
     def test_invalid_page_and_conflicting_task_file_are_rejected(self):
         with tempfile.TemporaryDirectory() as temp:

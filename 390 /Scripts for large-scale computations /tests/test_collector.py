@@ -26,13 +26,13 @@ class CollectorTests(unittest.TestCase):
              candidates_per_task="7",page_start="0",task_count=1,seconds=10,
              precision_bits=512,max_precision_bits=16384,checkpoint_seconds=5,
              n_min=str(10**43),n_max=str(10**45),x_min=str(10**54),x_max=str(10**55),
-             require_integer_sqrt=False,output_dir=self.pages)
+             require_integer_sqrt=False,signs="all",output_dir=self.pages)
         page=campaign.generate(args)
         self.page=self.pages/"page-000000000000.json"
         task_path=self.pages/page["tasks"][0]["file"]
         worker=self.folder/"mock.py"
         worker.write_text("#!/usr/bin/env python3\nimport sys,json\nfor line in sys.stdin:\n"
-             " a,q=line.split()\n print(json.dumps({'a':a,'q':q,'status':'complete','hits':[],'convergents':'1','congruences_enforced':True,'integer_sqrt_required':'--integer-sqrt' in sys.argv,'excluded_by_bounds':False,'excluded_by_congruence':False}),flush=True)\n")
+             " a,q=line.split()\n print(json.dumps({'a':a,'q':q,'status':'complete','parameterization':'absolute-slope-a-over-q-v1','hits':[],'convergents':'1','congruences_enforced':True,'integer_sqrt_required':'--integer-sqrt' in sys.argv,'excluded_by_bounds':False,'excluded_by_congruence':False,'signs':sys.argv[sys.argv.index('--signs')+1]}),flush=True)\n")
         worker.chmod(0o755)
         run=subprocess.run([sys.executable,str(ROOT/"run_task.py"),"--task",str(task_path),
                             "--output-dir",str(self.first),"--worker",str(worker)],
@@ -54,7 +54,7 @@ class CollectorTests(unittest.TestCase):
                       output_coverage={"start":str(start if retained_start is None else retained_start),"stop":str(stop)},
                       next_index=str(stop),remaining_indices=str(7-stop),
                       complete=(stop==7),state="complete" if stop==7 else "partial")
-        real=sum((1+(5+2*i))%3==0 for i in range(start,stop))
+        real=sum((5+2*i)%3!=0 for i in range(start,stop))
         status["counters_this_invocation"].update(fibers_completed=str(real),
                 cf_fibers_completed=str(real),bounds_excluded="0",non_coprime_skipped="0",
                 congruence_excluded=str(stop-start-real),new_hits="0",convergents=str(real))
@@ -103,6 +103,19 @@ class CollectorTests(unittest.TestCase):
         self.write_status(status)
         with self.assertRaisesRegex(ValueError,"unselected"):
             self.collect()
+
+    def test_changed_returned_sign_policy_cannot_claim_original_task(self):
+        task_path=self.first/"task.json"
+        returned=json.loads(task_path.read_text())
+        returned["search"]["signs"]="pp"
+        task_path.write_text(json.dumps(returned))
+        with self.assertRaisesRegex(ValueError,"task_id"):
+            self.collect()
+
+    def test_collected_task_reports_all_sign_coverage_policy(self):
+        summary=self.collect()
+        self.assertEqual(summary["schema"],"ce390-collection-v2")
+        self.assertEqual(summary["tasks"][0]["signs"],"all")
 
     def test_hit_file_loss_cannot_be_silently_counted_as_complete(self):
         status=self.status()

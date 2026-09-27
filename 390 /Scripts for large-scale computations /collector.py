@@ -61,7 +61,7 @@ def selected_tasks(pages: list[Path]) -> dict[str, dict[str, Any]]:
         keys(page, {"schema", "campaign_id", "total_candidate_indices", "total_tasks",
                     "page_start", "page_task_count", "next_page_start", "candidates_per_task",
                     "tasks", "coverage_note"}, set(), f"page {page_path}")
-        if page["schema"] != "ce390-page-v1" or not isinstance(page["tasks"], list):
+        if page["schema"] != "ce390-page-v2" or not isinstance(page["tasks"], list):
             raise ValueError(f"invalid task page: {page_path}")
         count = integer(page["total_candidate_indices"], "page.total_candidate_indices", positive=True)
         size = integer(page["candidates_per_task"], "page.candidates_per_task", positive=True)
@@ -113,7 +113,7 @@ def checked_status(status: Any, original: dict[str, Any], returned: dict[str, An
                 "unique_hits_in_this_output", "coverage_note"}
     keys(status, required, {"output_coverage"}, "returned status")
     parsed = validate_task(returned)
-    if (status["schema"] != "ce390-status-v1" or status["task_id"] != original["task_id"]
+    if (status["schema"] != "ce390-status-v2" or status["task_id"] != original["task_id"]
             or status["campaign_id"] != original["campaign_id"] or status["slice"] != original["slice"]
             or returned["task_id"] != original["task_id"] or task_identity(returned) != task_identity(original)):
         raise ValueError("returned status/task identity does not match the selected original task")
@@ -205,7 +205,7 @@ def collect(pages: list[Path], results_dir: Path, output_dir: Path, *, skip_unre
         elif status["state"] == "running":
             running_returns.append(relative)
         parsed = slot["parsed"]
-        bounds = Bounds(**parsed["bounds"])
+        bounds = Bounds(**parsed["bounds"], magnitudes=True, signs=parsed["signs"])
         hits_path = path.parent / "hits.jsonl"
         output_certificates: set[str] = set()
         with hits_path.open(encoding="utf-8") as stream:
@@ -223,10 +223,12 @@ def collect(pages: list[Path], results_dir: Path, output_dir: Path, *, skip_unre
                 row = json.loads(line, object_pairs_hook=unique)
                 checked = verify_record(row, bounds, require_congruences=True,
                                         require_integer_sqrt=slot["task"]["search"].get("require_integer_sqrt", False))
-                ratio = -2 * Fraction(int(checked["d_num"]), int(checked["d_den"])) - 2
+                n, x = int(checked["n"]), int(checked["x"])
+                y = Fraction(int(checked["y_num"]), int(checked["y_den"]))
+                ratio = abs(y / abs(x) - 1 + Fraction(6*n, x))
                 a, q = ratio.numerator, ratio.denominator
                 if a not in slot["a_index"] or q < parsed["q_min"] or (q - parsed["q_min"]) % 2:
-                    raise ValueError("verified certificate does not belong to the selected fiber list")
+                    raise ValueError("verified certificate does not belong to the selected absolute-slope fiber list")
                 qi = (q - parsed["q_min"]) // 2
                 index = slot["a_index"][a] * parsed["q_count"] + qi
                 if qi >= parsed["q_count"] or not parsed["start"] <= index < parsed["stop"]:
@@ -234,7 +236,7 @@ def collect(pages: list[Path], results_dir: Path, output_dir: Path, *, skip_unre
                 if row.get("task_id", tid) != tid:
                     raise ValueError("certificate task_id differs from its returned task")
                 if "candidate_index" in row and integer(row["candidate_index"], "hit.candidate_index") != index:
-                    raise ValueError("certificate candidate_index differs from its rational fiber")
+                    raise ValueError("certificate candidate_index differs from its absolute-slope fiber")
                 if "a" in row and (integer(row["a"], "hit.a", positive=True), integer(row["q"], "hit.q", positive=True)) != candidate(parsed, index):
                     raise ValueError("certificate a,q is not the canonical selected candidate")
                 key = certificate_key(checked)
@@ -260,7 +262,7 @@ def collect(pages: list[Path], results_dir: Path, output_dir: Path, *, skip_unre
         if not slot["returns"]:
             missing.append(tid)
         tasks.append({"task_id": tid, "campaign_id": slot["task"]["campaign_id"], "ordinal": slot["ordinal"],
-                      "slice": slot["task"]["slice"], "worker_sha256": slot["worker_sha256"],
+                      "slice": slot["task"]["slice"], "signs": parsed["signs"], "worker_sha256": slot["worker_sha256"],
                       "returned_invocations": slot["returns"], **coverage})
     complete = all(task["complete"] for task in tasks)
     campaign_workers: dict[str, list[str]] = {}
@@ -271,14 +273,14 @@ def collect(pages: list[Path], results_dir: Path, output_dir: Path, *, skip_unre
             hashes.append(sha)
     for hashes in campaign_workers.values():
         hashes.sort()
-    summary = {"schema": "ce390-collection-v1", "complete_selected_page": complete,
+    summary = {"schema": "ce390-collection-v2", "complete_selected_page": complete,
                "selected_tasks": len(tasks), "missing_tasks": missing, "tasks": tasks,
                "campaign_worker_sha256": campaign_workers,
                "campaigns_with_multiple_worker_hashes": sorted(k for k, v in campaign_workers.items() if len(v) > 1),
                "error_returns": error_returns, "running_returns": running_returns,
                "skipped_unrelated_returns": unrelated, "certificate_rows": certificate_rows,
                "unique_verified_solutions": len(certificates), "duplicate_certificate_rows": certificate_rows - len(certificates),
-               "coverage_note": "Completeness covers only the selected task-page fiber indices. It does not exhaust or prove anything about unsearched fibers in the n,x rectangle."}
+               "coverage_note": "Completeness covers only the selected task-page fiber indices. It does not exhaust or prove anything about unsearched absolute-slope fibers in the signed n,x magnitude regions."}
     output_dir.mkdir(parents=True, exist_ok=True)
     target = output_dir / "hits.jsonl"
     temporary = output_dir / "hits.jsonl.tmp"

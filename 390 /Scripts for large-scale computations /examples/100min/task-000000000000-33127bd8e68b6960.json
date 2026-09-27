@@ -1,10 +1,10 @@
 {
-  "campaign_id": "ce390-50min-001",
+  "campaign_id": "ce390-signed-100min-001",
   "execution": {
     "checkpoint_seconds": 5,
     "max_precision_bits": 16384,
     "precision_bits": 512,
-    "time_limit_seconds": 3000
+    "time_limit_seconds": 6000
   },
   "fibers": {
     "a_values": [
@@ -13,17 +13,18 @@
     "q_max": "100000000001",
     "q_min": "100000001"
   },
-  "parameterization": "d=-1-a/(2q);positive-odd-coprime-a-q",
-  "schema": "ce390-task-v1",
+  "parameterization": "absolute-slope-a-over-q-v1",
+  "schema": "ce390-task-v2",
   "search": {
     "n_max": "1000000000000000000000000000000000000000000000",
     "n_min": "10000000000000000000000000000000000000000000",
+    "signs": "all",
     "x_max": "10000000000000000000000000000000000000000000000000000000",
     "x_min": "1000000000000000000000000000000000000000000000000000000"
   },
   "slice": {
     "start": "0",
-    "stop": "50000000"
+    "stop": "100000000"
   },
-  "task_id": "37bb3667a8f071eebe127c6df28d3116c3081aede7c1be419a0829a18d34f6aa"
+  "task_id": "33127bd8e68b6960399900348025c26750e2d41042f1d06ab5f39f3f6edd7c3e"
 }

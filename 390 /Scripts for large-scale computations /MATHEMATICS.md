@@ -1,8 +1,8 @@
-# Exact mathematical basis of the search
+# Exact mathematical basis of the signed search (CE390 3.1.0)
 
 ## Scope
 
-The production target is
+The target is
 
 \[
 36n^3-65=-2d x^2\left(-x-6n+
@@ -12,311 +12,362 @@ The production target is
 with the **principal**, nonnegative square root, rational `d`, and integers
 
 \[
-10^{43}\le n\le10^{45},\qquad
-10^{54}\le x\le10^{55},\qquad
+10^{43}\le |n|\le10^{45},\qquad
+10^{54}\le |x|\le10^{55},\qquad
 n\equiv1\pmod3,\quad x\equiv5\pmod{12},\quad7\nmid x.
 \]
 
-All bounds are inclusive. This search allows a rational, nonintegral square
-root. Requiring an integer square root would discard legitimate solutions
-to the stated rational-`d` problem. The numerical scale supplied with the
-problem is treated as a requested search region, not as a proved lower
-bound for solutions or a proof that this region contains a solution.
+All bounds are inclusive. Both signs are allowed independently: `(+, +)`,
+`(+, -)`, `(-, +)`, and `(-, -)`. Congruences apply to the actual signed
+integers, not their absolute values. For example, negative `n` requires
+`|n| = 2 mod 3`, and negative `x` requires `|x| = 7 mod 12`.
 
-## 1. Eliminate the radical without losing its sign
+The search permits a rational, nonintegral square root. Requiring an integer
+square root would discard legitimate solutions to the stated rational-`d`
+problem; it is an optional additional filter. The numerical scale is a
+requested search region, not a proved lower bound or an existence theorem.
+
+## 1. Eliminate the radical and retain its principal branch
 
 Set
 
 \[
-A=36n^3-65,\qquad s=x+6n,\qquad
-y=\sqrt{s^2+A/x}.
+A=36n^3-65,\qquad S=x+6n,\qquad y=\sqrt{S^2+A/x}.
 \]
 
-In the production region, `A`, `x`, and `s` are positive, so `y>s>0`.
-The original equation implies `d != 0` and makes `y` rational whenever
-`d` is rational. Conversely, a rational principal square root determines
-exactly one `d`. Since `(y-s)(y+s)=A/x` and `A != 0`, cancellation gives
+In the production region `A` is nonzero and has the sign of `n`. The
+original equation forces `d != 0`, and rational `d` forces rational `y`.
+Conversely, a rational principal square root determines a unique `d`.
+Since `(y-S)(y+S)=A/x`, cancellation gives the stable exact formula
 
 \[
 \boxed{d=-\frac{y+x+6n}{2x}.}
 \]
 
-This identity uses no numerical subtraction of nearly equal radicals.
+This works for either sign of `x` and avoids numerical cancellation in the
+original radical expression.
 
-For independent verification define
+An independent integer-square certificate is
 
 \[
 M=x^2(x+6n)^2+(36n^3-65)x.
 \]
 
-The radical is rational **if and only if** `M` is the square of an integer
-`m`. Indeed, `m=xy` is rational and has integer square, so it is an integer;
-the converse is immediate. The principal branch requires `m>=0`. The
-result is then
+The radical is rational if and only if `M=m^2` for a nonnegative integer
+`m`. Indeed, `|x|y` is rational with integer square, so it is an integer.
+The principal root and corresponding parameter are
 
 \[
-y=m/x,\qquad
-\boxed{d=-\frac{m+x(x+6n)}{2x^2}.}
+y=\frac m{|x|},\qquad
+\boxed{d=-\frac{\operatorname{sgn}(x)m+x(x+6n)}{2x^2}.}
 \]
 
-Checking this integer-square identity, the original equation with exact
-rationals, the principal branch, the requested bounds, and the congruences
-provides a verifier independent of the continued-fraction search.
+The independent verifier checks this square certificate, the original
+rational equation, the principal branch, signed congruences, and magnitude
+bounds. In particular, it does not reconstruct `y` as `m/x` when `x<0`.
 
-## 2. Every target solution has the searched rational-parameter form
+## 2. A small rational auxiliary parameter covers all four signs
 
 Write
 
 \[
-\boxed{d=-1-\frac{a}{2q}},\qquad a>0,\quad q>0,\quad\gcd(a,q)=1.
+N=|n|,\quad X=|x|,\quad s_n=\operatorname{sgn}(n),\quad
+s_x=\operatorname{sgn}(x),\quad \tau=s_ns_x,\quad R=N/X.
 \]
 
-For every production solution, this reduced representation exists with
-`a` and `q` odd. In fact, it has the stronger necessary conditions
+The bounds imply `10^-12 <= R <= 10^-9`. Consequently `S` has the sign
+of `x`, and the radicand is strictly positive: for example,
 
 \[
-\gcd(a,6)=\gcd(q,6)=1,\qquad a+q\equiv0\pmod6.
+\frac{S^2+A/x}{X^2}\ge(1-6\cdot10^{-9})^2-37\cdot10^{-27}>0.
 \]
 
-To prove the parity assertions, write `y=p/r` in lowest terms with `r>0`.
-The equation `p^2/r^2=s^2+A/x` implies `r^2|x`, hence `r` is odd and not
-divisible by 3. Modulo 4, `x=1`, `s^2=1`, and `A=3`, so `p` is even.
-Modulo 3, `x=2`, `s^2=1`, and `A=1`, so `p` is divisible by 3.
-Now
+Use a **signed auxiliary square root** `w=s_x y`, which is distinct from
+the principal root `y` when `x<0`. Put `k=w-S`. Then
 
 \[
-\frac aq=\frac{y-x+6n}{x}
-=\frac{p-rx+6nr}{rx}.
+k=\frac A{x(w+S)},\qquad
+x(w+S)=X(y+|S|)>0.
 \]
 
-Its numerator and denominator are odd; neither is divisible by 3.
-Reduction preserves these facts. Modulo 3 this rational number equals
-`-1`, proving `a+q=0 mod 3`. Positivity follows from `y>x+6n`.
-
-The reduced denominator of `d` is therefore exactly `2q`, with precisely
-one factor of 2. A campaign that enumerates these reduced pairs does not
-duplicate a solution under different representations of `d`.
-
-The auxiliary quantity `k=y-x-6n` is positive and satisfies
+Thus `k` has the sign of `n`, and
 
 \[
-A=xk(2x+12n+k),\qquad0<k<18n^3/x^2.
+\boxed{\frac{w-x+6n}{x}=\tau\frac aq},\qquad
+\boxed{\frac aq=12R+\frac{|k|}{X}},
 \]
 
-Consequently
+where `a,q>0` are reduced integers. There is exactly one such reduced
+positive pair for each target solution. Its bounds follow from
 
 \[
-12n/x<a/q<12n/x+18(n/x)^3.
+0<\frac{|k|}{X}
+\le\frac{36N^3+65}{X^3(1-6R)}<37R^3.
 \]
 
-Across the requested rectangle this yields the exact, useful enclosure
+In particular every production solution satisfies
 
 \[
-\boxed{12\cdot10^{-12}<a/q<12\cdot10^{-9}+18\cdot10^{-27}.}
+12\cdot10^{-12}<\frac aq<12\cdot10^{-9}+37\cdot10^{-27}.
 \]
 
-In particular,
+The slightly wider rational enclosure used for campaign selection is
 
 \[
--1-6\cdot10^{-9}-9\cdot10^{-27}<d<-1-6\cdot10^{-12}.
+\boxed{11\cdot10^{-12}<a/q<13\cdot10^{-9}.}
 \]
 
-Thus **every solution in the requested region has a noninteger `d`**;
-there is no reason to search arbitrary magnitudes of `d`.
+Both enclosures imply `0<a<q`. Restricting the signed worker to `0<a<q`
+therefore loses no point in the production region. For deliberately small
+test rectangles its completeness claim is per admitted `(a,q)` fiber;
+not every rational point in an arbitrary small rectangle need have a
+parameter satisfying that restriction.
 
-## 3. The binary cubic equation
+### Parity and congruences of the reduced parameter
 
-For a fixed reduced pair `(a,q)`, the radical must be
+Write `y=p/r` in lowest terms, with `r>0`. The radical equation implies
+`r^2 | |x|`; hence `r` is odd and not divisible by 3. Reducing the equation
+modulo 4 gives `p` even, and reducing modulo 3 gives `p = 0 mod 3`.
+The same properties hold for the numerator of `w=s_x p/r`.
+
+Therefore `(w-x+6n)/x` has odd reduced numerator and denominator, neither
+divisible by 3. Modulo 3 its value is `-1`. Hence
 
 \[
-y=(1+a/q)x-6n.
+\boxed{\gcd(a,q)=1,\quad\gcd(aq,6)=1,\quad\tau a+q\equiv0\pmod3.}
 \]
 
-Substitution and multiplication by `q^2` give the exact binary cubic
+Equivalently, since both integers are odd,
 
 \[
-\boxed{F_{a,q}(n,x)=65q^2,}
+q\equiv-\tau a\pmod6.
+\]
+
+For `tau=+1`, this is the old `a+q=0 mod 6` condition. For `tau=-1`, it
+becomes `q-a=0 mod 6`. A campaign retaining only the old condition would
+omit both mixed-sign quadrants. For an odd coprime pair with neither
+component divisible by 3, exactly one `tau` survives this local filter.
+
+## 3. The two monotone cubics
+
+For a fixed `(a,q)` and `tau`, reconstruct
+
+\[
+w=(1+\tau a/q)x-6n,\qquad y=s_xw.
+\]
+
+Squaring and normalizing signs gives
+
+\[
+\boxed{H_\tau(N,X)=s_n65q^2,}
 \]
 
 where
 
 \[
-F_{a,q}(u,v)=36q^2u^3+12q(2q+a)uv^2-a(2q+a)v^3.
+H_\tau(U,V)=36q^2U^3+12q(2q+\tau a)UV^2
+-a(2q+\tau a)V^3.
 \]
 
-Every target solution satisfies this equation. Conversely, if a positive
-integer pair in the production rectangle satisfies it, then
+All production solutions satisfy this equation. Conversely, a solution
+of it in the magnitude bounds yields the radical identity. Its principal
+branch must still be checked as `y=s_xw>=0`, and all requested signed
+congruences must be checked. The implementation performs these checks
+exactly, including for small test rectangles.
+
+For a fixed `tau`, the positive-residual target `+65q^2` corresponds to
+`n>0`, and the negative-residual target `-65q^2` to `n<0`. The sign of `x`
+is then determined by `s_x=tau*s_n`. A single sequence of convergents can
+therefore serve two opposite quadrants without duplicating root isolation.
+The nonzero constant `65` is not sign-symmetric: negating both coordinates
+changes the residual sign, so one cannot obtain all solutions by simply
+negating an already discovered point.
+
+For positive `x`, `d` is fixed by the parameter pair and `tau`:
 
 \[
-(2+a/q)x^2((a/q)x-12n)=36n^3-65>0.
+d=-1-\tau\frac a{2q}\qquad(x>0).
 \]
 
-Hence `(a/q)x>12n` and the reconstructed radical obeys
-`y>x+6n>0`. Thus the principal-branch condition follows in the production
-region. The independent verifier nevertheless checks it explicitly.
-
-## 4. Why continued fractions cover every solution in a processed fiber
-
-Let `alpha` be the unique real zero of
+For negative `x`, instead,
 
 \[
-P(T)=36q^2T^3+12q(2q+a)T-a(2q+a).
+\boxed{d=\tau\left(\frac a{2q}-\frac{6N}{X}\right)
+=\tau\frac{|k|}{2X}\qquad(x<0).}
 \]
 
-It is positive because `P(0)<0`, and uniqueness follows from
+Thus these are **auxiliary-parameter fibers**, not always fixed-`d`
+fibers. The negative-`x` cases have `d` very close to zero; asymptotically
+`d ~ tau*9(N/X)^3`. The positive-`x` cases have `d` close to `-1`.
+More precisely, the four signs behave as follows:
+
+| Sign of `n` | Sign of `x` | `tau` | Location of `d` |
+|---|---|---|---|
+| positive | positive | +1 | just below `-1` |
+| positive | negative | -1 | just below `0` |
+| negative | positive | -1 | just above `-1` |
+| negative | negative | +1 | just above `0` |
+
+These are all noninteger values in the production region. Searching only
+negative `d` near `-1` would miss part of the user's signed search.
+
+## 4. Certified continued fractions cover every admitted fiber
+
+Let `alpha_tau` be the unique positive real root of
 
 \[
-P'(T)=108q^2T^2+12q(2q+a)>24q^2
+P_\tau(T)=36q^2T^3+12q(2q+\tau a)T-a(2q+\tau a).
 \]
 
-for all real `T`. A solution has
+Because `0<a<q`,
 
 \[
-P(n/x)=65q^2/x^3>0,
+P_\tau'(T)=108q^2T^2+12q(2q+\tau a)>12q^2
+\]
+
+for all real `T`. The polynomial is strictly increasing, its constant
+term is negative, and its positive root satisfies
+`0<alpha_tau<a/(12q)`. This provides a rigorous initial upper bound for
+the existing integer Newton root-isolation method. The derivative stays
+positive for both sign choices; no multiple-root approximation is used.
+
+A solution has
+
+\[
+P_\tau(N/X)=\frac{s_n65q^2}{X^3},
 \]
 
 so the mean-value theorem gives
 
 \[
-0<n/x-\alpha<\frac{65}{24x^3}.
+0<\left|N/X-\alpha_\tau\right|<\frac{65}{12X^3}.
 \]
 
-Write `g=gcd(n,x)` and reduce `n/x=u/v`, with `u,v>0` coprime. Then
+Write `g=gcd(N,X)`, `N=gu`, `X=gv`, with `u,v>0` coprime. Then
 
 \[
-0<u/v-\alpha<\frac{65}{24g^3v^3}.
+\left|u/v-\alpha_\tau\right|<\frac{65}{12g^3v^3}
+<\frac1{2v^2}
 \]
 
-In the production rectangle, `g<=n`, and therefore
+whenever `65<6g^3v`. Since `g^3v=g^2X>=X`, this holds whenever `X>=11`,
+in particular throughout the production region. Legendre's criterion
+therefore makes `u/v` a regular continued-fraction convergent of
+`alpha_tau`.
+
+Homogeneity yields
 
 \[
-v=x/g\ge x/n\ge10^9.
+g^3H_\tau(u,v)=s_n65q^2.
 \]
 
-In particular `65<12g^3v`, giving
+It is sufficient to generate every convergent with `v<=X_max`, require
+`H_tau(u,v)!=0`, and test whether
 
 \[
-\boxed{|u/v-\alpha|<1/(2v^2).}
+65q^2/|H_\tau(u,v)|
 \]
 
-The continued-fraction approximation theorem (Legendre's criterion)
-therefore implies that `u/v` is a regular continued-fraction convergent
-of `alpha`.
+is an exact positive integer cube `g^3`. The sign of `H_tau(u,v)` supplies
+`s_n`; `tau` then supplies `s_x`. Reconstruct the signed coordinates,
+check the magnitude bounds, and verify the original equation and branch.
+Both upper and lower convergents matter: their residual signs correspond
+to different signs of `n`.
 
-For each such convergent, homogeneity gives
+For small-domain validation, the worker also checks every `X<=10` in the
+requested magnitude interval. At fixed `X`, strict monotonicity of
+`H_tau(N,X)` permits exact binary search for each of the two targets.
+This covers every potential exception to the sufficient CF inequality,
+including exceptions with `g>1`. It makes exhaustive comparisons on small
+rectangles meaningful without imposing the production-scale argument.
+
+This establishes completeness for each fully processed admitted `(a,q)`
+fiber and each requested sign quadrant. It does not claim that a finite
+campaign has processed all possible pairs.
+
+## 5. Exact arithmetic and completion certificates
+
+The separation `N/X-alpha_tau` can be of order `X^-3`, around `10^-165`
+at the upper bound. Ordinary double precision, an uncertified decimal
+root, or guessed continued-fraction digits cannot establish coverage.
+
+Root isolation and continued-fraction extraction use integer/rational
+bounds and certified common partial quotients, refining an enclosure
+when needed. A precision cap, interrupted fiber, or unresolved enclosure
+is unfinished work and must never be counted as completed coverage. All
+residual signs, divisibility decisions, cube tests, square tests, and
+final rational values use exact arithmetic.
+
+The root is in fact irrational for the admitted family. Otherwise set
+`n=alpha_tau`, `x=tau`, and `y=1+tau*a/q-6*tau*alpha_tau`. These are
+nonzero rational coordinates satisfying the homogeneous radical equation
+`y^2=(x+6n)^2+36n^3/x`. Consequently
 
 \[
-g^3 F_{a,q}(u,v)=65q^2.
+(y-x)^3+(-x-y)^3+(2x+6n)^3=0.
 \]
 
-Thus it is sufficient to:
-
-1. Generate every convergent with denominator `v<=10^55`.
-2. Require `F(u,v)>0` and exact divisibility of `65q^2` by `F(u,v)`.
-3. Require the quotient to be an exact positive integer cube `g^3`.
-4. Reconstruct `n=gu`, `x=gv`.
-5. Apply the exact independent verifier and all requested filters.
-
-This is **complete for each fully processed `(a,q)` fiber**. It replaces
-an enormous scan of individual `(n,x)` values by a short list of rational
-approximations to one cubic root. Convergents on the lower side of `alpha`
-have `F(u,v)<0` and cannot produce positive-scale solutions.
-
-The implementation also covers arbitrary positive test rectangles. Since
-`g^3 v=g^2 x`, the same strict inequality holds whenever `x>=6`.
-If `g>=2`, it holds even for `x<6`. Thus possible exceptions are confined
-to `g=1` and `x<=5`. The worker explicitly checks each of the at most five
-such `x` values by exact binary search in `n`, using the strict monotonicity
-of `F(n,x)` in positive `n`. This makes small-domain exhaustive comparisons
-meaningful without assuming the production scale.
-
-In fact the positive root is irrational. If it were rational, put
-`n=alpha`, `x=1`, `y=1+a/q-6alpha`, and `k=y-1-6alpha` in the homogeneous
-equation `F(n,x)=0`. It gives `k>0` and
-
-\[
-(6\alpha+k)^3+(2+6\alpha)^3=(2+6\alpha+k)^3.
-\]
-
-All three bases would be positive rational numbers. Clearing denominators
-would contradict Fermat's theorem for exponent 3. Exact finite-root
-handling in the worker is therefore defensive; it is not needed for an
-admissible positive fiber.
-
-## 5. Exact arithmetic is essential
-
-The separation `n/x-alpha` can be of order `x^-3`, around `10^-165` at the
-largest requested `x`. Ordinary double precision, an unverified decimal
-root, or guessed continued-fraction digits cannot certify coverage.
-
-Root isolation and continued-fraction extraction must use integer/rational
-bounds with a certified common partial quotient, refining an enclosure
-whenever its endpoints do not certify the same next quotient. A precision
-limit, interrupted fiber, or unresolved enclosure is unfinished work and
-must be reported or checkpointed, never counted as a completed fiber.
-All polynomial residuals, divisibility decisions, integer cube tests,
-integer square tests, and final rational values must be exact.
+Fermat's theorem for exponent 3 implies that at least one of these three
+bases is zero. Either of the first two cases forces
+`n*(x^2+3nx+3n^2)=0`, impossible for nonzero real `n,x` because the
+quadratic is positive definite. The third case gives `x=-3n` and then
+`y^2=-3n^2`, also impossible. This proves irrationality for both `tau`
+choices. The implementation's handling of detected exact rational roots
+is defensive; the production completeness argument does not depend on
+such a root ever occurring.
 
 ## 6. What a bounded campaign proves
 
-The search rectangle is enormous, and the continued-fraction theorem does
-not make the set of all rational-parameter fibers small. For a solution,
-if `y=p/r` is reduced then `r^2|x`, and the reduced denominator `q` of
-`a/q` divides `xr`. Hence
+If `y=p/r` is reduced, then `r^2 | X`. The reduced denominator of the
+auxiliary slope divides `Xr`, so
 
 \[
-q\le x\lfloor\sqrt{x}\rfloor<3.163\cdot10^{82}.
+\boxed{q\le X\lfloor\sqrt X\rfloor<3.163\cdot10^{82}.}
 \]
 
-Another useful necessary property is `q^2|x^3`: the divisibilities
-`q|xr` and `r^2|x` give `q^2 | x^2 r^2 | x^3`.
-
-These are finite bounds, but they are much too large for a practical
-exhaustive sweep. A campaign must name the numerator/denominator fibers
-it actually covers. Searching small numerators first is a transparent
-prioritization of rational numbers near `d=-1`; it is not a theorem that
-the first or any solution has a small numerator.
+Also `q^2 | X^3`. These finite necessary bounds are much too large for a
+practical exhaustive sweep. Each campaign must identify the auxiliary
+parameter pairs and sign quadrants it actually covers. Prioritizing
+small numerators is a transparent search strategy, not a theorem that a
+solution must have small numerator or denominator.
 
 No hit means only that the completed fibers in the reported campaign
-contained no verified solution. It does not prove nonexistence in the
-whole rectangle. No implementation or allocation of CPU cores can
-guarantee a solution exists in the requested rectangle.
+contain no verified solution. It proves neither nonexistence throughout
+the requested signed region nor that further computation must find a
+solution. Existing positive-only campaign results cover the positive
+quadrant they actually processed; changing the scope requires new task
+identities and completion certificates.
 
 ## 7. Integer-radical subcase and the number 390
 
-If the square root happens to be an integer, `k=y-x-6n` is a positive
-integer, `k=1 mod 6`, and
+If the principal radical happens to be an integer, set
+`k_0=y-x-6n`. Direct algebra gives
 
 \[
-(6n+k)^3+(-2x-6n-k)^3+(2x+6n)^3=390.
+(6n+k_0)^3+(-2x-6n-k_0)^3+(2x+6n)^3=390.
 \]
 
-This explains the sum-of-three-cubes structure, but an integer-`k` search
-alone would cover only a subset of the rational-`d` request. For a reduced
-rational radical `y=p/r`, the analogous scaled identity has right-hand
-side `390r^3`, not `390`. The rational-parameter cubic above covers both
-cases.
+This identity is valid with signed `n,x`; `k_0` need not be positive.
+For a reduced rational radical `y=p/r`, clearing denominators gives
+right-hand side `390r^3`. Searching only integral radicals would cover
+only a subset of the rational-`d` problem.
 
 ## 8. Independent validation checklist
 
-Meaningful validation should include:
+Meaningful validation includes:
 
-- Direct symbolic or exact-integer checks that the radical identity and
-  the binary cubic give the same result.
-- An independent verifier based on `M=m^2`, not just another evaluation
-  of `F`.
-- A supplied rational-radical example, such as
-  `n=-5, x=81, y=454/9, d=-913/1458`, to ensure the verifier distinguishes
-  a rational radical from an integer one. This example is deliberately
-  outside the production region and must not be accepted as a target hit.
-- Exact recovery of scale `g` and rejection of noncube quotients.
-- Small-domain comparisons, including `x<=5`, to exercise both the
-  continued-fraction theorem and the supplementary monotone search.
-- Certified root brackets and continued-fraction prefixes compared with
-  a second implementation, including refinement-boundary cases.
-- Interrupted-run/resume comparisons and independent final-certificate
-  verification.
+- Exact checks that both signed cubics imply the radical identity.
+- An independent verifier based on `M=m^2`, with `y=m/|x|`.
+- Genuine nonempty fixtures with negative coordinates and nonintegral
+  radicals; for example `n=-5,x=81,y=454/9,d=-913/1458` checks that the
+  verifier does not impose the original positive-only bounds.
+- Exact cube-scale recovery for both residual signs.
+- Exhaustive small-domain comparisons across all four quadrants,
+  including `X<=10`, wrong principal branches, and signed residues.
+- Certified brackets and CF prefixes for both `tau` polynomials, checked
+  against independent computations and refinement-boundary cases.
+- Interrupted-run/resume comparisons and independent final certificates
+  that bind the sign scope as well as all magnitude bounds.
 
-The checklist specifies properties to test; it is not itself a claim that
-any particular test has been run. The release validation report records
-the actual executed checks and their outcomes.
+This checklist specifies what must be tested. The release validation
+report records the executed checks and their actual outcomes.

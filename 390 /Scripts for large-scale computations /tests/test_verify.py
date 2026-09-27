@@ -97,6 +97,16 @@ class CertificateTests(unittest.TestCase):
         with self.assertRaisesRegex(VerificationError, "congruences"):
             verify_record(certificate(*FIXTURES[0]), FIXTURE_BOUNDS)
 
+    def test_congruences_apply_to_signed_values_not_magnitudes(self):
+        positive_n, positive_x = 10**43, 10**54+1
+        self.assertEqual(positive_n % 3, 1)
+        self.assertEqual(positive_x % 12, 5)
+        for n, x in ((-positive_n, positive_x), (positive_n, -positive_x)):
+            item = {"n": str(n), "x": str(x), "y_num": "0", "y_den": "1",
+                    "d_num": "1", "d_den": "2"}
+            with self.subTest(n=n, x=x), self.assertRaisesRegex(VerificationError, "congruences"):
+                verify_record(item)
+
     def test_production_bounds_are_enforced_by_default(self):
         with self.assertRaisesRegex(VerificationError, "bounds"):
             verify_record(certificate(*FIXTURES[0]), require_congruences=False)
@@ -106,6 +116,45 @@ class CertificateTests(unittest.TestCase):
         verify_record(certificate(n, x, d), Bounds(n, n, x, x), require_congruences=False)
         with self.assertRaisesRegex(VerificationError, "bounds"):
             verify_record(certificate(n, x, d), Bounds(n+1, n+1, x, x), require_congruences=False)
+
+    def test_magnitude_bounds_accept_signed_historical_solutions(self):
+        for n, x, d in FIXTURES:
+            with self.subTest(n=n, x=x):
+                bounds = Bounds(abs(n), abs(n), abs(x), abs(x), magnitudes=True)
+                result = verify_record(certificate(n, x, d), bounds, require_congruences=False)
+                self.assertEqual((int(result["n"]), int(result["x"])), (n, x))
+                with self.assertRaisesRegex(VerificationError, "bounds"):
+                    verify_record(certificate(n, x, d),
+                                  Bounds(abs(n)+1, abs(n)+1, abs(x), abs(x), magnitudes=True),
+                                  require_congruences=False)
+
+    def test_requested_signs_are_enforced(self):
+        n, x, d = FIXTURES[0]
+        item = certificate(n, x, d)
+        for signs in ("all", "np"):
+            verify_record(item, Bounds(5, 5, 81, 81, magnitudes=True, signs=signs),
+                          require_congruences=False)
+        for signs in ("pp", "pn", "nn"):
+            with self.assertRaisesRegex(VerificationError, "signs"):
+                verify_record(item, Bounds(5, 5, 81, 81, magnitudes=True, signs=signs),
+                              require_congruences=False)
+
+    def test_bounds_validation_rejects_bad_magnitudes_and_signs(self):
+        for kwargs in ({"n_min": 0, "magnitudes": True},
+                       {"x_min": -1, "magnitudes": True}, {"signs": "mixed"}):
+            with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
+                Bounds(**kwargs)
+
+    def test_absolute_slope_metadata_is_verified(self):
+        # This is a genuine negative-n solution, with an independently fixed
+        # auxiliary fraction.  It is not a production-size search hit.
+        item = certificate(*FIXTURES[0])
+        item.update(a="545", q="729")
+        self.relaxed(item)
+        for a, q in (("547", "729"), ("1090", "1458"), ("729", "729")):
+            bad = dict(item, a=a, q=q)
+            with self.subTest(a=a, q=q), self.assertRaises(VerificationError):
+                self.relaxed(bad)
 
     def test_rational_sqrt_is_not_silently_called_integer(self):
         item = certificate(*FIXTURES[0])
@@ -152,12 +201,47 @@ class CertificateTests(unittest.TestCase):
         with self.assertRaisesRegex(VerificationError, "not rational"):
             verify_record(item)
 
+    def test_default_magnitude_policy_reaches_radical_check_in_all_quadrants(self):
+        # Synthetic near-squares must get past magnitude and signed residue
+        # filters, then be rejected by the actual mathematics in every quadrant.
+        for nsign in (-1, 1):
+            for xsign in (-1, 1):
+                n = nsign * (10**43 + 10)
+                n += (1-n) % 3
+                x = xsign * (10**54 + 100)
+                x += (5-x) % 12
+                if x % 7 == 0:
+                    x += 12
+                with self.subTest(nsign=nsign, xsign=xsign):
+                    self.assertEqual(n % 3, 1)
+                    self.assertEqual(x % 12, 5)
+                    m2 = x*x*(x+6*n)**2+(36*n**3-65)*x
+                    m = isqrt(m2)
+                    self.assertNotEqual(m*m, m2)
+                    y = Fraction(m, abs(x))
+                    d = -(y+x+6*n)/(2*x)
+                    item = {"n": str(n), "x": str(x), "y_num": str(y.numerator),
+                            "y_den": str(y.denominator), "d_num": str(d.numerator),
+                            "d_den": str(d.denominator)}
+                    with self.assertRaisesRegex(VerificationError, "not rational"):
+                        verify_record(item)
+
     def test_cli_accepts_fixture_and_reports_exact_count(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp)/"fixture.jsonl"
             path.write_text(json.dumps(certificate(*FIXTURES[0]))+"\n", encoding="utf-8")
             run = subprocess.run([sys.executable, str(ROOT/"verify.py"), str(path),
                                   "--n-min=-5", "--n-max=-5", "--x-min=81", "--x-max=81",
+                                  "--signed-intervals", "--relax-congruences"], capture_output=True, text=True)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual(json.loads(run.stdout)["unique_solutions"], 1)
+
+    def test_cli_magnitude_defaults_accept_negative_n(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)/"fixture.jsonl"
+            path.write_text(json.dumps(certificate(*FIXTURES[0]))+"\n", encoding="utf-8")
+            run = subprocess.run([sys.executable, str(ROOT/"verify.py"), str(path),
+                                  "--n-min=5", "--n-max=5", "--x-min=81", "--x-max=81",
                                   "--relax-congruences"], capture_output=True, text=True)
             self.assertEqual(run.returncode, 0, run.stderr)
             self.assertEqual(json.loads(run.stdout)["unique_solutions"], 1)

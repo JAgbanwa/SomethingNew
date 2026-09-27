@@ -31,8 +31,11 @@ use pilot measurements, and retain the safety margin.
 
 ## Search units and honest coverage
 
-A fiber is a reduced rational value `d = -1 - a/(2q)`, with positive odd `a,q` and
-`gcd(a,q)=1`. The mathematical reductions and their completeness conditions are
+A fiber is a reduced auxiliary slope `a/q = abs(y/abs(x)-1+6*n/x)`, where
+`y` is the principal square root, `0<a<q`, both integers are odd, and
+`gcd(a,q)=1`. A fiber covers all four sign combinations by default; for
+negative `x` it can yield different rational `d` values at different hits.
+The mathematical reductions and their completeness conditions are
 in `MATHEMATICS.md`. A task enumerates the chosen finite set of numerators and an
 inclusive interval of odd denominators. Noncoprime pairs occupy an index but are
 skipped. Pairs excluded by the proved modulo-3 conditions are also skipped
@@ -52,8 +55,14 @@ the exact inclusive rectangle in its task. **A completed selected-fiber campaign
 is not an exhaustive search of the whole `n,x` rectangle.** There is no promise
 that any chosen finite campaign will find a solution.
 
-The default bounds are the requested positive intervals `10^43 <= n <= 10^45`
-and `10^54 <= x <= 10^55`. The heuristic `x ~ n^(5/4)` imposes no additional cut.
+The default bounds are the requested magnitude intervals
+`10^43 <= abs(n) <= 10^45` and `10^54 <= abs(x) <= 10^55`.
+`--n-min`, `--n-max`, `--x-min`, and `--x-max` always specify positive
+magnitudes. The default `--signs all` includes `pp`, `pn`, `np`, and `nn`
+(the first letter is the sign of `n`). An explicit `--signs pp`, for example,
+restricts a new campaign to positive `n,x`. The policy is part of task identity.
+The congruences are evaluated on actual signed `n,x`, never on their magnitudes.
+The heuristic size relation imposes no additional cut.
 The default accepts a rational nonnegative square root. Add
 `--require-integer-sqrt` to restrict the search to the integer-square-root subset.
 
@@ -62,11 +71,11 @@ The default accepts a rational nonnegative square root. Add
 On a build host with Docker:
 
 ```sh
-docker build -t ce390:3.0.0 .
+docker build -t ce390:3.1.0 .
 ```
 
 For an amd64 CE image from an Apple Silicon build host, use
-`docker build --platform linux/amd64 -t ce390:3.0.0 .`; a local emulated benchmark
+`docker build --platform linux/amd64 -t ce390:3.1.0 .`; a local emulated benchmark
 is not representative of CE CPU speed. Image building downloads Debian packages;
 the running computation makes no network requests. The Docker build runs `make test` in its build stage. Preserve the resulting image
 digest and use that same image for every task and continuation in the campaign.
@@ -84,7 +93,7 @@ not a statistically justified best region and not a guarantee of discovery:
 
 ```sh
 python3 campaign.py \
-  --campaign-id ce390-pilot-001 \
+  --campaign-id ce390-signed-pilot-001 \
   --a-values 1,5,7 \
   --q-min 100000001 \
   --q-max 100000000001 \
@@ -95,7 +104,11 @@ python3 campaign.py \
   --output-dir tasks
 ```
 
-The default rectangle is embedded in every task using exact decimal strings.
+The default magnitude bounds and `signs: "all"` are embedded in every task
+using the `ce390-task-v2` schema and `absolute-slope-a-over-q-v1`
+parameterization. Version 3.0.0 task files and checkpoints must not be reused;
+generate new tasks for this signed campaign. Every numerator must be smaller
+than the campaign's minimum denominator.
 `--page-start` is a zero-based **task ordinal**. To generate the next page, use
 `--page-start 10` with all other campaign parameters unchanged. The page manifest
 reports the next ordinal. The generator refuses to replace a different task at
@@ -110,7 +123,7 @@ cp tasks/task-000000000000-*.json ce-input/task.json
 docker run --rm --network none --cpus 1 --memory 512m \
   --mount type=bind,src="$(pwd)/ce-input",dst=/local/input,readonly \
   --mount type=bind,src="$(pwd)/ce-output",dst=/local/output \
-  ce390:3.0.0
+  ce390:3.1.0
 ```
 
 Use one worker process per allocated core and separate task/output directories.

@@ -18,8 +18,9 @@ import sys
 import time
 from typing import Any
 
-SCHEMA = "ce390-task-v1"
-PARAMETERIZATION = "d=-1-a/(2q);positive-odd-coprime-a-q"
+SCHEMA = "ce390-task-v2"
+PARAMETERIZATION = "absolute-slope-a-over-q-v1"
+SIGN_POLICIES = ("all", "pp", "pn", "np", "nn")
 DECIMAL = re.compile(r"(?:0|[1-9][0-9]*)\Z")
 SIGNED = re.compile(r"(?:0|-?[1-9][0-9]*)\Z")
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
@@ -71,15 +72,17 @@ def validate_task(task: Any) -> dict[str, Any]:
     keys(task, {"schema", "parameterization", "campaign_id", "task_id", "search", "fibers", "slice", "execution"},
          {"resume_index", "expected_worker_sha256"}, "task")
     if task["schema"] != SCHEMA or task["parameterization"] != PARAMETERIZATION:
-        raise ValueError("unsupported task schema or parameterization")
+        raise ValueError("unsupported task schema or parameterization; v1 positive-only tasks must not be reinterpreted as signed tasks")
     if not isinstance(task["campaign_id"], str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,95}", task["campaign_id"]):
         raise ValueError("campaign_id must be 1-96 safe ASCII filename characters")
-    keys(task["search"], {"n_min", "n_max", "x_min", "x_max"}, {"require_integer_sqrt"}, "search")
+    keys(task["search"], {"n_min", "n_max", "x_min", "x_max", "signs"}, {"require_integer_sqrt"}, "search")
+    if task["search"]["signs"] not in SIGN_POLICIES:
+        raise ValueError("search.signs must be all, pp, pn, np or nn")
     if type(task["search"].get("require_integer_sqrt", False)) is not bool:
         raise ValueError("search.require_integer_sqrt must be a boolean")
     bounds = {k: integer(task["search"][k], f"search.{k}", positive=True) for k in ("n_min", "n_max", "x_min", "x_max")}
     if bounds["n_min"] > bounds["n_max"] or bounds["x_min"] > bounds["x_max"]:
-        raise ValueError("search bounds must be ordered and inclusive")
+        raise ValueError("search magnitude bounds must be positive, ordered and inclusive")
     keys(task["fibers"], {"a_values", "q_min", "q_max"}, set(), "fibers")
     raw_a = task["fibers"]["a_values"]
     if not isinstance(raw_a, list) or not raw_a or len(raw_a) > 100000:
@@ -91,6 +94,8 @@ def validate_task(task: Any) -> dict[str, Any]:
     q_max = integer(task["fibers"]["q_max"], "fibers.q_max", positive=True)
     if q_min % 2 == 0 or q_max % 2 == 0 or q_min > q_max:
         raise ValueError("q_min and q_max must be ordered, positive and odd")
+    if max(values_a) >= q_min:
+        raise ValueError("every a must be strictly smaller than q_min (0 < a/q < 1)")
     q_count = (q_max - q_min) // 2 + 1
     count = q_count * len(values_a)
     keys(task["slice"], {"start", "stop"}, set(), "slice")
@@ -110,7 +115,7 @@ def validate_task(task: Any) -> dict[str, Any]:
         raise ValueError("task_id does not match the immutable search definition")
     if "expected_worker_sha256" in task and not HEX64.fullmatch(str(task["expected_worker_sha256"])):
         raise ValueError("expected_worker_sha256 must be a lowercase SHA256 digest")
-    return dict(bounds=bounds, a_values=values_a, q_min=q_min, q_count=q_count, count=count,
+    return dict(bounds=bounds, signs=task["search"]["signs"], a_values=values_a, q_min=q_min, q_count=q_count, count=count,
                 start=start, stop=stop, resume=resume, seconds=seconds, precision=precision,
                 max_precision=max_precision, checkpoint_seconds=checkpoint_seconds)
 
@@ -155,7 +160,7 @@ def candidate(parsed: dict[str, Any], index: int) -> tuple[int, int]:
     return parsed["a_values"][ai], parsed["q_min"] + 2 * qi
 
 
-def validate_hit(hit: Any, a: int, q: int, bounds: dict[str, int]) -> dict[str, Any]:
+def validate_hit(hit: Any, a: int, q: int, bounds: dict[str, int], signs: str = "all") -> dict[str, Any]:
     if not isinstance(hit, dict):
         raise ValueError("worker hit must be an object")
     required = {"n", "x", "y_num", "y_den", "d_num", "d_den", "gap_num", "gap_den", "sqrt_integer"}
@@ -163,8 +168,11 @@ def validate_hit(hit: Any, a: int, q: int, bounds: dict[str, int]) -> dict[str, 
         raise ValueError(f"worker hit missing {sorted(required - hit.keys())}")
     values = {k: integer(hit[k], f"hit.{k}", signed=True) for k in required - {"sqrt_integer"}}
     n, x = values["n"], values["x"]
-    if not bounds["n_min"] <= n <= bounds["n_max"] or not bounds["x_min"] <= x <= bounds["x_max"]:
-        raise ValueError("worker hit violates search bounds")
+    if not bounds["n_min"] <= abs(n) <= bounds["n_max"] or not bounds["x_min"] <= abs(x) <= bounds["x_max"]:
+        raise ValueError("worker hit violates search magnitude bounds")
+    quadrant = ("p" if n > 0 else "n") + ("p" if x > 0 else "n")
+    if signs not in SIGN_POLICIES or (signs != "all" and quadrant != signs):
+        raise ValueError("worker hit violates the requested sign policy")
     if n % 3 != 1 or x % 12 != 5 or x % 7 == 0:
         raise ValueError("worker hit violates congruences")
     if any(values[k] <= 0 for k in ("y_den", "d_den", "gap_den")):
@@ -177,8 +185,8 @@ def validate_hit(hit: Any, a: int, q: int, bounds: dict[str, int]) -> dict[str, 
     c = 36 * n**3 - 65
     if y < 0 or y*y != (x + 6*n)**2 + Fraction(c, x):
         raise ValueError("worker hit fails exact nonnegative radical check")
-    if d != -1 - Fraction(a, 2*q) or gap != y - (x + 6*n):
-        raise ValueError("worker hit has wrong rational fiber or square-root gap")
+    if not 0 < a < q or abs(y / abs(x) - 1 + Fraction(6*n, x)) != Fraction(a, q) or gap != y - (x + 6*n):
+        raise ValueError("worker hit has wrong absolute-slope fiber or square-root gap")
     if c != -2 * d * x*x * gap:
         raise ValueError("worker hit fails original equation")
     if type(hit["sqrt_integer"]) is not bool or hit["sqrt_integer"] != (y.denominator == 1):
@@ -192,7 +200,7 @@ def certificate_key(hit: dict[str, Any]) -> str:
     return digest({key: hit[key] for key in ("n", "x", "d_num", "d_den", "y_num", "y_den")})
 
 
-def recover_hits(path: Path, bounds: dict[str, int], task_id: str, require_integer_sqrt: bool = False) -> set[str]:
+def recover_hits(path: Path, bounds: dict[str, int], task_id: str, require_integer_sqrt: bool = False, signs: str = "all") -> set[str]:
     seen: set[str] = set()
     if not path.exists():
         path.touch()
@@ -213,9 +221,9 @@ def recover_hits(path: Path, bounds: dict[str, int], task_id: str, require_integ
             row = json.loads(line)
             a = integer(row["a"], "stored hit.a", positive=True)
             q = integer(row["q"], "stored hit.q", positive=True)
-            if a % 2 != 1 or q % 2 != 1 or math.gcd(a, q) != 1:
-                raise ValueError("stored certificate has an invalid rational fiber")
-            checked = validate_hit(row, a, q, bounds)
+            if not 0 < a < q or a % 2 != 1 or q % 2 != 1 or math.gcd(a, q) != 1:
+                raise ValueError("stored certificate has an invalid absolute-slope fiber")
+            checked = validate_hit(row, a, q, bounds, signs)
             if require_integer_sqrt and not checked["sqrt_integer"]:
                 raise ValueError("stored certificate violates the integer-square-root subset")
             key = certificate_key(checked)
@@ -323,7 +331,7 @@ def run(args: argparse.Namespace) -> int:
     cursor = parsed["resume"]
     if checkpoint_path.exists():
         cp = load_json(checkpoint_path)
-        if cp.get("schema") != "ce390-checkpoint-v1" or cp.get("task_id") != task["task_id"]:
+        if cp.get("schema") != "ce390-checkpoint-v2" or cp.get("task_id") != task["task_id"]:
             raise ValueError("checkpoint belongs to another task")
         if cp.get("worker_sha256") != worker_sha:
             raise ValueError("checkpoint worker hash differs from this executable")
@@ -375,7 +383,7 @@ def run(args: argparse.Namespace) -> int:
             raise ValueError("output directory already belongs to a different task")
     if required_retained_hits and not (output / "hits.jsonl").exists():
         raise ValueError("retained hit file is missing despite a positive durable hit count")
-    seen = recover_hits(output / "hits.jsonl", parsed["bounds"], task["task_id"], task["search"].get("require_integer_sqrt", False))
+    seen = recover_hits(output / "hits.jsonl", parsed["bounds"], task["task_id"], task["search"].get("require_integer_sqrt", False), parsed["signs"])
     if len(seen) < required_retained_hits:
         raise ValueError("retained hit records were lost: recovered unique count is below durable status/checkpoint count")
     atomic_json(output / "task.json", task)
@@ -400,7 +408,7 @@ def run(args: argparse.Namespace) -> int:
 
     def snapshot(state: str, reason: str) -> dict[str, Any]:
         return {
-            "schema": "ce390-status-v1", "task_id": task["task_id"], "campaign_id": task["campaign_id"],
+            "schema": "ce390-status-v2", "task_id": task["task_id"], "campaign_id": task["campaign_id"],
             "worker_sha256": worker_sha, "state": state, "reason": reason,
             "complete": cursor == parsed["stop"] and state == "complete",
             "started_utc": started, "updated_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
@@ -411,11 +419,11 @@ def run(args: argparse.Namespace) -> int:
             "next_index": str(cursor), "remaining_indices": str(parsed["stop"] - cursor),
             "counters_this_invocation": {key: str(value) for key, value in counters.items()},
             "unique_hits_in_this_output": str(len(seen)),
-            "coverage_note": "Only the selected rational-d fibers are covered; this is not an exhaustive search of the n,x rectangle.",
+            "coverage_note": "Only the selected absolute-slope fibers and requested signs are covered; this is not an exhaustive search of the signed n,x magnitude regions.",
         }
 
     def checkpoint(state: str, reason: str) -> None:
-        atomic_json(output / "checkpoint.json", {"schema": "ce390-checkpoint-v1", "task_id": task["task_id"],
+        atomic_json(output / "checkpoint.json", {"schema": "ce390-checkpoint-v2", "task_id": task["task_id"],
                     "worker_sha256": worker_sha, "next_index": str(cursor), "output_coverage_start": str(output_start),
                     "unique_hits_in_this_output": str(len(seen)), "updated_utc": dt.datetime.now(dt.timezone.utc).isoformat()})
         atomic_json(output / "status.json", snapshot(state, reason))
@@ -429,7 +437,8 @@ def run(args: argparse.Namespace) -> int:
 
     argv = [str(worker_path), "--n-min", task["search"]["n_min"], "--n-max", task["search"]["n_max"],
             "--x-min", task["search"]["x_min"], "--x-max", task["search"]["x_max"],
-            "--precision-bits", str(parsed["precision"]), "--max-precision-bits", str(parsed["max_precision"])]
+            "--precision-bits", str(parsed["precision"]), "--max-precision-bits", str(parsed["max_precision"]),
+            "--signs", parsed["signs"]]
     if task["search"].get("require_integer_sqrt", False):
         argv.append("--integer-sqrt")
     log(f"Starting task {task['task_id']} at candidate {cursor}, stop {parsed['stop']}; worker SHA256 {worker_sha}")
@@ -451,7 +460,7 @@ def run(args: argparse.Namespace) -> int:
                 if math.gcd(a, q) != 1:
                     counters["non_coprime_skipped"] += 1
                     cursor += 1
-                elif q % 3 == 0 or (a + q) % 3 != 0:
+                elif q % 3 == 0 or a % 3 == 0:
                     counters["congruence_excluded"] += 1
                     cursor += 1
                 else:
@@ -462,6 +471,10 @@ def run(args: argparse.Namespace) -> int:
                     if result.get("status") != "complete":
                         atomic_json(output / "worker_error.json", {"candidate_index": str(cursor), "worker_result": result})
                         raise RuntimeError("worker could not certify completion of this fiber; see worker_error.json")
+                    if result.get("parameterization") != PARAMETERIZATION:
+                        raise RuntimeError("worker reply used the wrong mathematical parameterization")
+                    if result.get("signs") != parsed["signs"]:
+                        raise RuntimeError("worker reply used the wrong signed search policy")
                     if result.get("congruences_enforced") is not True:
                         raise RuntimeError("worker reply did not enforce the requested congruences")
                     expected_integer_sqrt = task["search"].get("require_integer_sqrt", False)
@@ -474,7 +487,7 @@ def run(args: argparse.Namespace) -> int:
                     if not isinstance(rows, list):
                         raise RuntimeError("worker result has no hit list")
                     # Check every hit before accepting any part of this completed fiber.
-                    checked_hits = [validate_hit(row, a, q, parsed["bounds"]) for row in rows]
+                    checked_hits = [validate_hit(row, a, q, parsed["bounds"], parsed["signs"]) for row in rows]
                     if task["search"].get("require_integer_sqrt", False) and any(not row["sqrt_integer"] for row in checked_hits):
                         raise RuntimeError("worker returned a noninteger square root in integer-only mode")
                     for hit in checked_hits:

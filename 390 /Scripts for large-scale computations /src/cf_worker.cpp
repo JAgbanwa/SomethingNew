@@ -1,4 +1,4 @@
-// CE390: certified continued-fraction search of fixed rational-d fibres.
+// CE390: certified continued-fraction search of absolute-slope fibres.
 // All acceptance decisions use GMP integers/rationals, never floating point.
 #include <gmpxx.h>
 #include <algorithm>
@@ -15,7 +15,7 @@
 namespace {
 using Z = mpz_class;
 using Q = mpq_class;
-constexpr const char* VERSION = "3.0.0";
+constexpr const char* VERSION = "3.1.0";
 
 Z integer(const std::string& s) {
     if (s.empty()) throw std::runtime_error("empty integer");
@@ -51,12 +51,14 @@ struct Config {
     unsigned max_precision = 16384;
     bool congruences = true;
     bool integer_sqrt = false;
+    std::string signs = "all";
 };
 
 struct Polynomial {
     Z c3, c1, c0, target;
-    Polynomial(const Z& a, const Z& q)
-        : c3(36*q*q), c1(12*q*(2*q+a)), c0(a*(2*q+a)), target(65*q*q) {}
+    Polynomial(const Z& a, const Z& q, int tau=1)
+        : c3(36*q*q), c1(12*q*(2*q+tau*a)),
+          c0(a*(2*q+tau*a)), target(65*q*q) {}
     Z homogeneous(const Z& u, const Z& v) const {
         return c3*u*u*u + c1*u*v*v - c0*v*v*v;
     }
@@ -110,17 +112,27 @@ struct Hit {
     }
 };
 
-void verify_and_add(const Config& cfg, const Z& a, const Z& q,
+bool accepts_signs(const Config& cfg, int sn, int sx) {
+    return cfg.signs=="all" || cfg.signs==std::string(sn>0?"p":"n")+(sx>0?"p":"n");
+}
+
+void verify_and_add(const Config& cfg, const Z& a, const Z& q, int tau,
                     const Z& n, const Z& x, std::vector<Hit>& hits,
                     std::set<std::pair<std::string,std::string>>& seen) {
-    if (n < cfg.nmin || n > cfg.nmax || x < cfg.xmin || x > cfg.xmax) return;
+    Z N=abs(n), X=abs(x);
+    if (N < cfg.nmin || N > cfg.nmax || X < cfg.xmin || X > cfg.xmax) return;
+    int sn=mpz_sgn(n.get_mpz_t()), sx=mpz_sgn(x.get_mpz_t());
+    if (!sn || !sx || sn*sx!=tau || !accepts_signs(cfg,sn,sx)) return;
     if (cfg.congruences && (mpz_fdiv_ui(n.get_mpz_t(),3) != 1
         || mpz_fdiv_ui(x.get_mpz_t(),12) != 5
         || mpz_divisible_ui_p(x.get_mpz_t(),7))) return;
-    Q y((q+a)*x,q); y -= 6*n; y.canonicalize();
-    Q d(-(2*q+a),2*q); d.canonicalize();
+    // The auxiliary radical w has the sign of x. Recover the principal
+    // radical y first; d is then derived directly from the original equation.
+    Q w((q+tau*a)*x,q); w -= 6*n; w.canonicalize();
+    Q y=sx*w;
+    Q d=-(y+x+6*n)/(2*x); d.canonicalize();
     Q gap = y-x-6*n; gap.canonicalize();
-    if (y < 0) return; // Principal square root is required.
+    if (y < 0) return;
     if (cfg.integer_sqrt && y.get_den()!=1) return;
     Z A = 36*n*n*n-65, S=x+6*n;
     Q radicand(A,x); radicand += S*S; radicand.canonicalize();
@@ -138,32 +150,36 @@ bool recover_scale(const Z& target,const Z& value,Z& g) {
 }
 
 void evaluate(const Config& cfg, const Polynomial& f, const Z& a, const Z& q,
-              const Z& u, const Z& v, std::vector<Hit>& hits,
+              int tau, const Z& u, const Z& v, std::vector<Hit>& hits,
               std::set<std::pair<std::string,std::string>>& seen) {
     if (u <= 0 || v <= 0 || u > cfg.nmax || v > cfg.xmax) return;
-    Z value=f.homogeneous(u,v);
-    Z g;
-    if (!recover_scale(f.target,value,g)) return;
-    verify_and_add(cfg,a,q,g*u,g*v,hits,seen);
+    Z value=f.homogeneous(u,v), magnitude=abs(value), g;
+    if (!recover_scale(f.target,magnitude,g)) return;
+    int sn=mpz_sgn(value.get_mpz_t()), sx=sn*tau;
+    verify_and_add(cfg,a,q,tau,sn*g*u,sx*g*v,hits,seen);
 }
 
-// Legendre's sufficient inequality only potentially fails when g=1 and
-// reduced denominator v<=5. Such a point has x<=5. For each of those five
-// x values, strict monotonicity in n permits an exact binary search.
+// H'_tau(t)>12q^2 implies the Legendre bound whenever |x|>=11.
+// For every remaining X<=10, strict monotonicity in N gives an exact
+// binary search for each signed right-hand side, including scaled points.
 void small_exceptions(const Config& cfg, const Polynomial& f,
-                      const Z& a, const Z& q, std::vector<Hit>& hits,
+                      const Z& a, const Z& q, int tau, std::vector<Hit>& hits,
                       std::set<std::pair<std::string,std::string>>& seen) {
-    if (cfg.xmin > 5) return;
-    for (unsigned xsmall=1; xsmall<=5; ++xsmall) {
-        Z x=xsmall;
-        if (x<cfg.xmin || x>cfg.xmax) continue;
-        Z lo=cfg.nmin, hi=cfg.nmax;
-        while (lo<=hi) {
-            Z mid=(lo+hi)/2, value=f.homogeneous(mid,x);
-            if (value == f.target) {
-                verify_and_add(cfg,a,q,mid,x,hits,seen); break;
+    if (cfg.xmin > 10) return;
+    for (unsigned xsmall=1; xsmall<=10; ++xsmall) {
+        Z X=xsmall;
+        if (X<cfg.xmin || X>cfg.xmax) continue;
+        for (int sn: {1,-1}) {
+            int sx=sn*tau;
+            if (!accepts_signs(cfg,sn,sx)) continue;
+            Z lo=cfg.nmin, hi=cfg.nmax, target=sn*f.target;
+            while (lo<=hi) {
+                Z mid=(lo+hi)/2, value=f.homogeneous(mid,X);
+                if (value == target) {
+                    verify_and_add(cfg,a,q,tau,sn*mid,sx*X,hits,seen); break;
+                }
+                if (value<target) lo=mid+1; else hi=mid-1;
             }
-            if (value<f.target) lo=mid+1; else hi=mid-1;
         }
     }
 }
@@ -179,23 +195,23 @@ struct Result {
 // A common interval partial quotient is certified exactly. Endpoints are
 // open: for an integral upper endpoint H, floor(alpha)<=H-1.
 bool cf_attempt(const Config& cfg, const Polynomial& f,
-                const Z& a, const Z& q, unsigned bits,
+                const Z& a, const Z& q, int tau, unsigned bits,
                 Result& out) {
-    out.precision=bits;
+    out.precision=std::max(out.precision,bits);
     std::set<std::pair<std::string,std::string>> seen;
     for (const auto& h:out.hits) seen.emplace(h.n.get_str(),h.x.get_str());
     Isolation root=isolate(f,a,q,bits);
     Z pn2=0,pn1=1,vn2=1,vn1=0;
     if (root.exact) {
-        // Defensive handling of a rational root, even though positive roots
-        // in the admissible family are irrational (Fermat's theorem for 3).
+        // A rational endpoint is handled exactly as a finite continued
+        // fraction. No irrationality assumption is needed by this branch.
         Z p=root.lo,r=root.scale;
         while (r!=0) {
             Z c=p/r, rem=p%r;
             Z u=c*pn1+pn2,v=c*vn1+vn2;
             if (v>cfg.xmax) return true;
             ++out.convergents;
-            evaluate(cfg,f,a,q,u,v,out.hits,seen);
+            evaluate(cfg,f,a,q,tau,u,v,out.hits,seen);
             pn2=pn1;pn1=u;vn2=vn1;vn1=v;
             p=r;r=rem;
         }
@@ -213,7 +229,7 @@ bool cf_attempt(const Config& cfg, const Polynomial& f,
         Z u=cmin*pn1+pn2,v=cmin*vn1+vn2;
         if (v>cfg.xmax) return true;
         ++out.convergents;
-        evaluate(cfg,f,a,q,u,v,out.hits,seen);
+        evaluate(cfg,f,a,q,tau,u,v,out.hits,seen);
         pn2=pn1;pn1=u;vn2=vn1;vn1=v;
         if (vn1>0 && vn1+vn2>cfg.xmax) return true;
         Z low_rem=ln-cmin*ld, high_rem=hn-cmin*hd;
@@ -226,35 +242,55 @@ bool cf_attempt(const Config& cfg, const Polynomial& f,
     }
 }
 
+// H is increasing in N. For fixed N, the only positive stationary point
+// in X is a maximum; minima therefore occur at interval endpoints. A
+// stationary maximum is evaluated as a rational without rounding.
+bool outside_bounds(const Config& cfg,const Polynomial& f,int tau) {
+    Z low=std::min(f.homogeneous(cfg.nmin,cfg.xmin),f.homogeneous(cfg.nmin,cfg.xmax));
+    Z high=std::max(f.homogeneous(cfg.nmax,cfg.xmin),f.homogeneous(cfg.nmax,cfg.xmax));
+    Z high_num=high, high_den=1;
+    Z turn_num=2*f.c1*cfg.nmax, turn_den=3*f.c0;
+    if (turn_num>cfg.xmin*turn_den && turn_num<cfg.xmax*turn_den) {
+        high_den=27*f.c0*f.c0;
+        high_num=cfg.nmax*cfg.nmax*cfg.nmax*(f.c3*high_den+4*f.c1*f.c1*f.c1);
+    }
+    for (int sn: {1,-1}) {
+        if (!accepts_signs(cfg,sn,sn*tau)) continue;
+        Z target=sn*f.target;
+        if (low<=target && high_num>=target*high_den) return false;
+    }
+    return true;
+}
+
 Result solve(const Config& cfg,const Z& a,const Z& q) {
     Z divisor;
     mpz_gcd(divisor.get_mpz_t(),a.get_mpz_t(),q.get_mpz_t());
-    if (a<=0 || q<=0 || mpz_even_p(a.get_mpz_t()) || mpz_even_p(q.get_mpz_t()) || divisor!=1)
-        throw std::runtime_error("a and q must be positive odd coprime integers");
-    Polynomial f(a,q);
+    if (a<=0 || q<=a || divisor!=1
+        || (cfg.congruences && (mpz_even_p(a.get_mpz_t()) || mpz_even_p(q.get_mpz_t()))))
+        throw std::runtime_error("a and q must satisfy 0<a<q and gcd(a,q)=1; enforced congruences require both odd");
     Result result;
-    if (cfg.congruences && (mpz_divisible_ui_p(q.get_mpz_t(),3)
-        || (mpz_fdiv_ui(a.get_mpz_t(),3)+mpz_fdiv_ui(q.get_mpz_t(),3))%3!=0)) {
-        result.excluded_by_congruence=true;
-        return result;
-    }
-    // P is increasing in n. At fixed n, its derivative in x has one
-    // positive zero, a maximum, so the minimum on an x interval is at an
-    // endpoint. These exclusions avoid CF work on irrelevant fibres.
-    if (f.homogeneous(cfg.nmax,cfg.xmin)<=0
-        || (f.homogeneous(cfg.nmin,cfg.xmin)>f.target
-            && f.homogeneous(cfg.nmin,cfg.xmax)>f.target)) {
-        result.excluded_by_bounds=true;
-        return result;
-    }
+    bool any_congruence_eligible=false, any_bounds_eligible=false;
     std::set<std::pair<std::string,std::string>> seen;
-    small_exceptions(cfg,f,a,q,result.hits,seen);
-    for (unsigned bits=cfg.precision;;) {
-        if (cf_attempt(cfg,f,a,q,bits,result)) return result;
-        if (bits>=cfg.max_precision)
-            throw std::runtime_error("precision cap reached before fibre completeness; retry with larger --max-precision-bits");
-        bits=std::min(cfg.max_precision,bits*2);
+    for (int tau: {1,-1}) {
+        if (!accepts_signs(cfg,1,tau) && !accepts_signs(cfg,-1,-tau)) continue;
+        Z residue=tau*a+q;
+        if (cfg.congruences && (mpz_divisible_ui_p(q.get_mpz_t(),3)
+            || !mpz_divisible_ui_p(residue.get_mpz_t(),3))) continue;
+        any_congruence_eligible=true;
+        Polynomial f(a,q,tau);
+        if (outside_bounds(cfg,f,tau)) continue;
+        any_bounds_eligible=true;
+        small_exceptions(cfg,f,a,q,tau,result.hits,seen);
+        for (unsigned bits=cfg.precision;;) {
+            if (cf_attempt(cfg,f,a,q,tau,bits,result)) break;
+            if (bits>=cfg.max_precision)
+                throw std::runtime_error("precision cap reached before fibre completeness; retry with larger --max-precision-bits");
+            bits=std::min(cfg.max_precision,bits*2);
+        }
     }
+    result.excluded_by_congruence=!any_congruence_eligible;
+    result.excluded_by_bounds=any_congruence_eligible && !any_bounds_eligible;
+    return result;
 }
 
 unsigned positive_unsigned(const std::string& s) {
@@ -271,9 +307,10 @@ Config arguments(int argc,char** argv) {
         if (name=="--help") {
             std::cout<<"Usage: cf_worker [--n-min N --n-max N --x-min X --x-max X]\n"
                 <<"  [--precision-bits 512 --max-precision-bits 16384]\n"
-                <<"  [--integer-sqrt] [--relax-congruences]\n"
-                <<"Read positive odd coprime a q pairs on stdin; emit one JSON record per fibre.\n"
-                <<"d=-1-a/(2q). Bounds are positive and inclusive. Default target residues:\n"
+                <<"  [--integer-sqrt] [--relax-congruences] [--signs all|pp|pn|np|nn]\n"
+                <<"Read positive odd coprime a q with a<q; emit one JSON record per slope fibre.\n"
+                <<"Bounds are inclusive magnitudes |n|,|x|; all four signs are searched by default.\n"
+                <<"Parameterization: absolute-slope-a-over-q-v1. Default target residues:\n"
                 <<"n=1 mod 3, x=5 mod 12, x!=0 mod 7.\n";
             std::exit(0);
         }
@@ -287,10 +324,13 @@ Config arguments(int argc,char** argv) {
         else if(name=="--x-max") c.xmax=integer(val);
         else if(name=="--precision-bits") c.precision=positive_unsigned(val);
         else if(name=="--max-precision-bits") c.max_precision=positive_unsigned(val);
+        else if(name=="--signs") c.signs=val;
         else throw std::runtime_error("unknown option: "+name);
     }
     if (c.nmin<1 || c.xmin<1 || c.nmax<c.nmin || c.xmax<c.xmin)
-        throw std::runtime_error("bounds must be positive ordered inclusive intervals");
+        throw std::runtime_error("magnitude bounds must be positive ordered inclusive intervals");
+    if(c.signs!="all" && c.signs!="pp" && c.signs!="pn" && c.signs!="np" && c.signs!="nn")
+        throw std::runtime_error("signs must be all, pp, pn, np, or nn");
     if (c.precision>c.max_precision) throw std::runtime_error("initial precision exceeds maximum precision");
     return c;
 }
@@ -311,7 +351,8 @@ int main(int argc,char** argv) {
                 Z a=integer(sa),q=integer(sq);
                 Result r=solve(cfg,a,q);
                 output<<"{\"a\":"<<quoted(a.get_str())<<",\"q\":"<<quoted(q.get_str())
-                  <<",\"status\":\"complete\",\"congruences_enforced\":"<<(cfg.congruences?"true":"false")
+                  <<",\"status\":\"complete\",\"parameterization\":\"absolute-slope-a-over-q-v1\""
+                  <<",\"signs\":"<<quoted(cfg.signs)<<",\"congruences_enforced\":"<<(cfg.congruences?"true":"false")
                   <<",\"integer_sqrt_required\":"<<(cfg.integer_sqrt?"true":"false")
                   <<",\"excluded_by_congruence\":"<<(r.excluded_by_congruence?"true":"false")
                   <<",\"excluded_by_bounds\":"<<(r.excluded_by_bounds?"true":"false")

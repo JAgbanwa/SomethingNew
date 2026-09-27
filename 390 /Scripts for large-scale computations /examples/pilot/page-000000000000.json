@@ -1,20 +1,20 @@
 {
-  "campaign_id": "ce390-pilot-001",
+  "campaign_id": "ce390-signed-pilot-001",
   "candidates_per_task": "30000",
-  "coverage_note": "Finite selected rational-d fibers only. No claim to exhaust the full n,x rectangle.",
+  "coverage_note": "Finite selected absolute-slope fibers and requested signs only. No claim to exhaust the signed n,x magnitude regions.",
   "next_page_start": "1",
   "page_start": "0",
   "page_task_count": 1,
-  "schema": "ce390-page-v1",
+  "schema": "ce390-page-v2",
   "tasks": [
     {
-      "file": "task-000000000000-64c0c51fcac916b8.json",
+      "file": "task-000000000000-7eecbfadd14726ff.json",
       "ordinal": "0",
       "slice": {
         "start": "0",
         "stop": "30000"
       },
-      "task_id": "64c0c51fcac916b863d116ce690b4f68509ee4ee3d4f7e19d62dc630fb0d29e5"
+      "task_id": "7eecbfadd14726ffd42a58b3643c379d78fb9cebce2d094ed9fa8964b1e74fda"
     }
   ],
   "total_candidate_indices": "50001",

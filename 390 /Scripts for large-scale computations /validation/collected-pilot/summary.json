@@ -1,23 +1,23 @@
 {
   "campaign_worker_sha256": {
-    "ce390-pilot-001": [
-      "db637a883a99401ae133f9c73d98cceef97369003e9338c00354ca8b4d6118f8"
+    "ce390-signed-pilot-001": [
+      "4094460226cc692b5996cda4bcb40ef2ea75be2c6505929fbb709c3eff6a59d9"
     ]
   },
   "campaigns_with_multiple_worker_hashes": [],
   "certificate_rows": 0,
   "complete_selected_page": true,
-  "coverage_note": "Completeness covers only the selected task-page fiber indices. It does not exhaust or prove anything about unsearched fibers in the n,x rectangle.",
+  "coverage_note": "Completeness covers only the selected task-page fiber indices. It does not exhaust or prove anything about unsearched absolute-slope fibers in the signed n,x magnitude regions.",
   "duplicate_certificate_rows": 0,
   "error_returns": [],
   "missing_tasks": [],
   "running_returns": [],
-  "schema": "ce390-collection-v1",
+  "schema": "ce390-collection-v2",
   "selected_tasks": 1,
   "skipped_unrelated_returns": [],
   "tasks": [
     {
-      "campaign_id": "ce390-pilot-001",
+      "campaign_id": "ce390-signed-pilot-001",
       "complete": true,
       "coverage": [
         {
@@ -44,12 +44,13 @@
           "state": "complete"
         }
       ],
+      "signs": "all",
       "slice": {
         "start": "0",
         "stop": "30000"
       },
-      "task_id": "64c0c51fcac916b863d116ce690b4f68509ee4ee3d4f7e19d62dc630fb0d29e5",
-      "worker_sha256": "db637a883a99401ae133f9c73d98cceef97369003e9338c00354ca8b4d6118f8"
+      "task_id": "7eecbfadd14726ffd42a58b3643c379d78fb9cebce2d094ed9fa8964b1e74fda",
+      "worker_sha256": "4094460226cc692b5996cda4bcb40ef2ea75be2c6505929fbb709c3eff6a59d9"
     }
   ],
   "unique_verified_solutions": 0

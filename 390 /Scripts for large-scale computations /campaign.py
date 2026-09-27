@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import sys
 from run_task import (SCHEMA, PARAMETERIZATION, DEFAULT_N_MIN, DEFAULT_N_MAX, DEFAULT_X_MIN,
-                      DEFAULT_X_MAX, atomic_json, integer, task_identity, validate_task)
+                      DEFAULT_X_MAX, SIGN_POLICIES, atomic_json, integer, task_identity, validate_task)
 
 
 def generate(args: argparse.Namespace) -> dict:
@@ -24,6 +24,7 @@ def generate(args: argparse.Namespace) -> dict:
     if page_start >= task_count:
         raise ValueError(f"page-start {page_start} is beyond the {task_count} campaign tasks")
     search = {k: getattr(args, k) for k in ("n_min", "n_max", "x_min", "x_max")}
+    search["signs"] = args.signs
     if args.require_integer_sqrt:
         search["require_integer_sqrt"] = True
     fibers = {"a_values": a_values, "q_min": args.q_min, "q_max": args.q_max}
@@ -50,11 +51,11 @@ def generate(args: argparse.Namespace) -> dict:
         else:
             atomic_json(path, task)
         entries.append({"ordinal": str(ordinal), "file": filename, "task_id": task["task_id"], "slice": task["slice"]})
-    manifest = {"schema": "ce390-page-v1", "campaign_id": args.campaign_id, "total_candidate_indices": str(count),
+    manifest = {"schema": "ce390-page-v2", "campaign_id": args.campaign_id, "total_candidate_indices": str(count),
                 "total_tasks": str(task_count), "page_start": str(page_start), "page_task_count": len(entries),
                 "next_page_start": str(page_start + len(entries)) if page_start + len(entries) < task_count else None,
                 "candidates_per_task": str(size), "tasks": entries,
-                "coverage_note": "Finite selected rational-d fibers only. No claim to exhaust the full n,x rectangle."}
+                "coverage_note": "Finite selected absolute-slope fibers and requested signs only. No claim to exhaust the signed n,x magnitude regions."}
     atomic_json(args.output_dir / f"page-{page_start:012d}.json", manifest)
     return manifest
 
@@ -69,12 +70,13 @@ def main() -> int:
     p.add_argument("--page-start", default="0", help="zero-based task ordinal, not candidate index")
     p.add_argument("--task-count", type=int, default=10, help="emit only this page, at most 10000 tasks")
     p.add_argument("--seconds", type=int, default=3000, help="soft wall-time budget: 3000 for 1h CE tasks, 6000 for 2h")
+    p.add_argument("--signs", choices=SIGN_POLICIES, default="all", help="all four sign combinations by default; p/n refer to signs of n then x")
     p.add_argument("--require-integer-sqrt", action="store_true", help="restrict to the integer-radical subset")
     p.add_argument("--precision-bits", type=int, default=512)
     p.add_argument("--max-precision-bits", type=int, default=16384)
     p.add_argument("--checkpoint-seconds", type=int, default=5)
     for name, default in (("n-min", DEFAULT_N_MIN), ("n-max", DEFAULT_N_MAX), ("x-min", DEFAULT_X_MIN), ("x-max", DEFAULT_X_MAX)):
-        p.add_argument("--" + name, default=str(default))
+        p.add_argument("--" + name, default=str(default), help="inclusive positive magnitude bound")
     p.add_argument("--output-dir", type=Path, default=Path("tasks"))
     args = p.parse_args()
     try:

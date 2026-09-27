@@ -1,5 +1,5 @@
 {
-  "campaign_id": "ce390-pilot-001",
+  "campaign_id": "ce390-signed-50min-001",
   "execution": {
     "checkpoint_seconds": 5,
     "max_precision_bits": 16384,
@@ -10,20 +10,21 @@
     "a_values": [
       "1"
     ],
-    "q_max": "100100001",
+    "q_max": "100000000001",
     "q_min": "100000001"
   },
-  "parameterization": "d=-1-a/(2q);positive-odd-coprime-a-q",
-  "schema": "ce390-task-v1",
+  "parameterization": "absolute-slope-a-over-q-v1",
+  "schema": "ce390-task-v2",
   "search": {
     "n_max": "1000000000000000000000000000000000000000000000",
     "n_min": "10000000000000000000000000000000000000000000",
+    "signs": "all",
     "x_max": "10000000000000000000000000000000000000000000000000000000",
     "x_min": "1000000000000000000000000000000000000000000000000000000"
   },
   "slice": {
     "start": "0",
-    "stop": "30000"
+    "stop": "50000000"
   },
-  "task_id": "64c0c51fcac916b863d116ce690b4f68509ee4ee3d4f7e19d62dc630fb0d29e5"
+  "task_id": "fd5415853b05b9b97cbf60ec5d0ab49e72a49f81e798111644440e62906cc7ea"
 }
