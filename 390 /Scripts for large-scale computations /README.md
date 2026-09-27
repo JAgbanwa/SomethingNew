@@ -200,3 +200,52 @@ connection to sums of three cubes is contextualized by Booker and Sutherland,
 algorithm is not implemented here. Charity Engine I/O and task conventions
 were checked against its [computing documentation](https://www.charityengine.com/docs/Computing%2Bwith%2BCharity%2BEngine)
 on 2026-09-26.
+
+## Step-by-step Terminal verification on macOS (v3.2.0)
+
+These steps use the Intel GMP/Homebrew configuration on an Apple Silicon Mac
+described above. GMP and Homebrew Python 3.12 must already be installed;
+Intel executables require Rosetta.
+
+1. Download the supplied `ce390-3.2.0.zip` archive and extract it in **Downloads**.
+   The extracted folder should be named `ce390-3.2.0`.
+
+2. Open Terminal and enter:
+
+   ```bash
+   cd "$HOME/Downloads/ce390-3.2.0"
+   ```
+
+   If using a GitHub checkout instead of the supplied archive, change into
+   the directory containing this README and the Makefile before continuing.
+
+3. Once inside that folder, paste the entire block below:
+
+   ```bash
+   export PATH="$(brew --prefix python@3.12)/libexec/bin:$PATH"
+   export CXX="clang++ -arch x86_64"
+   export CXXFLAGS="-O3 -std=c++17 -Wall -Wextra -Wpedantic"
+   export CPPFLAGS="-I$(brew --prefix gmp)/include"
+   export LDFLAGS="-L$(brew --prefix gmp)/lib"
+   export LDLIBS="-lgmpxx -lgmp"
+
+   make clean && make &&
+   "$(brew --prefix python@3.12)/bin/python3.12" -m unittest discover -s tests -v
+   ```
+
+4. A successful run should end with:
+
+   ```text
+   Ran 66 tests in ...s
+
+   OK
+   ```
+
+   The elapsed time will vary. The final `OK` confirms that all 66 tests
+   passed; the line reporting the number of tests alone does not establish
+   success. If an error appears, retain the final 30 lines of output for
+   diagnosis.
+
+This runs local verification only; it does not submit Charity Engine jobs
+or start the large-scale search. The v3.2.0 production defaults require an
+integer principal square root.
