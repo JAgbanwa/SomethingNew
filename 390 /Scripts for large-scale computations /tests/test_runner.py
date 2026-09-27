@@ -42,12 +42,14 @@ class SupervisorTests(unittest.TestCase):
         self.worker.write_text(
             "#!/usr/bin/env python3\nimport json,sys,time\nfrom pathlib import Path\n"
             f"mode={mode!r}\nmarker=Path({str(self.marker)!r})\n"
+            "if sum(flag in sys.argv for flag in ('--integer-sqrt','--allow-rational-sqrt'))!=1: raise SystemExit(2)\n"
             "for line in sys.stdin:\n"
             " a,q=line.split()\n"
             " if mode=='hang' or (mode=='partial' and q=='11' and not marker.exists()): time.sleep(3600)\n"
-            " row={'a':a,'q':q,'status':'error' if mode=='error' else 'complete','parameterization':'absolute-slope-a-over-q-v1','hits':[],'convergents':'1','congruences_enforced':mode!='relaxed','integer_sqrt_required':'--integer-sqrt' in sys.argv,'excluded_by_bounds':False,'excluded_by_congruence':False,'signs':sys.argv[sys.argv.index('--signs')+1]}\n"
+            " row={'a':a,'q':q,'status':'error' if mode=='error' else 'complete','parameterization':'absolute-slope-a-over-q-v1','hits':[],'convergents':'1','congruences_enforced':mode!='relaxed','integer_sqrt_required':'--allow-rational-sqrt' not in sys.argv,'excluded_by_bounds':False,'excluded_by_congruence':False,'signs':sys.argv[sys.argv.index('--signs')+1]}\n"
             " if mode=='wrong': row['q']='999'\n"
             " if mode=='positive_only': row['signs']='pp'\n"
+            " if mode=='rational_only': row['integer_sqrt_required']=False\n"
             " if mode=='old_parameterization': row['parameterization']='d=-1-a/(2q);positive-odd-coprime-a-q'\n"
             " print(json.dumps(row),flush=True)\n",encoding="utf-8")
         self.worker.chmod(0o755)
@@ -123,6 +125,34 @@ class SupervisorTests(unittest.TestCase):
 
     def test_relaxed_worker_mode_cannot_certify_production_coverage(self):
         self.mock("relaxed")
+        run=self.run_supervisor()
+        self.assertEqual(run.returncode,2,run.stderr+run.stdout)
+        self.assertEqual(self.status()["next_index"],"0")
+
+    def test_explicit_policy_preserves_integer_rational_and_legacy_missing_scope(self):
+        self.mock()
+        for label,value in (("integer",True),("rational",False),("legacy_missing",None)):
+            with self.subTest(policy=label):
+                self.output=self.folder/("policy-"+label)
+                if value is None:
+                    self.task["search"].pop("require_integer_sqrt",None)
+                else:
+                    self.task["search"]["require_integer_sqrt"]=value
+                self.task["task_id"]=run_task.task_identity(self.task)
+                self.write_task()
+                run=self.run_supervisor()
+                self.assertEqual(run.returncode,0,run.stderr+run.stdout)
+                self.assertTrue(self.status()["complete"])
+                stored=json.loads((self.output/"task.json").read_text())
+                self.assertIs(stored["search"].get("require_integer_sqrt",False),bool(value))
+                if value is None:
+                    self.assertNotIn("require_integer_sqrt",stored["search"])
+
+    def test_rational_worker_cannot_certify_integer_only_task(self):
+        self.task["search"]["require_integer_sqrt"]=True
+        self.task["task_id"]=run_task.task_identity(self.task)
+        self.write_task()
+        self.mock("rational_only")
         run=self.run_supervisor()
         self.assertEqual(run.returncode,2,run.stderr+run.stdout)
         self.assertEqual(self.status()["next_index"],"0")

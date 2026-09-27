@@ -1,4 +1,4 @@
-# Exact mathematical basis of the signed search (CE390 3.1.0)
+# Exact mathematical basis of the signed search (CE390 3.2.0)
 
 ## Scope
 
@@ -9,7 +9,7 @@ The target is
 \sqrt{(x+6n)^2+(36n^3-65)/x}\right),
 \]
 
-with the **principal**, nonnegative square root, rational `d`, and integers
+with an **integer principal square root** `y >= 0`, rational `d`, and integers
 
 \[
 10^{43}\le |n|\le10^{45},\qquad
@@ -22,10 +22,12 @@ All bounds are inclusive. Both signs are allowed independently: `(+, +)`,
 integers, not their absolute values. For example, negative `n` requires
 `|n| = 2 mod 3`, and negative `x` requires `|x| = 7 mod 12`.
 
-The search permits a rational, nonintegral square root. Requiring an integer
-square root would discard legitimate solutions to the stated rational-`d`
-problem; it is an optional additional filter. The numerical scale is a
-requested search region, not a proved lower bound or an existence theorem.
+The user's additional requirement that the principal radical be an integer
+is enforced by default. Nonintegral rational radicals are not target hits.
+An explicit `--allow-rational-sqrt` option remains available for broader
+mathematical comparisons and historical regression fixtures. The numerical
+scale is a requested search region, not a proved lower bound or an existence
+theorem.
 
 ## 1. Eliminate the radical and retain its principal branch
 
@@ -62,9 +64,15 @@ y=\frac m{|x|},\qquad
 \boxed{d=-\frac{\operatorname{sgn}(x)m+x(x+6n)}{2x^2}.}
 \]
 
+For the required integer radical, one must additionally have `|x| | m`.
+Equivalently, require `x | A`, then test whether the integer
+`S^2+A/x` is a nonnegative perfect square. A square value of `M` alone
+does not establish that the radical is an integer.
+
 The independent verifier checks this square certificate, the original
-rational equation, the principal branch, signed congruences, and magnitude
-bounds. In particular, it does not reconstruct `y` as `m/x` when `x<0`.
+rational equation, radical integrality, the principal branch, signed
+congruences, and magnitude bounds. In particular, it does not reconstruct
+`y` as `m/x` when `x<0`.
 
 ## 2. A small rational auxiliary parameter covers all four signs
 
@@ -147,6 +155,40 @@ For `tau=+1`, this is the old `a+q=0 mod 6` condition. For `tau=-1`, it
 becomes `q-a=0 mod 6`. A campaign retaining only the old condition would
 omit both mixed-sign quadrants. For an odd coprime pair with neither
 component divisible by 3, exactly one `tau` survives this local filter.
+
+### Exact integer-radical filters
+
+The reconstructed auxiliary radical is
+
+\[
+w=\frac{(q+\tau a)x}{q}-6n.
+\]
+
+Since `gcd(a,q)=1`, also `gcd(q+tau*a,q)=1`. Therefore, for every
+reduced parameter pair and either sign combination,
+
+\[
+\boxed{y\in\mathbb Z\quad\Longleftrightarrow\quad w\in\mathbb Z
+\quad\Longleftrightarrow\quad q\mid X.}
+\]
+
+This equivalence does not depend on parity or the modular constraints.
+It permits an immediate exclusion of an entire fiber when `q>X_max`,
+and an exact divisibility rejection before constructing rational
+certificates for a candidate. These exclusions apply only when integral
+radicals are required.
+
+There is also an integer-only constraint on the common coordinate factor.
+The radical equation gives `x | 36n^3-65`. If `g=gcd(N,X)`, then `g`
+divides both `x` and `36n^3`, and therefore divides `65`. Consequently
+
+\[
+\boxed{g\in\{1,5,13,65\}.}
+\]
+
+Rejecting other recovered scales is valid in integer-radical mode.
+These are necessary filters, not substitutes for verification of the
+original equation and its principal branch.
 
 ## 3. The two monotone cubics
 
@@ -270,7 +312,8 @@ It is sufficient to generate every convergent with `v<=X_max`, require
 
 is an exact positive integer cube `g^3`. The sign of `H_tau(u,v)` supplies
 `s_n`; `tau` then supplies `s_x`. Reconstruct the signed coordinates,
-check the magnitude bounds, and verify the original equation and branch.
+check the magnitude bounds, require `q | X` for the target integer radical,
+and verify the original equation and branch.
 Both upper and lower convergents matter: their residual signs correspond
 to different signs of `n`.
 
@@ -281,9 +324,11 @@ This covers every potential exception to the sufficient CF inequality,
 including exceptions with `g>1`. It makes exhaustive comparisons on small
 rectangles meaningful without imposing the production-scale argument.
 
-This establishes completeness for each fully processed admitted `(a,q)`
-fiber and each requested sign quadrant. It does not claim that a finite
-campaign has processed all possible pairs.
+The CF argument covers rational radicals, and therefore covers their
+integer subset. The exact `q | X` filter retains every point in the
+requested integer subset. This establishes completeness for each fully
+processed admitted `(a,q)` fiber, radical mode, and requested sign quadrant.
+It does not claim that a finite campaign has processed all possible pairs.
 
 ## 5. Exact arithmetic and completion certificates
 
@@ -318,49 +363,58 @@ such a root ever occurring.
 
 ## 6. What a bounded campaign proves
 
-If `y=p/r` is reduced, then `r^2 | X`. The reduced denominator of the
-auxiliary slope divides `Xr`, so
+For the required integer radical, the preceding divisibility proof gives
 
 \[
-\boxed{q\le X\lfloor\sqrt X\rfloor<3.163\cdot10^{82}.}
+\boxed{q\mid X,\qquad q\le X\le10^{55}.}
 \]
 
-Also `q^2 | X^3`. These finite necessary bounds are much too large for a
-practical exhaustive sweep. Each campaign must identify the auxiliary
-parameter pairs and sign quadrants it actually covers. Prioritizing
-small numerators is a transparent search strategy, not a theorem that a
-solution must have small numerator or denominator.
+Combined with the slope enclosure, this is a finite parameter search
+region. It remains far too large for a practical exhaustive sweep. Each
+campaign must identify the auxiliary parameter pairs, radical mode, and
+sign quadrants it actually covers. Prioritizing small numerators is a
+transparent search strategy, not a theorem that a solution must have small
+numerator or denominator.
+
+Only in the explicitly selected broader rational-radical mode is the
+weaker bound needed: if `y=p/r` is reduced, then `r^2 | X` and `q | Xr`,
+giving `q <= X*floor(sqrt(X)) < 3.163*10^82` and `q^2 | X^3`.
 
 No hit means only that the completed fibers in the reported campaign
 contain no verified solution. It proves neither nonexistence throughout
 the requested signed region nor that further computation must find a
-solution. Existing positive-only campaign results cover the positive
-quadrant they actually processed; changing the scope requires new task
-identities and completion certificates.
+solution. Existing campaign results cover the sign scope and radical mode
+they actually processed; changing that scope requires new task identities
+and completion certificates.
 
-## 7. Integer-radical subcase and the number 390
+## 7. Integer-radical target and the number 390
 
-If the principal radical happens to be an integer, set
-`k_0=y-x-6n`. Direct algebra gives
+For the required integer principal radical, set `k_0=y-x-6n`. Then `k_0`
+is an integer, and direct algebra gives
 
 \[
 (6n+k_0)^3+(-2x-6n-k_0)^3+(2x+6n)^3=390.
 \]
 
 This identity is valid with signed `n,x`; `k_0` need not be positive.
-For a reduced rational radical `y=p/r`, clearing denominators gives
-right-hand side `390r^3`. Searching only integral radicals would cover
-only a subset of the rational-`d` problem.
+Thus every accepted production hit supplies an integer solution of this
+sum-of-three-cubes identity. In the explicitly selected broader mode,
+a reduced rational radical `y=p/r` instead gives right-hand side
+`390r^3` after clearing denominators. A historical rational-radical
+fixture is not evidence of an integer-radical target hit.
 
 ## 8. Independent validation checklist
 
 Meaningful validation includes:
 
 - Exact checks that both signed cubics imply the radical identity.
-- An independent verifier based on `M=m^2`, with `y=m/|x|`.
+- An independent verifier based on `M=m^2`, with `y=m/|x|`, and a required
+  integrality check in the default mode.
 - Genuine nonempty fixtures with negative coordinates and nonintegral
-  radicals; for example `n=-5,x=81,y=454/9,d=-913/1458` checks that the
-  verifier does not impose the original positive-only bounds.
+  radicals; for example `n=-5,x=81,y=454/9,d=-913/1458` must be rejected
+  in the default mode and accepted only with explicit rational-mode scope.
+- Independent checks of `y` integral if and only if `q | X`, the bound
+  `q <= X_max`, and the integer-only common-factor restriction `g | 65`.
 - Exact cube-scale recovery for both residual signs.
 - Exhaustive small-domain comparisons across all four quadrants,
   including `X<=10`, wrong principal branches, and signed residues.

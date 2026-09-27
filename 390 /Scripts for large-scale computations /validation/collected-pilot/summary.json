@@ -1,7 +1,7 @@
 {
   "campaign_worker_sha256": {
-    "ce390-signed-pilot-001": [
-      "4094460226cc692b5996cda4bcb40ef2ea75be2c6505929fbb709c3eff6a59d9"
+    "ce390-integer-pilot-001": [
+      "af0351b47c66c758b5bbd57fa86d6a8dccbaeeafba98402e7780c32d2827a894"
     ]
   },
   "campaigns_with_multiple_worker_hashes": [],
@@ -17,7 +17,7 @@
   "skipped_unrelated_returns": [],
   "tasks": [
     {
-      "campaign_id": "ce390-signed-pilot-001",
+      "campaign_id": "ce390-integer-pilot-001",
       "complete": true,
       "coverage": [
         {
@@ -49,8 +49,8 @@
         "start": "0",
         "stop": "30000"
       },
-      "task_id": "7eecbfadd14726ffd42a58b3643c379d78fb9cebce2d094ed9fa8964b1e74fda",
-      "worker_sha256": "4094460226cc692b5996cda4bcb40ef2ea75be2c6505929fbb709c3eff6a59d9"
+      "task_id": "13b9502e2c26a4d8893726fa6c116858e4c6a3c8992a210a3c22a1b1f5d9762a",
+      "worker_sha256": "af0351b47c66c758b5bbd57fa86d6a8dccbaeeafba98402e7780c32d2827a894"
     }
   ],
   "unique_verified_solutions": 0

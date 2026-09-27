@@ -47,6 +47,8 @@ int main() {
     assert(value==integer("73195680385557184"));
     assert(recover_scale(f.target,value,g) && g==35);
     Config cfg;
+    assert(cfg.integer_sqrt);
+    cfg.integer_sqrt=false; // The historical certificate has a rational radical.
     cfg.nmin=1; cfg.nmax=2000000; cfg.xmin=1; cfg.xmax=20000000;
     cfg.congruences=false;
     std::vector<Hit> hits;

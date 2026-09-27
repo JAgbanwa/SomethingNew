@@ -439,8 +439,12 @@ def run(args: argparse.Namespace) -> int:
             "--x-min", task["search"]["x_min"], "--x-max", task["search"]["x_max"],
             "--precision-bits", str(parsed["precision"]), "--max-precision-bits", str(parsed["max_precision"]),
             "--signs", parsed["signs"]]
+    # Explicitly preserve each task's mathematical scope across worker releases.
+    # In schema v2, historical tasks without the flag mean rational roots allowed.
     if task["search"].get("require_integer_sqrt", False):
         argv.append("--integer-sqrt")
+    else:
+        argv.append("--allow-rational-sqrt")
     log(f"Starting task {task['task_id']} at candidate {cursor}, stop {parsed['stop']}; worker SHA256 {worker_sha}")
     checkpoint("running", "started")
     worker: Worker | None = None

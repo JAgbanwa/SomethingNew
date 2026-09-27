@@ -3,6 +3,7 @@ import argparse
 import json
 from pathlib import Path
 import sys
+import subprocess
 import tempfile
 import unittest
 
@@ -17,7 +18,7 @@ def arguments(output_dir, **changes):
                  candidates_per_task="4",page_start="0",task_count=2,
                  seconds=3000,precision_bits=512,max_precision_bits=16384,checkpoint_seconds=5,
                  n_min=str(10**43),n_max=str(10**45),x_min=str(10**54),x_max=str(10**55),
-                 require_integer_sqrt=False,signs="all",output_dir=output_dir)
+                 require_integer_sqrt=True,signs="all",output_dir=output_dir)
     options.update(changes)
     return argparse.Namespace(**options)
 
@@ -45,9 +46,35 @@ class CampaignTests(unittest.TestCase):
     def test_integer_radical_campaign_has_distinct_task_identity(self):
         with tempfile.TemporaryDirectory() as temp:
             folder=Path(temp)
-            rational=campaign.generate(arguments(folder/"rational",task_count=1))
+            rational=campaign.generate(arguments(folder/"rational",task_count=1,require_integer_sqrt=False))
             integer=campaign.generate(arguments(folder/"integer",task_count=1,require_integer_sqrt=True))
             self.assertNotEqual(rational["tasks"][0]["task_id"],integer["tasks"][0]["task_id"])
+
+    def test_cli_defaults_to_explicit_integer_roots_and_opt_out_is_distinct(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder=Path(temp)
+            tasks=[]
+            for label,flags,expected in (("default",[],True),
+                                         ("integer",["--require-integer-sqrt"],True),
+                                         ("rational",["--allow-rational-sqrt"],False)):
+                output=folder/label
+                run=subprocess.run([sys.executable,str(ROOT/"campaign.py"),
+                     "--campaign-id","cli-default-policy","--q-min","5","--q-max","17",
+                     "--task-count","1","--output-dir",str(output),*flags],
+                     text=True,capture_output=True,timeout=10)
+                self.assertEqual(run.returncode,0,run.stderr)
+                task=json.loads(next(output.glob("task-*.json")).read_text())
+                self.assertIs(task["search"]["require_integer_sqrt"],expected)
+                self.assertEqual(task["search"]["signs"],"all")
+                tasks.append(task)
+            self.assertEqual(tasks[0]["task_id"],tasks[1]["task_id"])
+            self.assertNotEqual(tasks[0]["task_id"],tasks[2]["task_id"])
+            conflicting=subprocess.run([sys.executable,str(ROOT/"campaign.py"),
+                "--campaign-id","conflicting-policy","--q-min","5","--q-max","17",
+                "--require-integer-sqrt","--allow-rational-sqrt", "--output-dir",str(folder/"invalid")],
+                text=True,capture_output=True,timeout=10)
+            self.assertNotEqual(conflicting.returncode,0)
+            self.assertFalse((folder/"invalid").exists())
 
     def test_sign_policy_is_explicit_and_part_of_task_identity(self):
         with tempfile.TemporaryDirectory() as temp:

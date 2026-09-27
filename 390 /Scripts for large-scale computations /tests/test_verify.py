@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 from verify import Bounds, VerificationError, integer, verify_record
 
 
-# Historical solutions of the equation, NOT hits in the production box.
+# Historical rational-radical solutions, NOT integer-radical production hits.
 # The expected d values are independent fixed regression values.
 FIXTURES = [
     (-5, 81, Fraction(-913, 1458)),
@@ -45,6 +45,7 @@ def certificate(n, x, d):
 
 class CertificateTests(unittest.TestCase):
     def relaxed(self, record, **kwargs):
+        kwargs.setdefault("require_integer_sqrt", False)
         return verify_record(record, FIXTURE_BOUNDS, require_congruences=False, **kwargs)
 
     def test_seven_original_equation_certificates(self):
@@ -113,7 +114,8 @@ class CertificateTests(unittest.TestCase):
 
     def test_inclusive_custom_bounds(self):
         n, x, d = FIXTURES[0]
-        verify_record(certificate(n, x, d), Bounds(n, n, x, x), require_congruences=False)
+        verify_record(certificate(n, x, d), Bounds(n, n, x, x),
+                      require_congruences=False, require_integer_sqrt=False)
         with self.assertRaisesRegex(VerificationError, "bounds"):
             verify_record(certificate(n, x, d), Bounds(n+1, n+1, x, x), require_congruences=False)
 
@@ -121,7 +123,8 @@ class CertificateTests(unittest.TestCase):
         for n, x, d in FIXTURES:
             with self.subTest(n=n, x=x):
                 bounds = Bounds(abs(n), abs(n), abs(x), abs(x), magnitudes=True)
-                result = verify_record(certificate(n, x, d), bounds, require_congruences=False)
+                result = verify_record(certificate(n, x, d), bounds,
+                                       require_congruences=False, require_integer_sqrt=False)
                 self.assertEqual((int(result["n"]), int(result["x"])), (n, x))
                 with self.assertRaisesRegex(VerificationError, "bounds"):
                     verify_record(certificate(n, x, d),
@@ -133,7 +136,7 @@ class CertificateTests(unittest.TestCase):
         item = certificate(n, x, d)
         for signs in ("all", "np"):
             verify_record(item, Bounds(5, 5, 81, 81, magnitudes=True, signs=signs),
-                          require_congruences=False)
+                          require_congruences=False, require_integer_sqrt=False)
         for signs in ("pp", "pn", "nn"):
             with self.assertRaisesRegex(VerificationError, "signs"):
                 verify_record(item, Bounds(5, 5, 81, 81, magnitudes=True, signs=signs),
@@ -164,6 +167,15 @@ class CertificateTests(unittest.TestCase):
         item["sqrt_integer"] = True
         with self.assertRaisesRegex(VerificationError, "sqrt_integer"):
             self.relaxed(item)
+
+    def test_default_policy_rejects_true_rational_noninteger_radical(self):
+        item = certificate(*FIXTURES[0])
+        self.assertEqual(Fraction(int(item["y_num"]), int(item["y_den"])), Fraction(454,9))
+        with self.assertRaisesRegex(VerificationError, "not an integer"):
+            verify_record(item, FIXTURE_BOUNDS, require_congruences=False)
+        accepted = verify_record(item, FIXTURE_BOUNDS, require_congruences=False,
+                                 require_integer_sqrt=False)
+        self.assertFalse(accepted["sqrt_integer"])
 
     def test_noncanonical_and_bad_numbers_rejected(self):
         for value in [1.0, True, "1e2", "+1", "01", " 1", "1 ", None]:
@@ -232,7 +244,8 @@ class CertificateTests(unittest.TestCase):
             path.write_text(json.dumps(certificate(*FIXTURES[0]))+"\n", encoding="utf-8")
             run = subprocess.run([sys.executable, str(ROOT/"verify.py"), str(path),
                                   "--n-min=-5", "--n-max=-5", "--x-min=81", "--x-max=81",
-                                  "--signed-intervals", "--relax-congruences"], capture_output=True, text=True)
+                                  "--signed-intervals", "--relax-congruences",
+                                  "--allow-rational-sqrt"], capture_output=True, text=True)
             self.assertEqual(run.returncode, 0, run.stderr)
             self.assertEqual(json.loads(run.stdout)["unique_solutions"], 1)
 
@@ -242,9 +255,25 @@ class CertificateTests(unittest.TestCase):
             path.write_text(json.dumps(certificate(*FIXTURES[0]))+"\n", encoding="utf-8")
             run = subprocess.run([sys.executable, str(ROOT/"verify.py"), str(path),
                                   "--n-min=5", "--n-max=5", "--x-min=81", "--x-max=81",
-                                  "--relax-congruences"], capture_output=True, text=True)
+                                  "--relax-congruences", "--allow-rational-sqrt"],
+                                 capture_output=True, text=True)
             self.assertEqual(run.returncode, 0, run.stderr)
             self.assertEqual(json.loads(run.stdout)["unique_solutions"], 1)
+
+    def test_cli_rejects_rational_fixture_by_default(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)/"fixture.jsonl"
+            path.write_text(json.dumps(certificate(*FIXTURES[0]))+"\n", encoding="utf-8")
+            command = [sys.executable, str(ROOT/"verify.py"), str(path),
+                       "--n-min=5", "--n-max=5", "--x-min=81", "--x-max=81",
+                       "--relax-congruences"]
+            for flags in ([], ["--require-integer-sqrt"]):
+                run = subprocess.run(command+flags, capture_output=True, text=True)
+                self.assertEqual(run.returncode, 1, run.stderr)
+                self.assertIn("not an integer", json.loads(run.stderr)["error"])
+            run = subprocess.run(command+["--require-integer-sqrt", "--allow-rational-sqrt"],
+                                 capture_output=True, text=True)
+            self.assertEqual(run.returncode, 2)
 
     def test_cli_empty_file_does_not_claim_a_hit(self):
         with tempfile.TemporaryDirectory() as temp:

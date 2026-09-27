@@ -25,8 +25,7 @@ def generate(args: argparse.Namespace) -> dict:
         raise ValueError(f"page-start {page_start} is beyond the {task_count} campaign tasks")
     search = {k: getattr(args, k) for k in ("n_min", "n_max", "x_min", "x_max")}
     search["signs"] = args.signs
-    if args.require_integer_sqrt:
-        search["require_integer_sqrt"] = True
+    search["require_integer_sqrt"] = args.require_integer_sqrt
     fibers = {"a_values": a_values, "q_min": args.q_min, "q_max": args.q_max}
     execution = {"time_limit_seconds": args.seconds, "precision_bits": args.precision_bits,
                  "max_precision_bits": args.max_precision_bits, "checkpoint_seconds": args.checkpoint_seconds}
@@ -71,7 +70,12 @@ def main() -> int:
     p.add_argument("--task-count", type=int, default=10, help="emit only this page, at most 10000 tasks")
     p.add_argument("--seconds", type=int, default=3000, help="soft wall-time budget: 3000 for 1h CE tasks, 6000 for 2h")
     p.add_argument("--signs", choices=SIGN_POLICIES, default="all", help="all four sign combinations by default; p/n refer to signs of n then x")
-    p.add_argument("--require-integer-sqrt", action="store_true", help="restrict to the integer-radical subset")
+    sqrt_policy = p.add_mutually_exclusive_group()
+    sqrt_policy.add_argument("--require-integer-sqrt", dest="require_integer_sqrt", action="store_true",
+                             help="require an integer principal square root (default)")
+    sqrt_policy.add_argument("--allow-rational-sqrt", dest="require_integer_sqrt", action="store_false",
+                             help="explicitly allow noninteger rational square roots")
+    p.set_defaults(require_integer_sqrt=True)
     p.add_argument("--precision-bits", type=int, default=512)
     p.add_argument("--max-precision-bits", type=int, default=16384)
     p.add_argument("--checkpoint-seconds", type=int, default=5)

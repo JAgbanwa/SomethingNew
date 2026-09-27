@@ -1,5 +1,5 @@
 {
-  "campaign_id": "ce390-signed-100min-001",
+  "campaign_id": "ce390-integer-100min-001",
   "candidates_per_task": "100000000",
   "coverage_note": "Finite selected absolute-slope fibers and requested signs only. No claim to exhaust the signed n,x magnitude regions.",
   "next_page_start": "1",
@@ -8,13 +8,13 @@
   "schema": "ce390-page-v2",
   "tasks": [
     {
-      "file": "task-000000000000-33127bd8e68b6960.json",
+      "file": "task-000000000000-855b7680808d3419.json",
       "ordinal": "0",
       "slice": {
         "start": "0",
         "stop": "100000000"
       },
-      "task_id": "33127bd8e68b6960399900348025c26750e2d41042f1d06ab5f39f3f6edd7c3e"
+      "task_id": "855b7680808d3419f96c8b54586b7f1a693d348fc1b5853350b7f38aa14a8b9d"
     }
   ],
   "total_candidate_indices": "49950000001",

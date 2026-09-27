@@ -1,4 +1,4 @@
-# CE390 3.1.0 — exact continued-fraction search
+# CE390 3.2.0 — exact continued-fraction search
 
 Research compute package for the equation
 
@@ -9,8 +9,8 @@ Research compute package for the equation
 **Target:** integers `10^43 <= abs(n) <= 10^45`,
 `10^54 <= abs(x) <= 10^55`, with `n % 3 == 1`, `x % 12 == 5`,
 `x % 7 != 0`; rational `d`. Bounds are inclusive and all large
-numbers are decimal integer strings. The principal, nonnegative square root
-is used. **All four sign combinations are searched by default:** `(+,+)`,
+numbers are decimal integer strings. The principal square root must be a
+**nonnegative integer**. **All four sign combinations are searched by default:** `(+,+)`,
 `(+,-)`, `(-,+)`, and `(-,-)`. Congruences apply to the signed integers;
 for example, a negative `x` must still satisfy `x % 12 == 5`.
 Outputs are written to **`/local/output/`**.
@@ -56,10 +56,17 @@ its unfinished fiber.
 The proof, scope of the small-bound test fallback, and derivation are in
 [MATHEMATICS.md](MATHEMATICS.md).
 
-The default accepts rational square roots, as required for rational `d` in
-the stated equation. Set `require_integer_sqrt` to true to restrict the search
-to integer square roots. That stricter problem gives integer cubes summing to
-390; allowing rational square roots is a larger problem.
+The worker, campaign generator, and independent verifier require an
+**integer square root by default**, matching the clarified target.
+With default options, each generated task explicitly records
+`require_integer_sqrt: true`.
+This condition gives integer cubes summing to 390. The exact check uses
+integer/rational arithmetic, with no rounding tolerance.
+
+`--allow-rational-sqrt` explicitly enables the broader exploratory mode.
+Its fractional-radical hits are not solutions to the requested integer-radical
+problem. Historical fractional-radical regression fixtures use this mode
+only to test the underlying arithmetic and the rejection filter.
 
 ## Build and validate
 
@@ -88,8 +95,8 @@ make clean && make &&
 
 Intel executables on Apple Silicon require Rosetta. With native ARM GMP
 under `/opt/homebrew`, use `export CXX=clang++` instead. The configuration
-above passed the previous 3.0.0 test suite on the user's Mac; the revised
-3.1.0 suite must be rerun there. Local tests do not submit CE jobs.
+above passed all 60 tests of version 3.1.0 on the user's Mac in 21.232 seconds.
+The updated 3.2.0 suite must be rerun there. Local tests do not submit CE jobs.
 
 See [VALIDATION.md](VALIDATION.md) for the checks actually run for this
 release and the limits of that validation. `Dockerfile` supplies the same
@@ -144,8 +151,10 @@ The supplied bounds imply approximately
 12*10^-12 < a/q < 12*10^-9 + 37*10^-27 < 1.
 ```
 
-This ratio only identifies potentially relevant fibers. It does not bound
-`a` or `q` individually, and small numerators are a search preference, not a
+For the integer-radical target, additionally `q` divides `abs(x)` and hence
+`q <= 10^55`. The worker rejects larger denominators and candidates whose
+`abs(x)` is not divisible by `q`. These necessary conditions preserve every
+integer-radical target solution. Small numerators are a search preference, not a
 completeness theorem or an evidence-based prediction of where a solution is.
 You can search large decimal parameters; avoid describing a
 small-numerator pilot as a comprehensive campaign. First benchmark a small
@@ -153,14 +162,21 @@ representative page, then agree a finite campaign and CPU budget with the
 Charity Engine team. The files support such campaigns without asserting a
 known practical route to a first solution.
 
+**Upgrade from 3.1.0:** regenerate production tasks using the new defaults.
+The integer-radical policy is part of task identity. Old version-2 tasks
+without this flag retain their original rational-radical meaning; they are
+not silently reinterpreted. Existing continuations are pinned to their
+original binary and must not be reused with the new binary.
+
 **Upgrade from 3.0.0:** regenerate tasks using the new generator. The
 `ce390-task-v2` schema records magnitude bounds and a sign policy, and uses
 the new auxiliary-slope parameterization. Old tasks and checkpoints are
 rejected rather than silently given broader coverage. Earlier positive-only
 test and pilot results do not establish completion of the signed campaign.
 
-A result certificate contains exact `n`, `x`, rational `d`, and rational
-square root. Independently recheck returned hits using `verify.py` before
+A production result certificate contains exact `n`, `x`, rational `d`, and
+an integer square root (`y_den: "1"`, `sqrt_integer: true`).
+Independently recheck returned hits using `verify.py` before
 reporting any mathematical discovery. Keep the task and its status alongside
 the hits to distinguish discovery verification from coverage accounting.
 

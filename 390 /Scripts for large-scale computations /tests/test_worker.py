@@ -88,6 +88,7 @@ class WorkerTests(unittest.TestCase):
             with self.subTest(congruences=congruences):
                 rows=self.invoke(pairs,"--n-min","1","--n-max","80",
                                  "--x-min","1","--x-max","120",
+                                 "--allow-rational-sqrt",
                                  *([] if congruences else ["--relax-congruences"]))
                 for (a,q),row in zip(pairs,rows):
                     expected={p for p in expected_by_pair[(a,q)] if not congruences
@@ -97,11 +98,11 @@ class WorkerTests(unittest.TestCase):
                     self.assertEqual(actual,expected,(a,q,congruences))
                     for hit in row["hits"]:
                         verify_record(hit,Bounds(1,80,1,120,magnitudes=True),
-                                      require_congruences=congruences)
+                                      require_congruences=congruences,require_integer_sqrt=False)
 
     def test_nonempty_signed_fibers_and_every_sign_selector(self):
-        # Independently fixed historical solutions, not production campaign
-        # hits. Even q is admitted only with --relax-congruences.
+        # Independently fixed rational-radical historical solutions, not
+        # integer-radical production hits. Even q requires relaxed congruences.
         fixtures=[(-5,81,Fraction(-913,1458),(545,729)),
                   (166,-2500,Fraction(-1103,250000),(100703,125000)),
                   (2047,-45972,Fraction(-599,551664),(147983,275832)),
@@ -114,15 +115,29 @@ class WorkerTests(unittest.TestCase):
                 with self.subTest(n=n,x=x,signs=signs):
                     row=self.invoke([pair],"--n-min",str(abs(n)),"--n-max",str(abs(n)),
                                     "--x-min",str(abs(x)),"--x-max",str(abs(x)),
-                                    "--signs",signs,"--relax-congruences")[0]
+                                    "--signs",signs,"--relax-congruences",
+                                    "--allow-rational-sqrt")[0]
                     self.assertEqual(row["status"],"complete",row)
                     actual={(int(h["n"]),int(h["x"])) for h in row["hits"]}
                     expected={(n,x)} if signs in ("all",quadrant) else set()
                     self.assertEqual(actual,expected,row)
                     for hit in row["hits"]:
                         verify_record(hit,Bounds(abs(n),abs(n),abs(x),abs(x),
-                                      magnitudes=True,signs=signs),require_congruences=False)
+                                      magnitudes=True,signs=signs),require_congruences=False,
+                                      require_integer_sqrt=False)
                         self.assertEqual(Fraction(int(hit["d_num"]),int(hit["d_den"])),d)
+
+    def test_integer_radical_default_excludes_genuine_rational_fixture(self):
+        options=("--n-min","5","--n-max","5","--x-min","81","--x-max","81",
+                 "--relax-congruences")
+        for policy in ((), ("--integer-sqrt",)):
+            row=self.invoke([(545,729)],*options,*policy)[0]
+            self.assertEqual(row["status"],"complete",row)
+            self.assertEqual(row["hits"],[],row)
+        rational=self.invoke([(545,729)],*options,"--allow-rational-sqrt")[0]
+        self.assertEqual([(h["n"],h["x"]) for h in rational["hits"]],[("-5","81")])
+        self.assertEqual(rational["hits"][0]["y_den"],"9")
+        self.assertFalse(rational["hits"][0]["sqrt_integer"])
 
     def test_production_precision_refines_without_changing_results(self):
         pairs=[(1,10**10+1),(3,10**11+3),(7,10**11+1)]

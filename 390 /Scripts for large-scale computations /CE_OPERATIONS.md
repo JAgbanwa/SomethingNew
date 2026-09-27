@@ -63,19 +63,22 @@ magnitudes. The default `--signs all` includes `pp`, `pn`, `np`, and `nn`
 restricts a new campaign to positive `n,x`. The policy is part of task identity.
 The congruences are evaluated on actual signed `n,x`, never on their magnitudes.
 The heuristic size relation imposes no additional cut.
-The default accepts a rational nonnegative square root. Add
-`--require-integer-sqrt` to restrict the search to the integer-square-root subset.
+The default requires an integer nonnegative square root. With default
+options, new tasks write `require_integer_sqrt: true` explicitly. The worker and verifier check
+this condition exactly. `--require-integer-sqrt` remains an explicit spelling
+of the default; `--allow-rational-sqrt` selects the broader exploratory mode,
+which does not meet the requested target when its radical is noninteger.
 
 ## Build and generate a pilot
 
 On a build host with Docker:
 
 ```sh
-docker build -t ce390:3.1.0 .
+docker build -t ce390:3.2.0 .
 ```
 
 For an amd64 CE image from an Apple Silicon build host, use
-`docker build --platform linux/amd64 -t ce390:3.1.0 .`; a local emulated benchmark
+`docker build --platform linux/amd64 -t ce390:3.2.0 .`; a local emulated benchmark
 is not representative of CE CPU speed. Image building downloads Debian packages;
 the running computation makes no network requests. The Docker build runs `make test` in its build stage. Preserve the resulting image
 digest and use that same image for every task and continuation in the campaign.
@@ -93,7 +96,7 @@ not a statistically justified best region and not a guarantee of discovery:
 
 ```sh
 python3 campaign.py \
-  --campaign-id ce390-signed-pilot-001 \
+  --campaign-id ce390-integer-pilot-001 \
   --a-values 1,5,7 \
   --q-min 100000001 \
   --q-max 100000000001 \
@@ -104,10 +107,14 @@ python3 campaign.py \
   --output-dir tasks
 ```
 
-The default magnitude bounds and `signs: "all"` are embedded in every task
+The default magnitude bounds, `signs: "all"`, and
+`require_integer_sqrt: true` are embedded in every task
 using the `ce390-task-v2` schema and `absolute-slope-a-over-q-v1`
-parameterization. Version 3.0.0 task files and checkpoints must not be reused;
-generate new tasks for this signed campaign. Every numerator must be smaller
+parameterization. Generate new production tasks for the integer-radical search.
+Version-2 tasks with a missing or false integer-radical flag retain the broader
+meaning of that original task. The runner always passes the exact task policy
+explicitly to the worker; changing defaults does not alter old coverage.
+Version 3.0.0 tasks are rejected. Every numerator must be smaller
 than the campaign's minimum denominator.
 `--page-start` is a zero-based **task ordinal**. To generate the next page, use
 `--page-start 10` with all other campaign parameters unchanged. The page manifest
@@ -123,7 +130,7 @@ cp tasks/task-000000000000-*.json ce-input/task.json
 docker run --rm --network none --cpus 1 --memory 512m \
   --mount type=bind,src="$(pwd)/ce-input",dst=/local/input,readonly \
   --mount type=bind,src="$(pwd)/ce-output",dst=/local/output \
-  ce390:3.1.0
+  ce390:3.2.0
 ```
 
 Use one worker process per allocated core and separate task/output directories.
@@ -253,9 +260,10 @@ The Python supervisor verifies every worker hit with standard-library integers
 and `fractions.Fraction` directly in the original equation. This verification is
 independent of the C++ continued-fraction implementation. A separate `verify.py`
 is included for rechecking retrieved records; consult `python3 verify.py --help`
-for bounds and input options. A rational square root is checked for nonnegativity
-before the original unsquared equation is accepted, so an extraneous branch
-cannot be reported as a solution.
+for bounds and input options. The production square root is checked for
+nonnegativity and integrality before the original unsquared equation is
+accepted. The collector applies each returned task's recorded radical policy;
+the standalone verifier requires integer radicals unless explicitly overridden.
 
 Do not call a lack of hits a proof that the whole rectangle has no solutions.
 The exact result of a completed campaign is coverage of its explicitly selected

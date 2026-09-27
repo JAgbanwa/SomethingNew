@@ -1,5 +1,5 @@
 {
-  "campaign_id": "ce390-signed-pilot-001",
+  "campaign_id": "ce390-integer-pilot-001",
   "complete": true,
   "counters_this_invocation": {
     "bounds_excluded": "0",
@@ -11,7 +11,7 @@
     "non_coprime_skipped": "0"
   },
   "coverage_note": "Only the selected absolute-slope fibers and requested signs are covered; this is not an exhaustive search of the signed n,x magnitude regions.",
-  "elapsed_seconds": 1.608281,
+  "elapsed_seconds": 1.684183,
   "invocation_coverage": {
     "start": "0",
     "stop": "30000"
@@ -28,11 +28,11 @@
     "start": "0",
     "stop": "30000"
   },
-  "started_utc": "2026-09-27T08:57:05.972426+00:00",
+  "started_utc": "2026-09-27T11:17:15.769413+00:00",
   "state": "complete",
-  "task_id": "7eecbfadd14726ffd42a58b3643c379d78fb9cebce2d094ed9fa8964b1e74fda",
+  "task_id": "13b9502e2c26a4d8893726fa6c116858e4c6a3c8992a210a3c22a1b1f5d9762a",
   "time_limit_seconds": 3000,
   "unique_hits_in_this_output": "0",
-  "updated_utc": "2026-09-27T08:57:07.580705+00:00",
-  "worker_sha256": "4094460226cc692b5996cda4bcb40ef2ea75be2c6505929fbb709c3eff6a59d9"
+  "updated_utc": "2026-09-27T11:17:17.453600+00:00",
+  "worker_sha256": "af0351b47c66c758b5bbd57fa86d6a8dccbaeeafba98402e7780c32d2827a894"
 }

@@ -76,13 +76,14 @@ def verify_record(
     *,
     require_congruences: bool = True,
     require_noninteger_d: bool = True,
-    require_integer_sqrt: bool = False,
+    require_integer_sqrt: bool = True,
 ) -> dict[str, Any]:
     """Check one solution against the original radical equation.
 
     Omitted bounds select production magnitudes and all four sign combinations.
     Explicit Bounds retain signed interval semantics unless magnitudes=True.
-    The principal square root is required in every sign combination.
+    The principal square root must be an integer by default, in every sign
+    combination. Rational noninteger radicals require an explicit opt-out.
     """
     if not isinstance(record, dict):
         raise VerificationError("certificate must be a JSON object")
@@ -180,7 +181,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--relax-congruences", action="store_true",
                         help="TEST ONLY: allow certificates outside production residue classes")
     parser.add_argument("--allow-integer-d", action="store_true")
-    parser.add_argument("--require-integer-sqrt", action="store_true")
+    radical_policy = parser.add_mutually_exclusive_group()
+    radical_policy.add_argument("--require-integer-sqrt", dest="require_integer_sqrt",
+                                action="store_true", default=True,
+                                help="require an integer principal square root (default)")
+    radical_policy.add_argument("--allow-rational-sqrt", dest="require_integer_sqrt",
+                                action="store_false",
+                                help="allow rational noninteger radicals for exploratory/test data")
     args = parser.parse_args(argv)
     try:
         bounds = Bounds(args.n_min, args.n_max, args.x_min, args.x_max,

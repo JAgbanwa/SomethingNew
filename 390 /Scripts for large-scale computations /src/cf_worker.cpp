@@ -15,7 +15,7 @@
 namespace {
 using Z = mpz_class;
 using Q = mpq_class;
-constexpr const char* VERSION = "3.1.0";
+constexpr const char* VERSION = "3.2.0";
 
 Z integer(const std::string& s) {
     if (s.empty()) throw std::runtime_error("empty integer");
@@ -50,7 +50,7 @@ struct Config {
     unsigned precision = 512;
     unsigned max_precision = 16384;
     bool congruences = true;
-    bool integer_sqrt = false;
+    bool integer_sqrt = true;
     std::string signs = "all";
 };
 
@@ -126,6 +126,8 @@ void verify_and_add(const Config& cfg, const Z& a, const Z& q, int tau,
     if (cfg.congruences && (mpz_fdiv_ui(n.get_mpz_t(),3) != 1
         || mpz_fdiv_ui(x.get_mpz_t(),12) != 5
         || mpz_divisible_ui_p(x.get_mpz_t(),7))) return;
+    // With gcd(a,q)=1, y is integral exactly when q divides |x|.
+    if (cfg.integer_sqrt && !mpz_divisible_p(X.get_mpz_t(),q.get_mpz_t())) return;
     // The auxiliary radical w has the sign of x. Recover the principal
     // radical y first; d is then derived directly from the original equation.
     Q w((q+tau*a)*x,q); w -= 6*n; w.canonicalize();
@@ -278,7 +280,7 @@ Result solve(const Config& cfg,const Z& a,const Z& q) {
             || !mpz_divisible_ui_p(residue.get_mpz_t(),3))) continue;
         any_congruence_eligible=true;
         Polynomial f(a,q,tau);
-        if (outside_bounds(cfg,f,tau)) continue;
+        if ((cfg.integer_sqrt && q>cfg.xmax) || outside_bounds(cfg,f,tau)) continue;
         any_bounds_eligible=true;
         small_exceptions(cfg,f,a,q,tau,result.hits,seen);
         for (unsigned bits=cfg.precision;;) {
@@ -307,15 +309,18 @@ Config arguments(int argc,char** argv) {
         if (name=="--help") {
             std::cout<<"Usage: cf_worker [--n-min N --n-max N --x-min X --x-max X]\n"
                 <<"  [--precision-bits 512 --max-precision-bits 16384]\n"
-                <<"  [--integer-sqrt] [--relax-congruences] [--signs all|pp|pn|np|nn]\n"
+                <<"  [--integer-sqrt | --allow-rational-sqrt] [--relax-congruences]\n"
+                <<"  [--signs all|pp|pn|np|nn]\n"
                 <<"Read positive odd coprime a q with a<q; emit one JSON record per slope fibre.\n"
                 <<"Bounds are inclusive magnitudes |n|,|x|; all four signs are searched by default.\n"
+                <<"The principal square root must be an integer by default.\n"
                 <<"Parameterization: absolute-slope-a-over-q-v1. Default target residues:\n"
                 <<"n=1 mod 3, x=5 mod 12, x!=0 mod 7.\n";
             std::exit(0);
         }
         if (name=="--relax-congruences") {c.congruences=false;continue;}
         if (name=="--integer-sqrt") {c.integer_sqrt=true;continue;}
+        if (name=="--allow-rational-sqrt") {c.integer_sqrt=false;continue;}
         if (i+1==argc) throw std::runtime_error("missing value for "+name);
         std::string val=argv[++i];
         if (name=="--n-min") c.nmin=integer(val);
