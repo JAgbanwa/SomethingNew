@@ -1,15 +1,16 @@
 # Charity Engine operations
 
 This package produces independent CPU tasks with bounded wall time, exact arithmetic,
-verifiable hit records and explicit continuations. It does not submit jobs or invent
-an API for the Charity Engine service. The CE team should attach the container,
-input files and output collection policy through its supported submission process.
+verifiable hit records and explicit continuations. It does not submit jobs. The
+Charity Engine account owner supplies the container image, task input and command
+through CE's dashboard, Remote CLI or API, using their own account credits. Keep
+account credentials outside this repository. See [CONTAINER.md](CONTAINER.md) for
+the container build, test evidence, downloadable image and deployment instructions.
 
 **All retrievable output is written under `/local/output/`.** The default input is
 `/local/input/task.json`. Neither path is `/output/`.
 
-If the CE application configuration overrides Docker entrypoint behavior, its
-explicit executable and arguments are:
+Use this explicit command line in the CE application configuration:
 
 ```text
 /app/run_task.sh --task /local/input/task.json --output-dir /local/output
@@ -23,6 +24,11 @@ reserve time for launch, checkpointing and output collection:
 | --- | ---: | ---: |
 | 1 hour | 3000 (50 minutes, default) | 10 minutes |
 | 2 hours | 6000 (100 minutes) | 20 minutes |
+
+For the CE Remote CLI, set `--hours 1` for a 3000-second task or `--hours 2`
+for a 6000-second task. Use the one-hour configuration unless a two-hour allowance
+has been arranged. The task's own budget and CE's external allowance are separate
+settings; increasing one does not change the other.
 
 The budget measures elapsed wall time, not CPU time. Its maximum accepted value is
 6600 seconds. A watchdog also stops a worker that is still computing one fiber when

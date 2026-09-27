@@ -249,3 +249,14 @@ Intel executables require Rosetta.
 This runs local verification only; it does not submit Charity Engine jobs
 or start the large-scale search. The v3.2.0 production defaults require an
 integer principal square root.
+
+## Container build and Charity Engine deployment
+
+See [CONTAINER.md](CONTAINER.md) for the automated Docker build, real-container
+pilot and continuation checks, downloadable image and evidence, and self-service
+CE submission settings. The workflow builds Linux amd64 and runs the regression
+suite before testing the container. Select a successful run for the exact commit
+and use its matching image for every task and continuation.
+
+The first CE-hosted pilot separately checks CE image import and output retrieval.
+Local native test results and Docker test results are distinct validation records.

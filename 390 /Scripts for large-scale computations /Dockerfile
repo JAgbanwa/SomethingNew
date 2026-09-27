@@ -17,9 +17,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /build/bin/cf_worker /app/bin/cf_worker
-COPY campaign.py run_task.py verify.py run_task.sh /app/
-RUN chmod 0755 /app/run_task.sh /app/bin/cf_worker \
+COPY campaign.py run_task.py verify.py run_task.sh container_entrypoint.sh /app/
+RUN chmod 0755 /app/run_task.sh /app/container_entrypoint.sh /app/bin/cf_worker \
     && mkdir -p /local/input /local/output
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 STOPSIGNAL SIGTERM
-ENTRYPOINT ["/app/run_task.sh"]
+ENTRYPOINT ["/app/container_entrypoint.sh"]

@@ -1,0 +1,141 @@
+name: CE390 container
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '390 /Scripts for large-scale computations /**'
+      - '.github/workflows/ce390-container.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ce390-container-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  container:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+        working-directory: '390 /Scripts for large-scale computations '
+    env:
+      CE390_IMAGE: ce390:${{ github.sha }}
+    steps:
+      - name: Check out the exact source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Verify package integrity
+        run: sha256sum --check SHA256SUMS
+
+      - name: Build Linux amd64 image and run the regression suite
+        run: |
+          mkdir -p "$RUNNER_TEMP/ce390-evidence"
+          docker version > "$RUNNER_TEMP/ce390-evidence/docker-version.txt"
+          docker build --pull --platform linux/amd64 --progress plain \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --iidfile "$RUNNER_TEMP/ce390-evidence/image-id.txt" \
+            --tag "$CE390_IMAGE" . 2>&1 | tee "$RUNNER_TEMP/ce390-evidence/docker-build.log"
+
+      - name: Test the real container and returned artifacts
+        run: |
+          python3 container_check.py --image "$CE390_IMAGE" \
+            --output-dir "$RUNNER_TEMP/ce390-evidence/container" \
+            2>&1 | tee "$RUNNER_TEMP/ce390-evidence/container-console.log"
+
+      - name: Export and reload the tested image
+        run: |
+          mkdir -p "$RUNNER_TEMP/ce390-release"
+          docker image inspect "$CE390_IMAGE" > "$RUNNER_TEMP/ce390-evidence/image-inspect.json"
+          docker save --output "$RUNNER_TEMP/ce390-release/ce390-linux-amd64.tar" "$CE390_IMAGE"
+          docker image rm "$CE390_IMAGE"
+          docker load --input "$RUNNER_TEMP/ce390-release/ce390-linux-amd64.tar" \
+            > "$RUNNER_TEMP/ce390-evidence/docker-load.txt"
+          test "$(docker image inspect --format '{{.Id}}' "$CE390_IMAGE")" = \
+            "$(cat "$RUNNER_TEMP/ce390-evidence/image-id.txt")"
+          docker run --rm --network none "$CE390_IMAGE" /app/bin/cf_worker --version \
+            > "$RUNNER_TEMP/ce390-evidence/reloaded-worker-version.txt"
+
+      - name: Package deployment evidence
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, zipfile
+          root = pathlib.Path(os.environ["RUNNER_TEMP"])
+          evidence, release = root / "ce390-evidence", root / "ce390-release"
+          sha, repo = os.environ["GITHUB_SHA"], os.environ["GITHUB_REPOSITORY"]
+          run, attempt = os.environ["GITHUB_RUN_ID"], os.environ["GITHUB_RUN_ATTEMPT"]
+          tag = f"ce390-container-{sha}-{run}-{attempt}"
+          base = f"https://github.com/{repo}/releases/download/{tag}"
+          deployment = {
+              "source_commit": sha, "platform": "linux/amd64",
+              "workflow_run": f"https://github.com/{repo}/actions/runs/{run}",
+              "release_tag": tag, "image_name": os.environ["CE390_IMAGE"],
+              "image_id": (evidence / "image-id.txt").read_text().strip(),
+              "image_archive_url": base + "/ce390-linux-amd64.tar",
+              "ce_application": "docker:" + os.environ["CE390_IMAGE"] + " " + base + "/ce390-linux-amd64.tar",
+              "ce_commandline": "/app/run_task.sh --task /local/input/task.json --output-dir /local/output",
+              "ce_hours": 1, "task_budget_seconds": 3000,
+              "ce_job_submitted": False,
+          }
+          (evidence / "deployment.json").write_text(json.dumps(deployment, indent=2) + "\n")
+          with zipfile.ZipFile(release / "container-evidence.zip", "w", zipfile.ZIP_DEFLATED) as archive:
+              for path in sorted(evidence.rglob("*")):
+                  if path.is_file() and not path.name.startswith("."):
+                      archive.write(path, path.relative_to(evidence))
+          names = ["ce390-linux-amd64.tar", "container-evidence.zip"]
+          (release / "SHA256SUMS").write_text("".join(
+              hashlib.sha256((release / name).read_bytes()).hexdigest() + "  " + name + "\n"
+              for name in names))
+          (release / "release-tag.txt").write_text(tag + "\n")
+          notes = (
+              "Built from commit " + sha + ".\n\n"
+              "Linux amd64 image; regression suite, container pilot, deadline/continuation, "
+              "and independent collection checks passed. See the workflow logs and "
+              "container-evidence.zip for exact observations.\n\n"
+              "Workflow: " + deployment["workflow_run"] + "\n\n"
+              "CE application:\n\n\x60\x60\x60text\n" + deployment["ce_application"] + "\n\x60\x60\x60\n\n"
+              "CE command line:\n\n\x60\x60\x60text\n" + deployment["ce_commandline"] + "\n\x60\x60\x60\n\n"
+              "Stage the selected task as task.json. Use a one-hour reservation with the "
+              "3,000-second task budget. A 6,000-second task requires a two-hour reservation.\n\n"
+              "The archive is an uncompressed docker-save image; validate SHA256SUMS before "
+              "loading it. Image URLs are unique per build and are never overwritten.\n\n"
+              "No CE job was submitted by this workflow. The first CE-hosted pilot must "
+              "still confirm CE image import, scheduling and output retrieval.\n"
+          )
+          (release / "release-notes.md").write_text(notes)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write(notes)
+          PY
+
+      - name: Preserve build and validation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ce390-container-evidence-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ce390-evidence/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Publish the verified image with immutable asset URLs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          release_dir="$RUNNER_TEMP/ce390-release"
+          release_tag="$(cat "$release_dir/release-tag.txt")"
+          gh release create "$release_tag" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest=false \
+            --title "CE390 Linux amd64 container ($GITHUB_RUN_ID, attempt $GITHUB_RUN_ATTEMPT)" \
+            --notes-file "$release_dir/release-notes.md" \
+            "$release_dir/ce390-linux-amd64.tar" \
+            "$release_dir/container-evidence.zip" \
+            "$release_dir/SHA256SUMS"
+
