@@ -84,7 +84,8 @@ jobs:
               "image_archive_url": base + "/ce390-linux-amd64.tar",
               "ce_application": "docker:" + os.environ["CE390_IMAGE"] + " " + base + "/ce390-linux-amd64.tar",
               "ce_commandline": "/app/run_task.sh --task /local/input/task.json --output-dir /local/output",
-              "ce_hours": 1, "task_budget_seconds": 3000,
+              "ce_hours": 2, "task_budget_seconds": 3600,
+              "supplied_pilot_ce_hours": 1, "supplied_pilot_task_budget_seconds": 3000,
               "ce_job_submitted": False,
           }
           (evidence / "deployment.json").write_text(json.dumps(deployment, indent=2) + "\n")
@@ -105,8 +106,11 @@ jobs:
               "Workflow: " + deployment["workflow_run"] + "\n\n"
               "CE application:\n\n\x60\x60\x60text\n" + deployment["ce_application"] + "\n\x60\x60\x60\n\n"
               "CE command line:\n\n\x60\x60\x60text\n" + deployment["ce_commandline"] + "\n\x60\x60\x60\n\n"
-              "Stage the selected task as task.json. Use a one-hour reservation with the "
-              "3,000-second task budget. A 6,000-second task requires a two-hour reservation.\n\n"
+              "Stage the selected task as task.json. Newly generated tasks default to a "
+              "3,600-second search budget: use a two-hour CE allowance (--hours 2) so "
+              "startup and output handling have time. The unchanged supplied pilot uses "
+              "3,000 seconds with --hours 1; 6,000-second tasks also require --hours 2. "
+              "These are per-task limits, not an aggregate CPU-hour cap.\n\n"
               "The archive is an uncompressed docker-save image; validate SHA256SUMS before "
               "loading it. Image URLs are unique per build and are never overwritten.\n\n"
               "No CE job was submitted by this workflow. The first CE-hosted pilot must "

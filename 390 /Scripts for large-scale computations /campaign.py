@@ -68,7 +68,8 @@ def main() -> int:
     p.add_argument("--candidates-per-task", default="10000", help="candidate indices, including noncoprime pairs")
     p.add_argument("--page-start", default="0", help="zero-based task ordinal, not candidate index")
     p.add_argument("--task-count", type=int, default=10, help="emit only this page, at most 10000 tasks")
-    p.add_argument("--seconds", type=int, default=3000, help="soft wall-time budget: 3000 for 1h CE tasks, 6000 for 2h")
+    p.add_argument("--seconds", type=int, default=3600,
+                   help="soft wall-time budget (default 3600): use CE --hours 2; use 3000 for CE --hours 1")
     p.add_argument("--signs", choices=SIGN_POLICIES, default="all", help="all four sign combinations by default; p/n refer to signs of n then x")
     sqrt_policy = p.add_mutually_exclusive_group()
     sqrt_policy.add_argument("--require-integer-sqrt", dest="require_integer_sqrt", action="store_true",

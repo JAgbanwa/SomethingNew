@@ -109,8 +109,9 @@ Use [CE_OPERATIONS.md](CE_OPERATIONS.md) for exact job creation, command
 lines, calibration, resumption, and collection. Each task uses one worker
 process and one CPU core. Give every task an isolated `/local/output/`.
 Choose its finite fiber count from measured throughput on representative
-Charity Engine CPUs. The default soft budget is 3,000 seconds for a one-hour
-reservation; 6,000 seconds is appropriate for a two-hour reservation.
+Charity Engine CPUs. Newly generated tasks default to a 3,600-second (one-hour)
+soft search budget. Use a two-hour CE allowance (`--hours 2`) to leave time for
+startup and output handling. Existing task JSON files retain their own budgets.
 
 Each task records its input and exact coverage, checkpoints the next
 uncompleted fiber, and writes a continuation when the soft deadline interrupts
@@ -124,11 +125,18 @@ Starting another numerator range or increasing parameter bounds creates a
 new campaign; it must not silently redefine old task identities. No script
 submits paid jobs or sends messages automatically.
 
-`examples/pilot/` contains one small calibration task. `examples/50min/`
-and `examples/100min/` contain example first pages with those soft budgets;
+`examples/pilot/` contains one small calibration task with its original
+3,000-second budget. `examples/50min/`, `examples/60min/`, and `examples/100min/`
+contain example first pages with those soft budgets;
 their fixed counts are starting points to recalibrate, not promised durations.
 Only the included page is assigned, not every task in its broader parameter
 interval. Do not submit the overlapping example campaigns together.
+
+The one-hour example changes the execution budget and campaign name only; it
+retains the historical `a=1` selection and is not a general `a/q` campaign.
+A longer task budget does not establish broader mathematical coverage or enforce
+an aggregate 2,000 CPU-hour limit. See the one-hour instructions in
+[CE_OPERATIONS.md](CE_OPERATIONS.md) before generating new task pages.
 
 After retrieving pilot results into a directory such as `returned/`, run:
 

@@ -22,18 +22,50 @@ reserve time for launch, checkpointing and output collection:
 
 | CE external task allowance | `--seconds` in campaign generation | Reserved margin |
 | --- | ---: | ---: |
-| 1 hour | 3000 (50 minutes, default) | 10 minutes |
+| 1 hour | 3000 (50 minutes, explicit option) | 10 minutes |
+| 2 hours | 3600 (60 minutes, new-task default) | 60 minutes |
 | 2 hours | 6000 (100 minutes) | 20 minutes |
 
-For the CE Remote CLI, set `--hours 1` for a 3000-second task or `--hours 2`
-for a 6000-second task. Use the one-hour configuration unless a two-hour allowance
-has been arranged. The task's own budget and CE's external allowance are separate
-settings; increasing one does not change the other.
+For the CE Remote CLI, set `--hours 2` for a 3600- or 6000-second task. This uses
+the two-hour maximum permitted in the CE team's 1–2 hour task guidance; it does
+not make the worker search for two hours. If the external allowance is limited to
+one hour, explicitly generate 3000-second tasks and submit with `--hours 1`.
+Do not pair a 3600-second search budget with a one-hour external limit: startup
+and final output handling also need time. The task's own budget and CE's external
+allowance are separate settings; increasing one does not change the other.
 
 The budget measures elapsed wall time, not CPU time. Its maximum accepted value is
 6600 seconds. A watchdog also stops a worker that is still computing one fiber when
 the budget expires. Task time on an unfamiliar host cannot be predicted exactly;
 use pilot measurements, and retain the safety margin.
+
+Tasks finish early if their assigned indices are exhausted. Existing task JSONs
+and continuations retain their explicit budgets; changing the generator default
+does not change them. Per-task limits do not enforce a campaign-wide CPU-hour cap.
+
+### Generate one-hour task pages
+
+`examples/60min/` contains the first page of the historical example selection
+with a 3600-second budget. Reproduce it, or generate further pages in a fresh
+directory, using:
+
+```sh
+python3 campaign.py \
+  --campaign-id ce390-integer-60min-001 \
+  --a-values 1 \
+  --q-min 100000001 --q-max 100000000001 \
+  --candidates-per-task 50000000 \
+  --page-start 0 --task-count 1 \
+  --seconds 3600 \
+  --output-dir tasks-60min
+```
+
+This is a timing-only alternative to `examples/50min/`, with the same index
+intervals, 49,950,000,001 selected indices and 1,000 initial chunks. It retains
+`a=1`; it is not a recommended general-parameter campaign or a claim that the
+selected parameters are promising. Do not submit both overlapping alternatives.
+Use `--page-start 1` for the next page, keeping the other campaign settings fixed.
+Upload each input at a new immutable URL and use CE `--hours 2`.
 
 ## Search units and honest coverage
 
@@ -109,7 +141,7 @@ python3 campaign.py \
   --candidates-per-task 10000 \
   --page-start 0 \
   --task-count 10 \
-  --seconds 3000 \
+  --seconds 3600 \
   --output-dir tasks
 ```
 
@@ -159,8 +191,9 @@ Use the elapsed time and `invocation_coverage` in `status.json` to estimate
 candidate indices per second. Do not divide by `fibers_completed` alone because
 some indices are noncoprime and are skipped.
 
-A starting production count is `floor(0.8 * measured_indices_per_second * 3000)`
-for a 50-minute budget, or substitute 6000 for a 100-minute budget. Time several
+A starting production count is `floor(0.8 * measured_indices_per_second * 3600)`
+for a one-hour search budget. Substitute 3000 for 50 minutes or 6000 for
+100 minutes. Time several
 separated regions of the chosen `a,q` space and use the slowest representative
 rate. Fiber costs and host speeds vary, so the supervisor always enforces the
 budget and writes a continuation. Increasing precision or changing numerators
@@ -178,7 +211,7 @@ count = int(c['stop']) - int(c['start'])
 seconds = s['elapsed_seconds']
 if s['state'] != 'complete' or count <= 0 or seconds <= 0:
     raise SystemExit('Use a completed nonempty representative pilot.')
-print(max(1, math.floor(0.8 * count / seconds * 3000)))
+print(max(1, math.floor(0.8 * count / seconds * 3600)))
 PY
 ```
 

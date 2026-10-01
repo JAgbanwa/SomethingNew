@@ -163,8 +163,8 @@ Remote CLI/API with your own account. Supply:
 | Application | Accessible image reference from the preceding section |
 | Input file | Supplied pilot JSON, staged with the name `task.json` |
 | Command line | `/app/run_task.sh --task /local/input/task.json --output-dir /local/output` |
-| External allowance | One hour (`--hours 1` in the CLI) |
-| Internal computation budget | 3000 seconds in the task JSON |
+| External allowance | One hour (`--hours 1`) for the unchanged supplied pilot; two hours (`--hours 2`) for newly generated 3600-second tasks |
+| Internal computation budget | Supplied `examples/pilot/`: 3000 seconds; new generator default: 3600 seconds |
 | Output collection | All files under `/local/output/`, including failure artifacts |
 
 The documented `C.2x2` instance offers two CPU cores and 2 GiB RAM. This package
@@ -178,11 +178,16 @@ also mean an intentional partial result, in which case submit
 `continuation.task.json` as the next `task.json` using the same image. Preserve
 earlier outputs and verify contiguous coverage before counting a task complete.
 
-For production, retain 3000-second tasks with `--hours 1`. Use 6000-second tasks
-only with `--hours 2` and an agreed two-hour allowance. These leave 10- and
-20-minute margins respectively for startup and output handling. Calibrate candidate
-counts as described in [CE_OPERATIONS.md](CE_OPERATIONS.md). The account owner
-decides how many jobs to submit against available credits.
+For one-hour searching, generate tasks with `--seconds 3600` (the new default)
+and submit them with CE `--hours 2`. The longer external allowance leaves time
+for startup and output handling; the search still stops at its one-hour soft
+budget or earlier when its slice is complete. `examples/60min/` supplies a
+timing-only alternative to the historical `a=1` example, not a broader search.
+The older 3000-second/`--hours 1` and 6000-second/`--hours 2` settings remain
+supported. Calibrate candidate counts as described in
+[CE_OPERATIONS.md](CE_OPERATIONS.md). The account owner decides how many jobs to
+submit against available credits. No aggregate CPU-hour cap is enforced by
+these per-task settings.
 
 A passing container workflow establishes reproducible build and local container
 behavior. The first CE-hosted pilot separately establishes CE image import,
