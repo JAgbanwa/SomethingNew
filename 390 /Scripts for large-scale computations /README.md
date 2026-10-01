@@ -1,4 +1,4 @@
-# CE390 3.2.0 — exact continued-fraction search
+# CE390 — general a/q campaigns and exact continued-fraction search
 
 Research compute package for the equation
 
@@ -21,6 +21,12 @@ a proven lower bound, or that a finite sample of rational parameters exhausts
 the rectangle. No target solution is bundled or claimed.
 
 ## What is actually searched
+
+**The campaign generator no longer defaults to `a=1`.** With no `--a-values`
+option it derives the full admissible parameter enclosure from the integer
+search bounds, allowing every numerator in that enclosure. No independently
+chosen small-numerator ceiling is imposed. Tasks advance through an explicit
+ordering of `(a,q)` pairs and record exactly the part completed.
 
 Write `N=abs(n)`, `X=abs(x)`, `tau=sign(n*x)` and let `y` be the
 principal square root. Every target solution has a unique reduced slope
@@ -63,7 +69,7 @@ With default options, each generated task explicitly records
 This condition gives integer cubes summing to 390. The exact check uses
 integer/rational arithmetic, with no rounding tolerance.
 
-`--allow-rational-sqrt` explicitly enables the broader exploratory mode.
+`--allow-rational-sqrt` with an explicit `--a-values` list enables the broader exploratory mode.
 Its fractional-radical hits are not solutions to the requested integer-radical
 problem. Historical fractional-radical regression fixtures use this mode
 only to test the underlying arithmetic and the rejection filter.
@@ -96,7 +102,7 @@ make clean && make &&
 Intel executables on Apple Silicon require Rosetta. With native ARM GMP
 under `/opt/homebrew`, use `export CXX=clang++` instead. The configuration
 above passed all 60 tests of version 3.1.0 on the user's Mac in 21.232 seconds.
-The updated 3.2.0 suite must be rerun there. Local tests do not submit CE jobs.
+Rerun the suite for the current checkout. Local tests do not submit CE jobs.
 
 See [VALIDATION.md](VALIDATION.md) for the checks actually run for this
 release and the limits of that validation. `Dockerfile` supplies the same
@@ -125,23 +131,23 @@ Starting another numerator range or increasing parameter bounds creates a
 new campaign; it must not silently redefine old task identities. No script
 submits paid jobs or sends messages automatically.
 
-`examples/pilot/` contains one small calibration task with its original
-3,000-second budget. `examples/50min/`, `examples/60min/`, and `examples/100min/`
-contain example first pages with those soft budgets;
-their fixed counts are starting points to recalibrate, not promised durations.
-Only the included page is assigned, not every task in its broader parameter
-interval. Do not submit the overlapping example campaigns together.
+Use `examples/general-pilot/` for a small calibration task that exercises many
+numerators. It is an explicitly selected denominator window, not a prediction of
+where a solution lies. `examples/general/` contains the first ten tasks in the
+full derived enclosure, with one-hour budgets. Only included task slices are
+assigned; a manifest's total count does not submit or authorize that workload.
+The two examples overlap in the full parameter space, so track pilot coverage
+separately and avoid scheduling the same work twice.
 
-The one-hour example changes the execution budget and campaign name only; it
-retains the historical `a=1` selection and is not a general `a/q` campaign.
-A longer task budget does not establish broader mathematical coverage or enforce
-an aggregate 2,000 CPU-hour limit. See the one-hour instructions in
-[CE_OPERATIONS.md](CE_OPERATIONS.md) before generating new task pages.
+The older `pilot/`, `50min/`, `60min/`, and `100min/` examples remain unchanged
+as historical `a=1` fixtures; they are superseded for the requested general
+search. Neither old nor new per-task budgets enforce a campaign-wide
+2,000 CPU-hour cap. See [CE_OPERATIONS.md](CE_OPERATIONS.md).
 
 After retrieving pilot results into a directory such as `returned/`, run:
 
 ```bash
-python3 collector.py --page examples/pilot/page-000000000000.json \
+python3 collector.py --page examples/general-pilot/page-000000000000.json \
   --results-dir returned --output-dir collected
 python3 verify.py collected/hits.jsonl
 ```
@@ -151,7 +157,7 @@ coverage intervals, and reports gaps. It exits 0 for complete selected-page
 coverage, 2 for valid partial returns, and 1 for invalid data. An empty result
 file is normal. To collect multiple pages, repeat `--page`.
 
-## Choosing rational parameters
+## General rational parameters
 
 The supplied bounds imply approximately
 
@@ -162,13 +168,38 @@ The supplied bounds imply approximately
 For the integer-radical target, additionally `q` divides `abs(x)` and hence
 `q <= 10^55`. The worker rejects larger denominators and candidates whose
 `abs(x)` is not divisible by `q`. These necessary conditions preserve every
-integer-radical target solution. Small numerators are a search preference, not a
-completeness theorem or an evidence-based prediction of where a solution is.
-You can search large decimal parameters; avoid describing a
-small-numerator pilot as a comprehensive campaign. First benchmark a small
-representative page, then agree a finite campaign and CPU budget with the
-Charity Engine team. The files support such campaigns without asserting a
-known practical route to a first solution.
+integer-radical target solution. The default `general-aq-v1` mode enumerates
+`q` coprime to 6, from 1 through `x_max`, and every numerator coprime to 6
+inside the proved row bounds. It retains noncoprime `(a,q)` indices, which the
+runner rejects before worker dispatch. The exact derivation is in
+[MATHEMATICS.md](MATHEMATICS.md).
+
+Generate a new page without assuming any numerator:
+
+```sh
+python3 campaign.py --campaign-id ce390-general-001 \
+  --candidates-per-task 50000000 --page-start 0 --task-count 10 \
+  --seconds 3600 --output-dir tasks-general
+```
+
+The ordering is increasing `q`, then increasing `a`. The earliest rows contain
+only `a=1` because of the proved bounds; later rows include `5,7,11,...`.
+This is an enumeration order, not a theorem that small denominators are more
+likely to succeed. `--q-min`/`--q-max` explicitly select a smaller denominator
+window if desired. `--a-values` remains an explicit restricted legacy mode,
+never the default. The general mode requires integer radicals and separated
+bounds where its enclosure proof applies; unsupported custom bounds are rejected.
+
+The full conservative enclosure has about `1.26 * 10^100` indexed pairs before
+the gcd filter. It is represented implicitly, not materialized. Removing the
+fixed numerator does **not** establish that this whole enclosure can be searched
+in 2,000 CPU-hours, or that a finite prefix will find a solution. The old
+49.95-billion-index/approximately-900-hour estimate applied only to the old
+selected `a=1` campaign and is not an estimate for this general search.
+
+Existing explicit-list tasks preserve their identities and index order. New
+tasks record `fibers.mode: "general-aq-v1"`; older runners reject that shape.
+Use the container and collector built from this update for new general tasks.
 
 **Upgrade from 3.1.0:** regenerate production tasks using the new defaults.
 The integer-radical policy is part of task identity. Old version-2 tasks
@@ -192,6 +223,7 @@ the hits to distinguish discovery verification from coverage accounting.
 
 - `src/cf_worker.cpp`: native exact search engine.
 - `campaign.py`, `run_task.py`, `run_task.sh`: bounded independent tasks.
+- `parameter_space.py`: exact general-parameter bounds, counts and resumable indexing.
 - `verify.py`: independent exact result verification.
 - `collector.py`: validate returned certificates and detect gaps in a job page.
 - `tests/`: differential, arithmetic, and task-lifecycle tests.
@@ -209,19 +241,20 @@ algorithm is not implemented here. Charity Engine I/O and task conventions
 were checked against its [computing documentation](https://www.charityengine.com/docs/Computing%2Bwith%2BCharity%2BEngine)
 on 2026-09-26.
 
-## Step-by-step Terminal verification on macOS (v3.2.0)
+## Step-by-step Terminal verification on macOS
 
 These steps use the Intel GMP/Homebrew configuration on an Apple Silicon Mac
 described above. GMP and Homebrew Python 3.12 must already be installed;
 Intel executables require Rosetta.
 
-1. Download the supplied `ce390-3.2.0.zip` archive and extract it in **Downloads**.
-   The extracted folder should be named `ce390-3.2.0`.
+1. Download the current package archive and extract it in **Downloads**.
+   Use the folder name of the archive you downloaded; older `ce390-3.2.0`
+   archives predate the general-parameter generator.
 
 2. Open Terminal and enter:
 
    ```bash
-   cd "$HOME/Downloads/ce390-3.2.0"
+   cd "$HOME/Downloads/ce390-general-aq"
    ```
 
    If using a GitHub checkout instead of the supplied archive, change into
@@ -244,19 +277,19 @@ Intel executables require Rosetta.
 4. A successful run should end with:
 
    ```text
-   Ran 66 tests in ...s
+   Ran ... tests in ...s
 
    OK
    ```
 
-   The elapsed time will vary. The final `OK` confirms that all 66 tests
-   passed; the line reporting the number of tests alone does not establish
+   The elapsed time and test count depend on the checkout. The final `OK`
+   confirms that all tests passed; the line reporting the count alone does not establish
    success. If an error appears, retain the final 30 lines of output for
    diagnosis.
 
 This runs local verification only; it does not submit Charity Engine jobs
-or start the large-scale search. The v3.2.0 production defaults require an
-integer principal square root.
+or start the large-scale search. Production defaults require an integer
+principal square root and general `a/q` enumeration.
 
 ## Container build and Charity Engine deployment
 

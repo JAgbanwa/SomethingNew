@@ -13,14 +13,15 @@ workflow changes on `main`, and can also be started with **Run workflow** in Git
 Actions. Select a run for the exact source commit you intend to deploy.
 
 The workflow builds a `linux/amd64` Docker image named `ce390:<full-commit-SHA>`.
-The Docker build executes the complete Python/C++ regression suite (66 tests at
-the time this workflow was introduced). The runtime image contains Python, GMP
+The Docker build executes the complete Python/C++ regression suite, including
+general-parameter indexing and continuation checks. The runtime image contains Python, GMP
 and the compiled worker; the compiler and build dependencies remain in the build
 stage. Compilation does not request AVX or the build host's native CPU features.
 
 `container_check.py` then checks the built image using Docker, including:
 
-- the supplied pilot and its exact task policy, output files and coverage;
+- the historical pilot for compatibility, plus a general pilot with many numerators;
+- exact task policies, output files and coverage for both layouts;
 - disabled container networking, one CPU and a 512 MiB memory limit;
 - read-only application/input files and a writable `/local/output/` mount;
 - execution as a non-root user with a correctly owned output directory;
@@ -97,7 +98,7 @@ document. Run the supplied pilot in fresh input and output directories:
 
 ```sh
 mkdir -p ce-input ce-output
-cp examples/pilot/task-000000000000-13b9502e2c26a4d8.json ce-input/task.json
+cp examples/general-pilot/task-000000000000-e8f317752153af5c.json ce-input/task.json
 docker run --rm --platform linux/amd64 --network none --cpus 1 --memory 512m \
   --mount type=bind,src="$(pwd)/ce-input",dst=/local/input,readonly \
   --mount type=bind,src="$(pwd)/ce-output",dst=/local/output \
@@ -161,10 +162,10 @@ Remote CLI/API with your own account. Supply:
 | Setting | Pilot value |
 | --- | --- |
 | Application | Accessible image reference from the preceding section |
-| Input file | Supplied pilot JSON, staged with the name `task.json` |
+| Input file | `examples/general-pilot/task-000000000000-e8f317752153af5c.json`, staged as `task.json` |
 | Command line | `/app/run_task.sh --task /local/input/task.json --output-dir /local/output` |
-| External allowance | One hour (`--hours 1`) for the unchanged supplied pilot; two hours (`--hours 2`) for newly generated 3600-second tasks |
-| Internal computation budget | Supplied `examples/pilot/`: 3000 seconds; new generator default: 3600 seconds |
+| External allowance | Two hours (`--hours 2`) |
+| Internal computation budget | 3600 seconds; the small pilot normally finishes sooner |
 | Output collection | All files under `/local/output/`, including failure artifacts |
 
 The documented `C.2x2` instance offers two CPU cores and 2 GiB RAM. This package
@@ -181,13 +182,19 @@ earlier outputs and verify contiguous coverage before counting a task complete.
 For one-hour searching, generate tasks with `--seconds 3600` (the new default)
 and submit them with CE `--hours 2`. The longer external allowance leaves time
 for startup and output handling; the search still stops at its one-hour soft
-budget or earlier when its slice is complete. `examples/60min/` supplies a
-timing-only alternative to the historical `a=1` example, not a broader search.
+budget or earlier when its slice is complete. `examples/general/` supplies
+initial pages of the general `a/q` enclosure without a chosen numerator list.
 The older 3000-second/`--hours 1` and 6000-second/`--hours 2` settings remain
 supported. Calibrate candidate counts as described in
 [CE_OPERATIONS.md](CE_OPERATIONS.md). The account owner decides how many jobs to
 submit against available credits. No aggregate CPU-hour cap is enforced by
 these per-task settings.
+
+The historical `examples/pilot/` retains its explicit `a=1` and 3000-second
+settings only for reproducibility checks. Use the general pilot for new CE
+calibration. The old restricted campaign's runtime estimate is not an estimate
+for general `a/q` coverage. Use this update's matching container; older images
+do not understand `general-aq-v1` task files.
 
 A passing container workflow establishes reproducible build and local container
 behavior. The first CE-hosted pilot separately establishes CE image import,

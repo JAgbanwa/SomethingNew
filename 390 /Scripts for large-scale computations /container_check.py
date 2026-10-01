@@ -18,7 +18,7 @@ import sys
 import time
 import uuid
 
-from run_task import load_json, sha256_file, validate_task
+from run_task import iter_candidates, load_json, sha256_file, validate_task
 
 
 ROOT = Path(__file__).resolve().parent
@@ -121,7 +121,8 @@ class Check:
             if check_image_files:
                 files = evidence / "image-files"
                 files.mkdir()
-                for name_in_app in ("run_task.py", "verify.py", "campaign.py", "run_task.sh", "container_entrypoint.sh"):
+                for name_in_app in ("run_task.py", "parameter_space.py", "verify.py", "campaign.py",
+                                    "run_task.sh", "container_entrypoint.sh"):
                     self.command(["docker", "cp", f"{name}:/app/{name_in_app}", str(files / name_in_app)])
                     require(sha256_file(files / name_in_app) == sha256_file(ROOT / name_in_app),
                             f"Image source differs from this checkout: {name_in_app}")
@@ -234,21 +235,60 @@ class Check:
         require(status["complete"], "Supplied pilot did not complete within its assigned budget")
         self.report["pilot"] = self.collect(saved_pilot / pages[0].name, self.output / "pilot-results",
                                            self.output / "pilot-collected")
+        self.report["pilot_kind"] = "historical explicit-numerator pilot; retained for compatibility"
+
+        # Exercise the default implicit general-a/q campaign separately from the
+        # unchanged historical pilot. An exact completed slice proves that the
+        # enumerated numerator sample below was actually covered in the container.
+        general_tasks = self.output / "general-pilot-tasks"
+        self.command([sys.executable, str(ROOT / "campaign.py"),
+                      "--campaign-id", "ce390-general-container-pilot",
+                      "--q-min", "1000000000001", "--q-max", "1000000001001",
+                      "--candidates-per-task", "30000", "--task-count", "1",
+                      "--output-dir", str(general_tasks)])
+        general_task_path = next(general_tasks.glob("task-*.json"))
+        general_task = load_json(general_task_path)
+        general_parsed = validate_task(general_task)
+        require(general_task["fibers"].get("mode") == "general-aq-v1",
+                "New default campaign did not select general-a/q enumeration")
+        require(general_task["execution"]["time_limit_seconds"] == 3600,
+                "New default campaign did not retain its one-hour search budget")
+        require((general_parsed["start"], general_parsed["stop"]) == (0, 30000),
+                "General pilot does not contain the intended 30,000 indices")
+        pair_sample = list(iter_candidates(general_parsed, 0, 100))
+        require(len({a for a, _ in pair_sample if a > 1}) > 1,
+                "General pilot failed to include multiple distinct numerators greater than one")
+        self.report["general_pilot_definition"] = {
+            "task_sha256": sha256_file(general_task_path),
+            "candidate_indices": 30000,
+            "sampled_candidate_pairs": [{"a": str(a), "q": str(q)} for a, q in pair_sample],
+        }
+        status = self.container("general-pilot", general_task_path,
+                                self.output / "general-pilot-results" / "run-01", mode="explicit")
+        require(status["complete"] and status["invocation_coverage"] == {"start": "0", "stop": "30000"},
+                "General pilot did not complete the exact intended slice")
+        self.report["general_pilot"] = self.collect(next(general_tasks.glob("page-*.json")),
+            self.output / "general-pilot-results", self.output / "general-pilot-collected")
 
         # Aim for about four seconds of real worker time, with 1-second budgets.
         # The cap bounds work on unusually fast or noisy machines; lack of an
         # observed interruption is a failure, never a claimed continuation pass.
+        # Calibrate from the general pilot, not from the historical a=1 sample.
         count = resume_candidates or max(60000, min(2000000, math.ceil(
             4 * int(status["next_index"]) / max(float(status["elapsed_seconds"]), 0.01))))
         self.report["continuation_candidate_indices"] = count
         generated = self.output / "continuation-tasks"
         self.command([sys.executable, str(ROOT / "campaign.py"), "--campaign-id", "ce390-container-continuation",
-                      "--q-min", "100000001", "--q-max", str(100000001 + 2 * (count - 1)),
+                      "--q-min", "1000000000001", "--q-max", str(1000000000001 + max(1000000, 2 * count)),
                       "--candidates-per-task", str(count), "--task-count", "1", "--seconds", "1",
                       "--checkpoint-seconds", "1", "--require-integer-sqrt", "--signs", "all",
                       "--output-dir", str(generated)])
         next_task = next(generated.glob("task-*.json"))
         original = load_json(next_task)
+        continuation_parsed = validate_task(original)
+        require(original["fibers"].get("mode") == "general-aq-v1"
+                and (continuation_parsed["start"], continuation_parsed["stop"]) == (0, count),
+                "General continuation task has the wrong enumeration mode or index count")
         cursor = 0
         partials = 0
         for i in range(1, max_invocations + 1):
@@ -278,11 +318,17 @@ class Check:
 
         signal_tasks = self.output / "signal-tasks"
         self.command([sys.executable, str(ROOT / "campaign.py"), "--campaign-id", "ce390-container-signal",
-                      "--q-min", "100000001", "--q-max", "119999999",
+                      "--q-min", "1000000000001", "--q-max", "1000001000001",
                       "--candidates-per-task", "10000000", "--task-count", "1", "--seconds", "60",
                       "--checkpoint-seconds", "1", "--require-integer-sqrt", "--signs", "all",
                       "--output-dir", str(signal_tasks)])
-        self.container("signal", next(signal_tasks.glob("task-*.json")),
+        signal_task_path = next(signal_tasks.glob("task-*.json"))
+        signal_task = load_json(signal_task_path)
+        signal_parsed = validate_task(signal_task)
+        require(signal_task["fibers"].get("mode") == "general-aq-v1"
+                and (signal_parsed["start"], signal_parsed["stop"]) == (0, 10000000),
+                "General signal task has the wrong enumeration mode or index count")
+        self.container("signal", signal_task_path,
                        self.output / "signal-results" / "run-01", mode="explicit", stop_after_checkpoint=True)
         self.report["signal"] = self.collect(next(signal_tasks.glob("page-*.json")),
             self.output / "signal-results", self.output / "signal-collected", require_complete=False)

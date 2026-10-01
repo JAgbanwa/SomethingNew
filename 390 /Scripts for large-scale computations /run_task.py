@@ -17,6 +17,7 @@ import subprocess
 import sys
 import time
 from typing import Any
+from parameter_space import GeneralAQ
 
 SCHEMA = "ce390-task-v2"
 PARAMETERIZATION = "absolute-slope-a-over-q-v1"
@@ -83,21 +84,34 @@ def validate_task(task: Any) -> dict[str, Any]:
     bounds = {k: integer(task["search"][k], f"search.{k}", positive=True) for k in ("n_min", "n_max", "x_min", "x_max")}
     if bounds["n_min"] > bounds["n_max"] or bounds["x_min"] > bounds["x_max"]:
         raise ValueError("search magnitude bounds must be positive, ordered and inclusive")
-    keys(task["fibers"], {"a_values", "q_min", "q_max"}, set(), "fibers")
-    raw_a = task["fibers"]["a_values"]
-    if not isinstance(raw_a, list) or not raw_a or len(raw_a) > 100000:
-        raise ValueError("a_values must contain between 1 and 100000 positive odd integers")
-    values_a = [integer(v, "fibers.a_values[]", positive=True) for v in raw_a]
-    if len(set(values_a)) != len(values_a) or any(a % 2 == 0 for a in values_a):
-        raise ValueError("a_values must be unique and odd")
-    q_min = integer(task["fibers"]["q_min"], "fibers.q_min", positive=True)
-    q_max = integer(task["fibers"]["q_max"], "fibers.q_max", positive=True)
-    if q_min % 2 == 0 or q_max % 2 == 0 or q_min > q_max:
-        raise ValueError("q_min and q_max must be ordered, positive and odd")
-    if max(values_a) >= q_min:
-        raise ValueError("every a must be strictly smaller than q_min (0 < a/q < 1)")
-    q_count = (q_max - q_min) // 2 + 1
-    count = q_count * len(values_a)
+    fiber_spec = task["fibers"]
+    space = None
+    if isinstance(fiber_spec, dict) and "mode" in fiber_spec:
+        keys(fiber_spec, {"mode", "q_min", "q_max"}, set(), "fibers")
+        if fiber_spec["mode"] != "general-aq-v1":
+            raise ValueError("unsupported fibers.mode")
+        if not task["search"].get("require_integer_sqrt", False):
+            raise ValueError("general-aq-v1 requires an integer square root")
+        q_min = integer(fiber_spec["q_min"], "fibers.q_min", positive=True)
+        q_max = integer(fiber_spec["q_max"], "fibers.q_max", positive=True)
+        space = GeneralAQ(bounds, q_min, q_max)
+        values_a, q_count, count = None, None, space.count
+    else:
+        keys(fiber_spec, {"a_values", "q_min", "q_max"}, set(), "fibers")
+        raw_a = fiber_spec["a_values"]
+        if not isinstance(raw_a, list) or not raw_a or len(raw_a) > 100000:
+            raise ValueError("a_values must contain between 1 and 100000 positive odd integers")
+        values_a = [integer(v, "fibers.a_values[]", positive=True) for v in raw_a]
+        if len(set(values_a)) != len(values_a) or any(a % 2 == 0 for a in values_a):
+            raise ValueError("a_values must be unique and odd")
+        q_min = integer(fiber_spec["q_min"], "fibers.q_min", positive=True)
+        q_max = integer(fiber_spec["q_max"], "fibers.q_max", positive=True)
+        if q_min % 2 == 0 or q_max % 2 == 0 or q_min > q_max:
+            raise ValueError("q_min and q_max must be ordered, positive and odd")
+        if max(values_a) >= q_min:
+            raise ValueError("every a must be strictly smaller than q_min (0 < a/q < 1)")
+        q_count = (q_max - q_min) // 2 + 1
+        count = q_count * len(values_a)
     keys(task["slice"], {"start", "stop"}, set(), "slice")
     start = integer(task["slice"]["start"], "slice.start")
     stop = integer(task["slice"]["stop"], "slice.stop", positive=True)
@@ -116,6 +130,7 @@ def validate_task(task: Any) -> dict[str, Any]:
     if "expected_worker_sha256" in task and not HEX64.fullmatch(str(task["expected_worker_sha256"])):
         raise ValueError("expected_worker_sha256 must be a lowercase SHA256 digest")
     return dict(bounds=bounds, signs=task["search"]["signs"], a_values=values_a, q_min=q_min, q_count=q_count, count=count,
+                parameter_space=space, a_index={a: i for i, a in enumerate(values_a or [])},
                 start=start, stop=stop, resume=resume, seconds=seconds, precision=precision,
                 max_precision=max_precision, checkpoint_seconds=checkpoint_seconds)
 
@@ -156,8 +171,35 @@ def sha256_file(path: Path) -> str:
 
 
 def candidate(parsed: dict[str, Any], index: int) -> tuple[int, int]:
+    if not 0 <= index < parsed["count"]:
+        raise ValueError("candidate index is outside the parameter space")
+    if parsed["parameter_space"] is not None:
+        return parsed["parameter_space"].candidate(index)
     ai, qi = divmod(index, parsed["q_count"])
     return parsed["a_values"][ai], parsed["q_min"] + 2 * qi
+
+
+def candidate_index(parsed: dict[str, Any], a: int, q: int) -> int:
+    """Invert the exact task ordering; reject pairs outside its parameter space."""
+    if parsed["parameter_space"] is not None:
+        return parsed["parameter_space"].index(a, q)
+    if a not in parsed["a_index"] or q < parsed["q_min"] or (q - parsed["q_min"]) % 2:
+        raise ValueError("candidate is outside the selected parameter space")
+    qi = (q - parsed["q_min"]) // 2
+    if qi >= parsed["q_count"]:
+        raise ValueError("candidate is outside the selected denominator interval")
+    return parsed["a_index"][a] * parsed["q_count"] + qi
+
+
+def iter_candidates(parsed: dict[str, Any], start: int, stop: int):
+    """Stream a slice, paying general-space rank inversion only once."""
+    if not 0 <= start <= stop <= parsed["count"]:
+        raise ValueError("candidate interval is outside the parameter space")
+    if parsed["parameter_space"] is not None:
+        yield from parsed["parameter_space"].iter_candidates(start, stop)
+    else:
+        for index in range(start, stop):
+            yield candidate(parsed, index)
 
 
 def validate_hit(hit: Any, a: int, q: int, bounds: dict[str, int], signs: str = "all") -> dict[str, Any]:
@@ -455,12 +497,13 @@ def run(args: argparse.Namespace) -> int:
         with (output / "worker.stderr.log").open("ab", buffering=0) as worker_stderr, (output / "hits.jsonl").open("ab", buffering=0) as hits_out:
             if cursor < parsed["stop"]:
                 worker = Worker(argv, worker_stderr, deadline, lambda: bool(stop_signal))
+            candidates = iter_candidates(parsed, cursor, parsed["stop"])
             while cursor < parsed["stop"]:
                 if stop_signal:
                     raise Halt("signal")
                 if time.monotonic() >= deadline:
                     raise Halt("time_limit")
-                a, q = candidate(parsed, cursor)
+                a, q = next(candidates)
                 if math.gcd(a, q) != 1:
                     counters["non_coprime_skipped"] += 1
                     cursor += 1

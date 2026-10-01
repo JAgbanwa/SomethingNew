@@ -1,0 +1,22 @@
+{
+  "campaign_id": "ce390-general-pilot-001",
+  "candidates_per_task": "30000",
+  "coverage_note": "General a/q enclosure with all derived numerators; only the assigned index slices are covered, not the whole signed n,x region.",
+  "next_page_start": "1",
+  "page_start": "0",
+  "page_task_count": 1,
+  "schema": "ce390-page-v2",
+  "tasks": [
+    {
+      "file": "task-000000000000-e8f317752153af5c.json",
+      "ordinal": "0",
+      "slice": {
+        "start": "0",
+        "stop": "30000"
+      },
+      "task_id": "e8f317752153af5c576bf00595adbfb9fa322be0498ed4d85c35486b2f319e0f"
+    }
+  ],
+  "total_candidate_indices": "1334664",
+  "total_tasks": "45"
+}

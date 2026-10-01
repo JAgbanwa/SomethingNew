@@ -11,7 +11,7 @@ from pathlib import Path
 import sys
 from typing import Any
 
-from run_task import (HEX64, MAX_LINE_BYTES, atomic_json, candidate, canonical, certificate_key,
+from run_task import (HEX64, MAX_LINE_BYTES, atomic_json, candidate, candidate_index, canonical, certificate_key,
                       integer, keys, load_json, task_identity, validate_task)
 from verify import Bounds, verify_record
 
@@ -99,8 +99,7 @@ def selected_tasks(pages: list[Path]) -> dict[str, dict[str, Any]]:
             if tid in selected:
                 raise ValueError(f"selected pages overlap at task {tid}")
             selected[tid] = {"task": task, "parsed": parsed, "ordinal": str(ordinal),
-                             "intervals": [], "returns": [], "worker_sha256": None,
-                             "a_index": {a: i for i, a in enumerate(parsed["a_values"])}}
+                             "intervals": [], "returns": [], "worker_sha256": None}
     if not selected:
         raise ValueError("at least one nonempty task page is required")
     return selected
@@ -227,11 +226,8 @@ def collect(pages: list[Path], results_dir: Path, output_dir: Path, *, skip_unre
                 y = Fraction(int(checked["y_num"]), int(checked["y_den"]))
                 ratio = abs(y / abs(x) - 1 + Fraction(6*n, x))
                 a, q = ratio.numerator, ratio.denominator
-                if a not in slot["a_index"] or q < parsed["q_min"] or (q - parsed["q_min"]) % 2:
-                    raise ValueError("verified certificate does not belong to the selected absolute-slope fiber list")
-                qi = (q - parsed["q_min"]) // 2
-                index = slot["a_index"][a] * parsed["q_count"] + qi
-                if qi >= parsed["q_count"] or not parsed["start"] <= index < parsed["stop"]:
+                index = candidate_index(parsed, a, q)
+                if not parsed["start"] <= index < parsed["stop"]:
                     raise ValueError("verified certificate does not belong to its task slice")
                 if row.get("task_id", tid) != tid:
                     raise ValueError("certificate task_id differs from its returned task")

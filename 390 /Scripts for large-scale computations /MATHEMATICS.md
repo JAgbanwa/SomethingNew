@@ -425,3 +425,171 @@ Meaningful validation includes:
 
 This checklist specifies what must be tested. The release validation
 report records the executed checks and their actual outcomes.
+
+## 9. General a/q campaign enclosure and indexing
+
+The `general-aq-v1` campaign derives an enclosure for **all reduced
+auxiliary fractions associated with the requested integer-radical
+solutions**. It does not fix `a=1`, select a numerator list, or impose a
+numerator ceiling independently of the coordinate bounds. The following
+proof assumes the original congruences and integer-radical mode, positive
+ordered magnitude bounds, and these guards:
+
+\[
+N_{\min}\ge2,\qquad X_{\min}>6N_{\max},\qquad
+M_{\max}<X_{\min}.
+\]
+
+The last quantity is derived below. The first guard ensures that
+`36n^3-65` has the sign of `n` in both signed branches. In particular,
+positive `n=1` is exceptional and must not be included by this enclosure.
+All three guards hold for the requested production rectangle. The
+coprime-to-6 filters below rely on the original congruences; this is not a
+completeness claim for an unconstrained small-domain test problem.
+
+### A finite enclosure with no selected numerator
+
+Keep `N=|n|`, `X=|x|`, `S=x+6n` and the signed radical `w=s_x y` from
+Section 2, and define the positive integer
+
+\[
+K=|w-S|.
+\]
+
+Since `S` has the sign of `x`,
+
+\[
+x(w+S)=X(y+|S|)>0,
+\qquad
+K=\frac{|36n^3-65|}{X(y+|S|)}.
+\]
+
+The radical and `S` are integers, and `36n^3-65` is nonzero, so `K>=1`.
+Using `y>=0` and `|S|>=X-6N` gives the exact integer upper bound
+
+\[
+K\le K_{\max}:=
+\left\lfloor
+\frac{36N_{\max}^3+65}
+{X_{\min}(X_{\min}-6N_{\max})}
+\right\rfloor.
+\]
+
+Allowing equality here is conservative. If `K_max=0`, no integer-radical
+target exists in these bounds and the candidate enclosure is empty.
+
+As `w-S` has the sign of `n`, the positive numerator before reduction is
+
+\[
+M=|w-x+6n|=12N+K,
+\qquad
+M_{\min}=12N_{\min}+1,
+\qquad
+M_{\max}=12N_{\max}+K_{\max}.
+\]
+
+The auxiliary fraction is exactly `a/q=M/X`. If `T=gcd(M,X)`, its reduced
+form has `a=M/T` and `q=X/T`; therefore `a<=M_max` and `q<=X_max`.
+For each denominator `1<=q<=X_max`, every target numerator lies in the
+inclusive interval
+
+\[
+\boxed{
+L(q):=\left\lceil\frac{M_{\min}q}{X_{\max}}\right\rceil
+\ \le a\le\
+U(q):=\min\left(
+\left\lfloor\frac{M_{\max}q}{X_{\min}}\right\rfloor,
+M_{\max}\right).
+}
+\]
+
+These bounds follow from
+`M_min/X_max <= M/X <= M_max/X_min` and retain boundary values. The guard
+`M_max<X_min` implies `a<q` throughout this enclosure, as required by the
+CF worker. The Section 2 congruence argument further implies that both
+`a` and `q` are coprime to 6. Their mutual coprimality and the branch
+condition `q=-tau*a (mod 6)` remain necessary.
+
+Every target in the signed coordinate rectangle thus maps to a unique
+reduced pair in this derived enclosure. Membership is only a necessary
+condition: most enclosed pairs need not yield any target. The existing
+certified CF search and independent verification determine whether a
+completed admissible pair has a solution in the requested bounds.
+
+### Exact indices and continuation boundaries
+
+Indices enumerate eligible denominators in increasing order, followed by
+eligible numerators in increasing order within each row. Here eligible
+means positive and coprime to 6, with `L(q)<=a<=U(q)`. Pairs with
+`gcd(a,q)>1` deliberately retain an index and are rejected cheaply by the
+runner. They are not interpreted as additional reduced fractions or as
+additional mathematical coverage. This convention makes the index space
+independent of factorization or a changing coprimality sieve.
+
+For an integer `z>=0`, the exact number of positive integers at most `z`
+that are coprime to 6 is
+
+\[
+C(z)=\left\lfloor\frac{z+5}{6}\right\rfloor
+     +\left\lfloor\frac{z+1}{6}\right\rfloor,
+\qquad C(z)=0\quad(z<0).
+\]
+
+When `K_max>=1`, the prefix count through denominator `Q` is
+
+\[
+P(Q)=\sum_{\substack{1\le q\le Q\\\gcd(q,6)=1}}
+\bigl(C(U(q))-C(L(q)-1)\bigr).
+\]
+
+It is evaluated with exact integers. No loop over all preceding
+denominators is needed: split `q` into its residue classes 1 and 5 modulo
+6, split the upper bound at `q=X_min`, and use ordinary affine floor
+sums. In particular,
+
+\[
+L(q)-1=\left\lfloor\frac{M_{\min}q-1}{X_{\max}}\right\rfloor,
+\]
+
+and for the nonnegative inner floors used here,
+
+\[
+C\!\left(\left\lfloor\frac{bq+\delta}{c}\right\rfloor\right)
+=\left\lfloor\frac{bq+\delta+5c}{6c}\right\rfloor
+ +\left\lfloor\frac{bq+\delta+c}{6c}\right\rfloor.
+\]
+
+Euclidean reduction evaluates each sum
+`sum(floor((b*i+d)/c), i=0,...,t-1)` without materializing its terms.
+Binary search on the monotone integer prefix `P` locates the row of an
+arbitrary candidate index, including indices too large for fixed-width
+machine integers. Once that first row is located, a task streams
+successive pairs without repeating a prefix inversion per pair.
+
+For an optional inclusive denominator window `[q_min,q_max]`, the index
+count is `P(q_max)-P(q_min-1)` and indices are relative to that window.
+The full denominator window is `[1,X_max]`; a smaller window is an
+explicit restriction of coverage. Each task processes a half-open index
+interval `[start_index,stop_index)`. Its checkpoint and continuation
+identify the next candidate index, rather than the number of hits or the
+number of CF solves. Consequently cheap rejections, including noncoprime
+pairs, still count toward completed indices. The ordered enclosure, all
+coordinate bounds and any denominator window must remain bound to the
+campaign and continuation identity.
+
+### Coverage and resource interpretation
+
+Completing every index of the full derived enclosure, with every
+admissible sign branch and the required radical mode, would cover the
+entire requested signed coordinate rectangle. The enclosure is far too
+large for that statement to imply a practical exhaustive computation.
+A completed finite prefix or denominator window covers only its recorded
+parameter pairs. Denominator-first ordering is an explicit scheduling
+choice, not a theorem that a target must have small denominator.
+
+This general campaign has a different workload and different indices
+from the historical selected-`a=1` campaign. Its completion time cannot be
+inferred from the former campaign's 49.95-billion-index size or runtime
+extrapolation. Neither this enclosure nor a CPU budget guarantees a hit;
+resource estimates must refer to the particular finite tasks actually
+selected and to measurements of their processing rate.

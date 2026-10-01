@@ -1,4 +1,35 @@
-# Release validation — CE390 3.2.0
+# Release validation — CE390
+
+## General a/q campaign update — 2026-10-01
+
+The general campaign update removes the implicit `a=1` generator default.
+`parameter_space.py` derives its numerator bounds from the integer target box,
+counts the enclosure with exact floor sums, and streams candidate indices.
+The native C++ search engine and independent mathematical verifier are unchanged.
+
+The complete updated native suite passed **85 tests in 11.072 seconds**.
+This includes 11 dedicated parameter-space tests and 8 integration tests added
+to the existing 66-test suite. Checks include independently enumerated small
+domains, arbitrary-size rank/unrank, page partitions, old task identities,
+unsupported proof domains, and deadline/resume across denominator rows.
+The collector's synthetic-certificate protocol tests explicitly mock mathematical
+verification; those fixtures are not claimed as solutions of the target equation.
+
+The supplied `examples/general-pilot/` task completed all 30,000 indices in
+2.980507 seconds in the native environment, spanning 3,996 distinct numerators
+and eight denominators. There were 27,979 CF fibers, 2,021 noncoprime skips,
+2,473,593 convergents, and zero hits. Independent collection confirmed the exact
+selected-page coverage. These are short native measurements, not CE timing
+estimates or evidence about the chance of finding a solution.
+
+The Docker acceptance procedure additionally exercises the new general pilot,
+real deadline continuations, SIGTERM, and collection, while retaining the
+historical pilot as a compatibility check. Consult the successful workflow and
+release for the exact source commit for actual Docker results. No CE jobs are
+submitted by these checks. The old 49.95-billion-index/approximately-900-hour
+estimate applies to the historical selected `a=1` campaign only.
+
+The following sections retain the historical 3.2.0 validation record.
 
 Validation performed on 2026-09-27. This release searches all four sign
 combinations with `10^43 <= abs(n) <= 10^45` and

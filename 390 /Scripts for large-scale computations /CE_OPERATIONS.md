@@ -43,29 +43,31 @@ Tasks finish early if their assigned indices are exhausted. Existing task JSONs
 and continuations retain their explicit budgets; changing the generator default
 does not change them. Per-task limits do not enforce a campaign-wide CPU-hour cap.
 
-### Generate one-hour task pages
+### Generate general a/q task pages
 
-`examples/60min/` contains the first page of the historical example selection
-with a 3600-second budget. Reproduce it, or generate further pages in a fresh
-directory, using:
+`examples/general/` contains ten initial tasks with 3600-second budgets.
+No numerator list or arbitrary numerator ceiling is selected. Reproduce that
+page, or generate further pages in a fresh directory, using:
 
 ```sh
 python3 campaign.py \
-  --campaign-id ce390-integer-60min-001 \
-  --a-values 1 \
-  --q-min 100000001 --q-max 100000000001 \
+  --campaign-id ce390-general-001 \
   --candidates-per-task 50000000 \
-  --page-start 0 --task-count 1 \
+  --page-start 0 --task-count 10 \
   --seconds 3600 \
-  --output-dir tasks-60min
+  --output-dir tasks-general
 ```
 
-This is a timing-only alternative to `examples/50min/`, with the same index
-intervals, 49,950,000,001 selected indices and 1,000 initial chunks. It retains
-`a=1`; it is not a recommended general-parameter campaign or a claim that the
-selected parameters are promising. Do not submit both overlapping alternatives.
-Use `--page-start 1` for the next page, keeping the other campaign settings fixed.
-Upload each input at a new immutable URL and use CE `--hours 2`.
+Use `--page-start 10` for the next ten tasks, keeping other settings fixed.
+Upload each input at a new immutable URL and use CE `--hours 2`. The counts are
+examples to calibrate, not a commitment to submit any number of tasks. The
+manifest's enormous total describes the implicit enclosure, not a funded batch.
+Do not extrapolate the old `a=1` runtime estimate to this general campaign.
+
+The older `examples/pilot/`, `50min/`, `60min/`, and `100min/` directories are
+historical restricted-numerator fixtures. Use `examples/general-pilot/` for
+the active mixed-numerator calibration task. General pilot and general campaign
+windows may overlap; retain their recorded coverage when planning work.
 
 ## Search units and honest coverage
 
@@ -74,12 +76,35 @@ A fiber is a reduced auxiliary slope `a/q = abs(y/abs(x)-1+6*n/x)`, where
 `gcd(a,q)=1`. A fiber covers all four sign combinations by default; for
 negative `x` it can yield different rational `d` values at different hits.
 The mathematical reductions and their completeness conditions are
-in `MATHEMATICS.md`. A task enumerates the chosen finite set of numerators and an
-inclusive interval of odd denominators. Noncoprime pairs occupy an index but are
-skipped. Pairs excluded by the proved modulo-3 conditions are also skipped
-before worker dispatch. This makes sharding deterministic and reproducible.
+in `MATHEMATICS.md`. The default `general-aq-v1` task enumerates denominators
+coprime to 6 in increasing order, and every numerator coprime to 6 inside the
+proved bounds for each denominator. Noncoprime `(a,q)` pairs occupy an index
+but are skipped before worker dispatch. Exact prefix counts and streaming
+iteration support huge indices without allocating a parameter array.
 
-For `Q = (q_max-q_min)/2+1`, candidate index `i` maps to:
+The new fiber definition is:
+
+```json
+{"mode": "general-aq-v1", "q_min": "1", "q_max": "10000000000000000000000000000000000000000000000000000000"}
+```
+
+`q_max` defaults to the task's `x_max`, because `q` divides `abs(x)`. Both
+endpoints are inclusive and may have any residue; only coprime-to-6 rows are
+enumerated. For `M_min=12*n_min+1` and proved `M_max=12*n_max+K_max`, numerators
+range from `ceil(M_min*q/x_max)` through
+`min(floor(M_max*q/x_min), M_max)`. See `MATHEMATICS.md` for the exact `K_max`.
+The proof requires `n_min>=2`, `x_min>6*n_max`, and `M_max<x_min` as well as
+the integer radical and fixed target congruences. The original production
+bounds satisfy all these conditions. Unsupported custom bounds are rejected.
+
+The first rows happen to allow only `a=1`; increasing denominators naturally
+introduce other numerators. No success probability is attached to this order.
+The full default enclosure has about `1.26e100` pairs before gcd filtering;
+only completed task slices constitute actual coverage.
+
+An explicit `--a-values` list selects the legacy restricted mode, requires both
+odd q endpoints, and preserves its old ordering. For that mode only, with
+`Q = (q_max-q_min)/2+1`, candidate index `i` maps to:
 
 ```text
 a = a_values[i // Q]
@@ -129,18 +154,17 @@ make -j2
 make test
 ```
 
-Generate only ten pilot tasks. The interval below is an illustrative selection,
-not a statistically justified best region and not a guarantee of discovery:
+Generate the supplied mixed-numerator pilot. This explicit denominator window
+is a calibration sample, not a statistically justified best region:
 
 ```sh
 python3 campaign.py \
-  --campaign-id ce390-integer-pilot-001 \
-  --a-values 1,5,7 \
-  --q-min 100000001 \
-  --q-max 100000000001 \
-  --candidates-per-task 10000 \
+  --campaign-id ce390-general-pilot-001 \
+  --q-min 1000000000001 \
+  --q-max 1000000001001 \
+  --candidates-per-task 30000 \
   --page-start 0 \
-  --task-count 10 \
+  --task-count 1 \
   --seconds 3600 \
   --output-dir tasks
 ```
@@ -152,10 +176,17 @@ parameterization. Generate new production tasks for the integer-radical search.
 Version-2 tasks with a missing or false integer-radical flag retain the broader
 meaning of that original task. The runner always passes the exact task policy
 explicitly to the worker; changing defaults does not alter old coverage.
-Version 3.0.0 tasks are rejected. Every numerator must be smaller
-than the campaign's minimum denominator.
+Version 3.0.0 tasks are rejected. In explicit-list mode every numerator must
+be smaller than the minimum denominator; general mode enforces `a<q` per row
+through the proved enclosure. General mode is unavailable for noninteger
+rational radicals; exploratory runs must explicitly select `--a-values`.
+Use the same exact container release for a task and all its continuations.
+`general-aq-v1` fixes the enclosure and index order; any future change to either
+must introduce a new mode identifier. The worker checksum alone pins the C++
+executable, not the Python parameter enumeration.
 `--page-start` is a zero-based **task ordinal**. To generate the next page, use
-`--page-start 10` with all other campaign parameters unchanged. The page manifest
+`--page-start 1` after the one-task pilot page, or `--page-start 10` after the
+ten-task general page, keeping all other campaign parameters unchanged. The page manifest
 reports the next ordinal. The generator refuses to replace a different task at
 an existing task filename; a fresh output directory is advisable when changing
 parameters. Numerator order is part of the campaign definition.

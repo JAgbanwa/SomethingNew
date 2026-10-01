@@ -85,7 +85,10 @@ jobs:
               "ce_application": "docker:" + os.environ["CE390_IMAGE"] + " " + base + "/ce390-linux-amd64.tar",
               "ce_commandline": "/app/run_task.sh --task /local/input/task.json --output-dir /local/output",
               "ce_hours": 2, "task_budget_seconds": 3600,
-              "supplied_pilot_ce_hours": 1, "supplied_pilot_task_budget_seconds": 3000,
+              "parameter_mode": "general-aq-v1",
+              "pilot_task": "examples/general-pilot/task-000000000000-e8f317752153af5c.json",
+              "supplied_pilot_ce_hours": 2, "supplied_pilot_task_budget_seconds": 3600,
+              "legacy_pilot_ce_hours": 1, "legacy_pilot_task_budget_seconds": 3000,
               "ce_job_submitted": False,
           }
           (evidence / "deployment.json").write_text(json.dumps(deployment, indent=2) + "\n")
@@ -100,7 +103,7 @@ jobs:
           (release / "release-tag.txt").write_text(tag + "\n")
           notes = (
               "Built from commit " + sha + ".\n\n"
-              "Linux amd64 image; regression suite, container pilot, deadline/continuation, "
+              "Linux amd64 image; regression suite, mixed-numerator general a/q pilot, legacy pilot, deadline/continuation, "
               "and independent collection checks passed. See the workflow logs and "
               "container-evidence.zip for exact observations.\n\n"
               "Workflow: " + deployment["workflow_run"] + "\n\n"
@@ -108,8 +111,9 @@ jobs:
               "CE command line:\n\n\x60\x60\x60text\n" + deployment["ce_commandline"] + "\n\x60\x60\x60\n\n"
               "Stage the selected task as task.json. Newly generated tasks default to a "
               "3,600-second search budget: use a two-hour CE allowance (--hours 2) so "
-              "startup and output handling have time. The unchanged supplied pilot uses "
-              "3,000 seconds with --hours 1; 6,000-second tasks also require --hours 2. "
+              "startup and output handling have time. Use examples/general-pilot for calibration. "
+              "General campaigns derive all numerators from the integer bounds; no a=1 default remains. "
+              "Historical a=1 examples are retained only for reproducibility. "
               "These are per-task limits, not an aggregate CPU-hour cap.\n\n"
               "The archive is an uncompressed docker-save image; validate SHA256SUMS before "
               "loading it. Image URLs are unique per build and are never overwritten.\n\n"

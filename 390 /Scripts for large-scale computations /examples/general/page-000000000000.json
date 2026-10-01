@@ -1,0 +1,103 @@
+{
+  "campaign_id": "ce390-general-001",
+  "candidates_per_task": "50000000",
+  "coverage_note": "General a/q enclosure with all derived numerators; only the assigned index slices are covered, not the whole signed n,x region.",
+  "next_page_start": "10",
+  "page_start": "0",
+  "page_task_count": 10,
+  "schema": "ce390-page-v2",
+  "tasks": [
+    {
+      "file": "task-000000000000-082e4ea9a696bbda.json",
+      "ordinal": "0",
+      "slice": {
+        "start": "0",
+        "stop": "50000000"
+      },
+      "task_id": "082e4ea9a696bbda0104e36a5a756da4b3b1d2f7f9ccd08300bd8270f607fb00"
+    },
+    {
+      "file": "task-000000000001-cb2f171058cc02e4.json",
+      "ordinal": "1",
+      "slice": {
+        "start": "50000000",
+        "stop": "100000000"
+      },
+      "task_id": "cb2f171058cc02e430a230b651e7a7995526af42fa06c53cfb98f8bd844640fe"
+    },
+    {
+      "file": "task-000000000002-4e494e92f3c4d84a.json",
+      "ordinal": "2",
+      "slice": {
+        "start": "100000000",
+        "stop": "150000000"
+      },
+      "task_id": "4e494e92f3c4d84acad7e9b87b49572c8e00c7b39daa6fc0f7192bb555d0d231"
+    },
+    {
+      "file": "task-000000000003-30ed0ed0d6185dfe.json",
+      "ordinal": "3",
+      "slice": {
+        "start": "150000000",
+        "stop": "200000000"
+      },
+      "task_id": "30ed0ed0d6185dfe5587e563c9147d799b8083dedf7a9e468348c099e2de6abe"
+    },
+    {
+      "file": "task-000000000004-65a48f0285f2ff38.json",
+      "ordinal": "4",
+      "slice": {
+        "start": "200000000",
+        "stop": "250000000"
+      },
+      "task_id": "65a48f0285f2ff38613558d0e783ecf7c874c73095244c4ee9cc853f8a8e84e0"
+    },
+    {
+      "file": "task-000000000005-1727f52ece29aab8.json",
+      "ordinal": "5",
+      "slice": {
+        "start": "250000000",
+        "stop": "300000000"
+      },
+      "task_id": "1727f52ece29aab8b3c033e3f19f67db9d96b2846e389ff1aaaf4c13d0f02a6a"
+    },
+    {
+      "file": "task-000000000006-413fe6e96e7cb813.json",
+      "ordinal": "6",
+      "slice": {
+        "start": "300000000",
+        "stop": "350000000"
+      },
+      "task_id": "413fe6e96e7cb81355f84b7749118cf4684d8d95d1c7293021c1b650d5cd7b6d"
+    },
+    {
+      "file": "task-000000000007-ee8c2c4d35e704b6.json",
+      "ordinal": "7",
+      "slice": {
+        "start": "350000000",
+        "stop": "400000000"
+      },
+      "task_id": "ee8c2c4d35e704b687fe9a363e0e7b7f2c8525a90fad281db26982bdfd272c05"
+    },
+    {
+      "file": "task-000000000008-e9d44aa7da1a56e1.json",
+      "ordinal": "8",
+      "slice": {
+        "start": "400000000",
+        "stop": "450000000"
+      },
+      "task_id": "e9d44aa7da1a56e159335f3a96e5318edc2ba72816552cb1dc8c2790cefe3e67"
+    },
+    {
+      "file": "task-000000000009-4258cb3f7a2b5003.json",
+      "ordinal": "9",
+      "slice": {
+        "start": "450000000",
+        "stop": "500000000"
+      },
+      "task_id": "4258cb3f7a2b5003cfe8b903f5a2ddeb0a067bb2b99575be1752a7c43196fd4a"
+    }
+  ],
+  "total_candidate_indices": "12600000000000000038000000228000001368000008207444444443124444444444426662666666642666666522666665816",
+  "total_tasks": "252000000000000000760000004560000027360000164148888888862488888888888533253333332853333330454"
+}

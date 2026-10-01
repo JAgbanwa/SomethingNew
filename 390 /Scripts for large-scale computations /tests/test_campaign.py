@@ -59,7 +59,7 @@ class CampaignTests(unittest.TestCase):
                                          ("rational",["--allow-rational-sqrt"],False)):
                 output=folder/label
                 run=subprocess.run([sys.executable,str(ROOT/"campaign.py"),
-                     "--campaign-id","cli-default-policy","--q-min","5","--q-max","17",
+                     "--campaign-id","cli-default-policy","--a-values","1","--q-min","5","--q-max","17",
                      "--task-count","1","--output-dir",str(output),*flags],
                      text=True,capture_output=True,timeout=10)
                 self.assertEqual(run.returncode,0,run.stderr)
@@ -70,7 +70,7 @@ class CampaignTests(unittest.TestCase):
             self.assertEqual(tasks[0]["task_id"],tasks[1]["task_id"])
             self.assertNotEqual(tasks[0]["task_id"],tasks[2]["task_id"])
             conflicting=subprocess.run([sys.executable,str(ROOT/"campaign.py"),
-                "--campaign-id","conflicting-policy","--q-min","5","--q-max","17",
+                "--campaign-id","conflicting-policy","--a-values","1","--q-min","5","--q-max","17",
                 "--require-integer-sqrt","--allow-rational-sqrt", "--output-dir",str(folder/"invalid")],
                 text=True,capture_output=True,timeout=10)
             self.assertNotEqual(conflicting.returncode,0)
