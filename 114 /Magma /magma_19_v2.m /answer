@@ -1,0 +1,103 @@
+================================================================
+  Search: 36n^3 - 19 equation
+  n0(mod3), x7(mod12), 7x, sqrtZ, dZ
+  Minimal |n| unknown, x~n^(5/4)
+================================================================
+
+=== Phase 1: Brute Force (|n|1000) ===
+  Solutions: 0
+
+=== Phase 2: u-Param Search (|u|100, |n|50000) ===
+  Total: 0
+
+=== Phase 3: Mordell Curves ===
+[Key]
+--- Mordell curve u=-1: Y^2 = W^3 + (12579840) ---
+  E: Elliptic Curve defined by y^2 = x^3 + 12579840 over Rational Field
+  Discriminant: -68365025751859200
+  Torsion: Z/Mapping from: GrpAb: T to Set of points of E with coordinates in
+Rational FieldZ
+  Computing rank...
+  Rank = 0
+  Rank 0: no non-torsion points
+[]
+
+[Ref]
+--- Mordell curve u=1: Y^2 = W^3 + (-12635136) ---
+  E: Elliptic Curve defined by y^2 = x^3 - 12635136 over Rational Field
+  Discriminant: -68967357871030272
+  Torsion: Z/Mapping from: GrpAb: T to Set of points of E with coordinates in
+Rational FieldZ
+  Computing rank...
+  Rank = 1
+  #Generators: 1
+  gen 1: height = 22.2082007640873902334570439344
+  gen 1 coordinates: (2825499385/9529569, 107808648049549/29417779503)
+    1*P: W=2825499385/9529569, Y=107808648049549/29417779503
+      n not integer (denom=2744515872)
+    2*P: W=310899244165717255649284484461822088545/4430374615909100242128880441\
+51856676, Y=-5380729395380859890286260079948078593551614379775235932783/2948904\
+27556399092251727120181489651219534871267151576
+      n not integer (denom=127594788938182086973311756715734722688)
+    3*P: W=59138735900507898524454353030108009662486469460066990975255640035889\
+9428948562025794489/30718012621065039734366399782124754382816099479582684908325\
+9766514008416820662189225, Y=14368889797199476406882675261205507853435455466671\
+6805575497648181495840535564640159937889715803312984766876536585442416267886957\
+63/1702510000962934671170748179308266047287666082572933859628564942747903728230\
+87742598546564913057689061726098516146382037312875
+      n not integer (denom=8846787634866731443497523137251929262251036650119813\
+2535978812756034424044350710496800)
+[]
+
+=== Phase 4: E_n Rank Jumps ===
+
+--- E_n for n = 3 ---
+  Torsion: Z/Mapping from: GrpAb: T to Set of points of E with coordinates in
+Rational FieldZ
+  Computing rank...
+  Rank = 1
+  #Gens: 2
+  gen 1: height=0.000000000000000000000000000000
+  gen 2: height=11.9608467087438671406202968850
+[]
+
+--- E_n for n = -6 ---
+  Torsion: Z/Mapping from: GrpAb: T to Set of points of E with coordinates in
+Rational FieldZ
+  Computing rank...
+  Rank = 1
+  #Gens: 2
+  gen 1: height=0.000000000000000000000000000000
+  gen 2: height=14.6304895484930568809011599413
+[]
+
+--- E_n for n = -9 ---
+  Torsion: Z/Mapping from: GrpAb: T to Set of points of E with coordinates in
+Rational FieldZ
+  Computing rank...
+  Rank = 1
+  #Gens: 2
+  gen 1: height=0.000000000000000000000000000000
+  gen 2: height=87.2504712222978447672722736497
+[]
+
+=== Summary ===
+Key Mordell curve: Y^2 = W^3 + 12579840 (u=-1)
+  Only u with integer C, u2(mod3), and 36n^319(mod|u|) solvable
+  Map: n=(48-W)/288, x=-(288-12WY)/1152
+  For n0(mod3): W48(mod864)
+  For |n|~10^43: |W|~310^45, height~52
+  If generator height h, then k*P gives |n|~exp(2k^2*h)/288
+  k=1 needs h~52, k=2 needs h~13, k=3 needs h~6
+
+If no solutions found:
+  1. Increase max_k in Phase 3 (Mordell curve u=-1)
+  2. Try more u values with rational C (u=5,11,17,...)
+  3. Search more E_n curves for rank jumps
+
+>> printf "  4. Use IntegralPoints on the Mordell curve\n");
+                                                          ^
+User error: bad syntax
+
+=== Complete ===
+
