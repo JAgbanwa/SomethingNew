@@ -1,0 +1,368 @@
+////////////////////////////////////////////////////////////////////////
+// Corrected Magma Script: 36n^3 - 19 equation
+//
+// Equation: 36n^3 - 19 = -2d * x^2 * (-(x+6n) + sqrt((x+6n)^2 + (36n^3-19)/x))
+//
+// Constraints: n ≡ 0 (mod 3), x ≡ 7 (mod 12), 7 ∤ x
+//             sqrt((x+6n)^2 + (36n^3-19)/x) ∈ Z (INTEGER square root)
+//             d = u/(2x) ∉ Z (non-integer rational d)
+//             Minimal |n| unknown (possibly ~10^43)
+//
+// KEY FINDING: The only u value with integer C(u), u ≡ 2 (mod 3),
+//   and 36n^3 ≡ 19 (mod |u|) solvable is u = -1.
+//   Mordell curve: Y^2 = W^3 + 12579840
+//   Map: n = (48-W)/288, x = -(288-12W ± Y)/1152
+////////////////////////////////////////////////////////////////////////
+
+SetClassGroupBounds("GRH");
+
+// ==================== UTILITY FUNCTIONS ====================
+
+function check_modular(x_val)
+    return (x_val mod 12 eq 7) and (x_val mod 7 ne 0);
+end function;
+
+function compute_d(n_val, x_val, k_val)
+    // k_val = integer square root (>= 0)
+    // d = (k - (x+6n))/(2x)  or  d = (-k - (x+6n))/(2x)
+    results := [];
+    s := x_val + 6*n_val;
+    for sign in [1, -1] do
+        num := sign*k_val - s;
+        den := 2*x_val;
+        if den eq 0 then continue; end if;
+        g := Gcd(Abs(num) eq 0 select 1 else Abs(num), Abs(den));
+        d_num := num div g;
+        d_den := den div g;
+        if d_den lt 0 then d_num := -d_num; d_den := -d_den; end if;
+        if d_den ne 1 then
+            Append(~results, [d_num, d_den, sign]);
+        end if;
+    end for;
+    return results;
+end function;
+
+function get_divisors(n)
+    if n eq 0 then return []; end if;
+    abs_n := Abs(n);
+    fac := Factorisation(abs_n);
+    divs := [1];
+    for f in fac do
+        p := f[1]; e := f[2];
+        new_divs := [];
+        for d in divs do
+            pe := 1;
+            for i in [0..e] do
+                Append(~new_divs, d*pe);
+                pe *:= p;
+            end for;
+        end for;
+        divs := new_divs;
+    end for;
+    return divs;
+end function;
+
+function verify_solution(n_val, x_val, k_val)
+    A := 36*n_val^3 - 19;
+    if A mod x_val ne 0 then return false; end if;
+    val := (x_val + 6*n_val)^2 + A div x_val;
+    return (val ge 0) and (val eq k_val^2);
+end function;
+
+// ==================== PHASE 1: BRUTE FORCE ====================
+
+function brute_force_search(n_range)
+    results := [];
+    for n_val in [-n_range..n_range] do
+        if n_val eq 0 or n_val mod 3 ne 0 then continue; end if;
+        A := 36*n_val^3 - 19;
+        if A eq 0 then continue; end if;
+        divs := get_divisors(A);
+        for d_abs in divs do
+            for sgn in [1, -1] do
+                x_val := sgn * d_abs;
+                if x_val eq 0 then continue; end if;
+                if not check_modular(x_val) then continue; end if;
+                if A mod x_val ne 0 then continue; end if;
+                val := (x_val + 6*n_val)^2 + A div x_val;
+                if val lt 0 then continue; end if;
+                if IsSquare(val) then
+                    k_val := SquareRoot(val);
+                    d_list := compute_d(n_val, x_val, k_val);
+                    for d_info in d_list do
+                        Append(~results, [d_info[1], d_info[2], n_val, x_val, k_val]);
+                    end for;
+                end if;
+            end for;
+        end for;
+    end for;
+    return results;
+end function;
+
+// ==================== PHASE 2: u-PARAMETRIZATION ====================
+
+function is_valid_u(u_val)
+    if u_val eq 0 then return false; end if;
+    if u_val mod 3 ne 2 then return false; end if;
+    abs_u := Abs(u_val);
+    for r in [0..abs_u-1] do
+        if (36*r^3 - 19) mod abs_u eq 0 then return true; end if;
+    end for;
+    return false;
+end function;
+
+function find_residue_class(u_val)
+    abs_u := Abs(u_val);
+    M := 3*abs_u;
+    for r in [0..M-1] do
+        if r mod 3 ne 0 then continue; end if;
+        if (36*r^3 - 19) mod abs_u eq 0 then return r, M; end if;
+    end for;
+    return -1, M;
+end function;
+
+function u_param_search(u_val, n_range)
+    results := [];
+    r, M := find_residue_class(u_val);
+    if r lt 0 then return results; end if;
+    n_list := [];
+    v := r;
+    while v le n_range do
+        if v ne 0 then Append(~n_list, v); end if;
+        v +:= M;
+    end while;
+    v := r - M;
+    while v ge -n_range do
+        if v ne 0 then Append(~n_list, v); end if;
+        v -:= M;
+    end while;
+    for n_val in n_list do
+        A := 36*n_val^3 - 19;
+        if A eq 0 or A mod u_val ne 0 then continue; end if;
+        D := (12*n_val + u_val)^2 + 8*(A div u_val);
+        if D lt 0 or not IsSquare(D) then continue; end if;
+        sq := SquareRoot(D);
+        for sgn in [1, -1] do
+            num := -(12*n_val + u_val) + sgn*sq;
+            if num mod 4 ne 0 then continue; end if;
+            x_val := num div 4;
+            if x_val eq 0 or A mod x_val ne 0 then continue; end if;
+            val := (x_val + 6*n_val)^2 + A div x_val;
+            if val lt 0 or not IsSquare(val) then continue; end if;
+            k_val := SquareRoot(val);
+            d_list := compute_d(n_val, x_val, k_val);
+            for di in d_list do
+                Append(~results, [di[1], di[2], n_val, x_val, k_val, u_val]);
+            end for;
+        end for;
+    end for;
+    return results;
+end function;
+
+// ==================== PHASE 3: MORDELL CURVE ====================
+
+function mordell_curve_search(u_val, C_val, max_k)
+    printf "\n--- Mordell curve u=%o: Y^2 = W^3 + (%o) ---\n", u_val, C_val;
+    E := EllipticCurve([0, C_val]);
+    printf "  E: %o\n", E;
+    printf "  Discriminant: %o\n", Discriminant(E);
+
+    T, mT := TorsionSubgroup(E);
+    printf "  Torsion: Z/%oZ\n", mT;
+
+    printf "  Computing rank...\n";
+    mr := Rank(E);
+    printf "  Rank = %o\n", mr;
+
+    if mr eq 0 then
+        printf "  Rank 0: no non-torsion points\n";
+        return [];
+    end if;
+
+    gens := Generators(E);
+    printf "  #Generators: %o\n", #gens;
+
+    results := [];
+    for i in [1..#gens] do
+        P := gens[i];
+        printf "  gen %o: height = %o\n", i, Height(P);
+        printf "  gen %o coordinates: (%o, %o)\n", i, P[1], P[2];
+
+        for k in [1..max_k] do
+            Q := k*P;
+            W := Q[1]; Y := Q[2];
+            printf "    %o*P: W=%o, Y=%o\n", k, W, Y;
+
+            // Map: n = (W-48)*u/288
+            n_rat := (W - 48) * u_val / 288;
+            if Denominator(n_rat) ne 1 then
+                printf "      n not integer (denom=%o)\n", Denominator(n_rat);
+                continue;
+            end if;
+            n_val := Numerator(n_rat);
+            if n_val eq 0 then continue; end if;
+            if n_val mod 3 ne 0 then
+                printf "      n=%o not 0 mod 3\n", n_val;
+                continue;
+            end if;
+
+            A := 36*n_val^3 - 19;
+            if A mod u_val ne 0 then continue; end if;
+
+            // x = u*(288 - 12W ± Y)/1152
+            for sgn in [1, -1] do
+                x_rat := u_val * (288 - 12*W + sgn*Y) / 1152;
+                if Denominator(x_rat) ne 1 then continue; end if;
+                x_val := Numerator(x_rat);
+                if x_val eq 0 then continue; end if;
+                if A mod x_val ne 0 then continue; end if;
+
+                val := (x_val + 6*n_val)^2 + A div x_val;
+                if val lt 0 or not IsSquare(val) then continue; end if;
+                k_val := SquareRoot(val);
+
+                if check_modular(x_val) then
+                    d_list := compute_d(n_val, x_val, k_val);
+                    for di in d_list do
+                        Append(~results, [di[1], di[2], n_val, x_val, k_val, u_val, k]);
+                        printf "    *** SOLUTION: d=%o/%o n=%o x=%o k=%o u=%o (kP=%o) ***\n",
+                               di[1], di[2], n_val, x_val, k_val, u_val, k;
+                    end for;
+                else
+                    printf "      mod fail: n=%o x=%o x%%12=%o x%%7=%o\n",
+                           n_val, x_val, x_val mod 12, x_val mod 7;
+                end if;
+            end for;
+        end for;
+    end for;
+    return results;
+end function;
+
+// ==================== PHASE 4: E_n CURVES ====================
+
+function construct_curve(n_val)
+    a := -228 * n_val;
+    c := 12*n_val^3 - 19;
+    b := -3*c^2 + 1444;
+    return EllipticCurve([a, b]);
+end function;
+
+function elliptic_curve_search(n_val, max_mult)
+    printf "\n--- E_n for n = %o ---\n", n_val;
+    A := 36*n_val^3 - 19;
+    if A eq 0 then printf "  A=0\n"; return []; end if;
+
+    E := construct_curve(n_val);
+    T, mT := TorsionSubgroup(E);
+    printf "  Torsion: Z/%oZ\n", mT;
+
+    printf "  Computing rank...\n";
+    mr := Rank(E);
+    printf "  Rank = %o\n", mr;
+
+    if mr eq 0 then printf "  Rank 0\n"; return []; end if;
+
+    gens := Generators(E);
+    printf "  #Gens: %o\n", #gens;
+
+    results := [];
+    for i in [1..#gens] do
+        P := gens[i];
+        printf "  gen %o: height=%o\n", i, Height(P);
+
+        for k in [1..max_mult] do
+            Q := k*P;
+            W := Q[1]; V := Q[2];
+            U := W - 12*n_val^2;
+            if U eq 0 then continue; end if;
+
+            x_rat := Rationals()!A / U;
+            if Denominator(x_rat) ne 1 then continue; end if;
+            x_val := Numerator(x_rat);
+            if x_val eq 0 then continue; end if;
+            if A mod x_val ne 0 then continue; end if;
+
+            val := (x_val + 6*n_val)^2 + A div x_val;
+            if val lt 0 or not IsSquare(val) then continue; end if;
+            k_val := SquareRoot(val);
+
+            if check_modular(x_val) then
+                d_list := compute_d(n_val, x_val, k_val);
+                for di in d_list do
+                    Append(~results, [di[1], di[2], n_val, x_val, k_val, k]);
+                    printf "  *** d=%o/%o n=%o x=%o k=%o (mult=%o) ***\n",
+                           di[1], di[2], n_val, x_val, k_val, k;
+                end for;
+            else
+                printf "    k=%o: x=%o [x%%12=%o x%%7=%o] -- mod fail\n",
+                       k, x_val, x_val mod 12, x_val mod 7;
+            end if;
+        end for;
+    end for;
+    return results;
+end function;
+
+// ==================== MAIN ====================
+
+printf "================================================================\n";
+printf "  Search: 36n^3 - 19 equation\n";
+printf "  n≡0(mod3), x≡7(mod12), 7∤x, sqrt∈Z, d∉Z\n";
+printf "  Minimal |n| unknown, x~n^(5/4)\n";
+printf "================================================================\n\n";
+
+// Phase 1: Brute force
+printf "=== Phase 1: Brute Force (|n|≤1000) ===\n";
+bf := brute_force_search(1000);
+printf "  Solutions: %o\n", #bf;
+for r in bf do
+    printf "    d=%o/%o n=%o x=%o k=%o\n", r[1], r[2], r[3], r[4], r[5];
+end for;
+
+// Phase 2: u-parametrization
+printf "\n=== Phase 2: u-Param Search (|u|≤100, |n|≤50000) ===\n";
+total_u := 0;
+for u_val in [-100..100] do
+    if not is_valid_u(u_val) then continue; end if;
+    res := u_param_search(u_val, 50000);
+    if #res gt 0 then
+        for s in res do
+            printf "  d=%o/%o n=%o x=%o k=%o u=%o [x%%12=%o x%%7=%o]\n",
+                   s[1], s[2], s[3], s[4], s[5], s[6], s[4] mod 12, s[4] mod 7;
+        end for;
+        total_u +:= #res;
+    end if;
+end for;
+printf "  Total: %o\n", total_u;
+
+// Phase 3: Mordell curves
+printf "\n=== Phase 3: Mordell Curves ===\n";
+
+// u=-1: C = 12579840 (KEY CURVE — only valid u with integer C)
+printf "[Key] ";
+mordell_curve_search(-1, 12579840, 5);
+
+// u=1: C = -12635136 (reference — rank 1, height 22.2 known)
+printf "\n[Ref] ";
+mordell_curve_search(1, -12635136, 3);
+
+// Phase 4: E_n curves with rank jumps
+printf "\n=== Phase 4: E_n Rank Jumps ===\n";
+for n_val in [3, -6, -9] do
+    elliptic_curve_search(n_val, 20);
+end for;
+
+// Phase 5: Summary
+printf "\n=== Summary ===\n";
+printf "Key Mordell curve: Y^2 = W^3 + 12579840 (u=-1)\n";
+printf "  Only u with integer C, u≡2(mod3), and 36n^3≡19(mod|u|) solvable\n";
+printf "  Map: n=(48-W)/288, x=-(288-12W±Y)/1152\n";
+printf "  For n≡0(mod3): W≡48(mod864)\n";
+printf "  For |n|~10^43: |W|~3×10^45, height~52\n";
+printf "  If generator height h, then k*P gives |n|~exp(2k^2*h)/288\n";
+printf "  k=1 needs h~52, k=2 needs h~13, k=3 needs h~6\n";
+printf "\nIf no solutions found:\n";
+printf "  1. Increase max_k in Phase 3 (Mordell curve u=-1)\n";
+printf "  2. Try more u values with rational C (u=5,11,17,...)\n";
+printf("  3. Search more E_n curves for rank jumps\n");
+printf "  4. Use IntegralPoints on the Mordell curve\n");
+printf "\n=== Complete ===\n";
