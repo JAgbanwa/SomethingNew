@@ -132,12 +132,12 @@ new campaign; it must not silently redefine old task identities. No script
 submits paid jobs or sends messages automatically.
 
 Use `examples/general-pilot/` for a small calibration task that exercises many
-numerators. It is an explicitly selected denominator window, not a prediction of
-where a solution lies. `examples/general/` contains the first ten tasks in the
-full derived enclosure, with one-hour budgets. Only included task slices are
-assigned; a manifest's total count does not submit or authorize that workload.
-The two examples overlap in the full parameter space, so track pilot coverage
-separately and avoid scheduling the same work twice.
+numerators. It is a 30,000-index calibration slice from the full derived denominator
+enclosure, not a claim that solutions lie in its prefix. `examples/general/`
+contains the first ten tasks in the same full derived enclosure. Only included
+task slices are assigned; a manifest's enormous total does not submit or authorize
+that workload. The pilot overlaps the first general task; avoid scheduling the
+same indices twice unless duplicate computation is intentional.
 
 The older `pilot/`, `50min/`, `60min/`, and `100min/` examples remain unchanged
 as historical `a=1` fixtures; they are superseded for the requested general
@@ -185,9 +185,11 @@ python3 campaign.py --campaign-id ce390-general-001 \
 The ordering is increasing `q`, then increasing `a`. The earliest rows contain
 only `a=1` because of the proved bounds; later rows include `5,7,11,...`.
 This is an enumeration order, not a theorem that small denominators are more
-likely to succeed. `--q-min`/`--q-max` explicitly select a smaller denominator
-window if desired. `--a-values` remains an explicit restricted legacy mode,
-never the default. The general mode requires integer radicals and separated
+likely to succeed. The default is the full proved denominator enclosure
+`[1, x_max]`. A smaller `--q-min`/`--q-max` window in general mode requires
+the explicit `--allow-q-window` opt-in and is only a restricted diagnostic run;
+it is not the default search. `--a-values` remains an explicitly restricted
+legacy mode, never the default. General mode requires integer radicals and
 bounds where its enclosure proof applies; unsupported custom bounds are rejected.
 
 The full conservative enclosure has about `1.26 * 10^100` indexed pairs before
