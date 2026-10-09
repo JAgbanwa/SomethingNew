@@ -11,6 +11,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 import campaign
 import run_task
+from parameter_space import GeneralAQ
 
 
 def arguments(output_dir, **changes):
@@ -98,6 +99,34 @@ class CampaignTests(unittest.TestCase):
                 campaign.generate(arguments(folder,n_min="-100"))
             with self.assertRaisesRegex(ValueError,"search.signs"):
                 campaign.generate(arguments(folder,signs="both"))
+
+    def test_general_mode_defaults_to_full_derived_denominator_enclosure(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            args = arguments(folder, a_values=None, q_min=None, q_max=None, task_count=1)
+            page = campaign.generate(args)
+            task = json.loads((folder / page["tasks"][0]["file"]).read_text())
+            self.assertEqual(task["fibers"]["q_min"], "1")
+            self.assertEqual(task["fibers"]["q_max"], str(10**55))
+            self.assertEqual(page["total_candidate_indices"],
+                             "12600000000000000038000000228000001368000008207444444443124444444444426662666666642666666522666665816")
+
+    def test_restricted_general_q_window_requires_explicit_opt_in(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            args = arguments(folder, a_values=None, q_min="1000000000001",
+                             q_max="1000000001001", task_count=1)
+            with self.assertRaisesRegex(ValueError, "restricted denominator window is opt-in"):
+                campaign.generate(args)
+            args.allow_q_window = True
+            page = campaign.generate(args)
+            task = json.loads((folder / page["tasks"][0]["file"]).read_text())
+            self.assertEqual(task["fibers"]["q_min"], "1000000000001")
+            self.assertEqual(task["fibers"]["q_max"], "1000000001001")
+            self.assertFalse(GeneralAQ({
+                "n_min": args.n_min, "n_max": args.n_max,
+                "x_min": args.x_min, "x_max": args.x_max
+            }, int(task["fibers"]["q_min"]), int(task["fibers"]["q_max"])).bounds_info()["full_denominator_window"])
 
     def test_invalid_page_and_conflicting_task_file_are_rejected(self):
         with tempfile.TemporaryDirectory() as temp:

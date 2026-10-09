@@ -243,7 +243,7 @@ class Check:
         general_tasks = self.output / "general-pilot-tasks"
         self.command([sys.executable, str(ROOT / "campaign.py"),
                       "--campaign-id", "ce390-general-container-pilot",
-                      "--q-min", "1000000000001", "--q-max", "1000000001001",
+                      "--q-min", "1000000000001", "--q-max", "1000000001001", "--allow-q-window",
                       "--candidates-per-task", "30000", "--task-count", "1",
                       "--output-dir", str(general_tasks)])
         general_task_path = next(general_tasks.glob("task-*.json"))
@@ -280,7 +280,7 @@ class Check:
         generated = self.output / "continuation-tasks"
         self.command([sys.executable, str(ROOT / "campaign.py"), "--campaign-id", "ce390-container-continuation",
                       "--q-min", "1000000000001", "--q-max", str(1000000000001 + max(1000000, 2 * count)),
-                      "--candidates-per-task", str(count), "--task-count", "1", "--seconds", "1",
+                      "--allow-q-window", "--candidates-per-task", str(count), "--task-count", "1", "--seconds", "1",
                       "--checkpoint-seconds", "1", "--require-integer-sqrt", "--signs", "all",
                       "--output-dir", str(generated)])
         next_task = next(generated.glob("task-*.json"))
@@ -319,7 +319,7 @@ class Check:
         signal_tasks = self.output / "signal-tasks"
         self.command([sys.executable, str(ROOT / "campaign.py"), "--campaign-id", "ce390-container-signal",
                       "--q-min", "1000000000001", "--q-max", "1000001000001",
-                      "--candidates-per-task", "10000000", "--task-count", "1", "--seconds", "60",
+                      "--allow-q-window", "--candidates-per-task", "10000000", "--task-count", "1", "--seconds", "60",
                       "--checkpoint-seconds", "1", "--require-integer-sqrt", "--signs", "all",
                       "--output-dir", str(signal_tasks)])
         signal_task_path = next(signal_tasks.glob("task-*.json"))
