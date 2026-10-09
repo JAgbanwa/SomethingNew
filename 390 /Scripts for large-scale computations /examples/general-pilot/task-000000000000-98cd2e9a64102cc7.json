@@ -1,0 +1,29 @@
+{
+  "campaign_id": "ce390-general-pilot-001",
+  "execution": {
+    "checkpoint_seconds": 5,
+    "max_precision_bits": 16384,
+    "precision_bits": 512,
+    "time_limit_seconds": 3600
+  },
+  "fibers": {
+    "mode": "general-aq-v1",
+    "q_min": "1",
+    "q_max": "10000000000000000000000000000000000000000000000000000000"
+  },
+  "parameterization": "absolute-slope-a-over-q-v1",
+  "schema": "ce390-task-v2",
+  "search": {
+    "n_min": "10000000000000000000000000000000000000000000",
+    "n_max": "1000000000000000000000000000000000000000000000",
+    "x_min": "1000000000000000000000000000000000000000000000000000000",
+    "x_max": "10000000000000000000000000000000000000000000000000000000",
+    "signs": "all",
+    "require_integer_sqrt": true
+  },
+  "slice": {
+    "start": "0",
+    "stop": "30000"
+  },
+  "task_id": "98cd2e9a64102cc72d2488e281491cf79bf4515513b4b667635850be0f63d462"
+}
