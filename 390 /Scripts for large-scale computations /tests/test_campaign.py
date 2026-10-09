@@ -11,6 +11,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 import campaign
 import run_task
+from parameter_space import GeneralAQ
 
 
 def arguments(output_dir, **changes):
