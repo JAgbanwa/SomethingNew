@@ -1,22 +1,22 @@
 {
   "campaign_id": "ce390-general-pilot-001",
   "candidates_per_task": "30000",
-  "coverage_note": "General a/q enclosure with all derived numerators; only the assigned index slices are covered, not the whole signed n,x region.",
+  "coverage_note": "Full derived denominator enclosure [1, x_max]; this page assigns only the first 30000 indices in the documented deterministic ordering. It is a runtime calibration slice, not an assumption that solutions occur there and not full-region coverage.",
   "next_page_start": "1",
   "page_start": "0",
   "page_task_count": 1,
   "schema": "ce390-page-v2",
   "tasks": [
     {
-      "file": "task-000000000000-e8f317752153af5c.json",
+      "file": "task-000000000000-98cd2e9a64102cc7.json",
       "ordinal": "0",
       "slice": {
         "start": "0",
         "stop": "30000"
       },
-      "task_id": "e8f317752153af5c576bf00595adbfb9fa322be0498ed4d85c35486b2f319e0f"
+      "task_id": "98cd2e9a64102cc72d2488e281491cf79bf4515513b4b667635850be0f63d462"
     }
   ],
-  "total_candidate_indices": "1334664",
-  "total_tasks": "45"
+  "total_candidate_indices": "12600000000000000038000000228000001368000008207444444443124444444444426662666666642666666522666665816",
+  "total_tasks": "420000000000000001266666674266666712266666940248148148104148148148147555422222221422222217422223"
 }
