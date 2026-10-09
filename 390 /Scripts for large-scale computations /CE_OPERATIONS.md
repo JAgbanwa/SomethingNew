@@ -65,9 +65,10 @@ manifest's enormous total describes the implicit enclosure, not a funded batch.
 Do not extrapolate the old `a=1` runtime estimate to this general campaign.
 
 The older `examples/pilot/`, `50min/`, `60min/`, and `100min/` directories are
-historical restricted-numerator fixtures. Use `examples/general-pilot/` for
-the active mixed-numerator calibration task. General pilot and general campaign
-windows may overlap; retain their recorded coverage when planning work.
+historical restricted-numerator fixtures. Use `examples/general-pilot/` for a
+30,000-index calibration slice from the full enclosure. It overlaps the first
+general task; avoid submitting both as separate work unless duplicate computation
+is intentional.
 
 ## Search units and honest coverage
 
@@ -88,9 +89,10 @@ The new fiber definition is:
 {"mode": "general-aq-v1", "q_min": "1", "q_max": "10000000000000000000000000000000000000000000000000000000"}
 ```
 
-`q_max` defaults to the task's `x_max`, because `q` divides `abs(x)`. Both
-endpoints are inclusive and may have any residue; only coprime-to-6 rows are
-enumerated. For `M_min=12*n_min+1` and proved `M_max=12*n_max+K_max`, numerators
+`q_min=1` and `q_max=x_max` are the defaults, because `q` divides `abs(x)`.
+Both endpoints are inclusive and may have any residue; only coprime-to-6 rows
+are enumerated. Narrower general-mode endpoints require the explicit
+`--allow-q-window` opt-in and should be used only for intentionally restricted runs. For `M_min=12*n_min+1` and proved `M_max=12*n_max+K_max`, numerators
 range from `ceil(M_min*q/x_max)` through
 `min(floor(M_max*q/x_min), M_max)`. See `MATHEMATICS.md` for the exact `K_max`.
 The proof requires `n_min>=2`, `x_min>6*n_max`, and `M_max<x_min` as well as
@@ -154,20 +156,24 @@ make -j2
 make test
 ```
 
-Generate the supplied mixed-numerator pilot. This explicit denominator window
-is a calibration sample, not a statistically justified best region:
+Generate the supplied mixed-numerator pilot. It uses the full derived
+denominator enclosure `[1, x_max]` by default. Its first 30,000 indices are
+only a runtime calibration slice in the documented order; this does not assume
+that a solution lies in that prefix and does not establish full-region coverage:
 
 ```sh
 python3 campaign.py \
   --campaign-id ce390-general-pilot-001 \
-  --q-min 1000000000001 \
-  --q-max 1000000001001 \
   --candidates-per-task 30000 \
   --page-start 0 \
   --task-count 1 \
   --seconds 3600 \
   --output-dir tasks
 ```
+
+To deliberately restrict a general-mode diagnostic run, supply narrower q endpoints
+and add `--allow-q-window`. Avoid this for the main search because it leaves every
+parameter outside that interval unprocessed.
 
 The default magnitude bounds, `signs: "all"`, and
 `require_integer_sqrt: true` are embedded in every task
