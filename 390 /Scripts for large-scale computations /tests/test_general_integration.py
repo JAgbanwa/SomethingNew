@@ -40,7 +40,7 @@ class GeneralIntegrationTests(unittest.TestCase):
 
     def generate(self, name="general", **overrides):
         values = dict(campaign_id="integration-" + name, a_values=None,
-                      q_min=str(self.Q_MIN), q_max=str(self.Q_MAX),
+                      q_min=str(self.Q_MIN), q_max=str(self.Q_MAX), allow_q_window=True,
                       candidates_per_task="8", page_start="0", task_count=1,
                       seconds=10, precision_bits=512, max_precision_bits=16384,
                       checkpoint_seconds=1, n_min=str(10**43), n_max=str(10**45),
