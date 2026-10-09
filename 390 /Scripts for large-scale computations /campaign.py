@@ -21,6 +21,12 @@ def generate(args: argparse.Namespace) -> dict:
         bounds = {k: integer(search[k], k, positive=True) for k in ("n_min", "n_max", "x_min", "x_max")}
         q_min = integer("1" if args.q_min is None else args.q_min, "q-min", positive=True)
         q_max = integer(search["x_max"] if args.q_max is None else args.q_max, "q-max", positive=True)
+        if (q_min != 1 or q_max != bounds["x_max"]) and not getattr(args, "allow_q_window", False):
+            raise ValueError(
+                "a restricted denominator window is opt-in; omit --q-min/--q-max "
+                "to cover the full derived interval [1, x_max], or pass --allow-q-window "
+                "to acknowledge restricted coverage"
+            )
         space = GeneralAQ(bounds, q_min, q_max)
         count = space.count
         fibers = {"mode": "general-aq-v1", "q_min": str(q_min), "q_max": str(q_max)}
@@ -81,8 +87,10 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--campaign-id", required=True)
     p.add_argument("--a-values", help="explicit restricted legacy mode: comma-separated positive odd numerators; omitted by default to search general a/q")
-    p.add_argument("--q-min", help="inclusive denominator lower bound (general default: 1)")
-    p.add_argument("--q-max", help="inclusive denominator upper bound (general default: x-max, proved by integer-root requirement)")
+    p.add_argument("--q-min", help="inclusive denominator lower bound; requires --allow-q-window when it restricts the full enclosure")
+    p.add_argument("--q-max", help="inclusive denominator upper bound; requires --allow-q-window when it restricts the full enclosure")
+    p.add_argument("--allow-q-window", action="store_true",
+                   help="explicitly allow a restricted q interval in general a/q mode (diagnostic only; not the default full enclosure)")
     p.add_argument("--candidates-per-task", default="10000", help="candidate indices, including noncoprime pairs")
     p.add_argument("--page-start", default="0", help="zero-based task ordinal, not candidate index")
     p.add_argument("--task-count", type=int, default=10, help="emit only this page, at most 10000 tasks")
