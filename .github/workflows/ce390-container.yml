@@ -86,7 +86,7 @@ jobs:
               "ce_commandline": "/app/run_task.sh --task /local/input/task.json --output-dir /local/output",
               "ce_hours": 2, "task_budget_seconds": 3600,
               "parameter_mode": "general-aq-v1",
-              "pilot_task": "examples/general-pilot/task-000000000000-e8f317752153af5c.json",
+              "pilot_task": "examples/general-pilot/task-000000000000-98cd2e9a64102cc7.json",
               "supplied_pilot_ce_hours": 2, "supplied_pilot_task_budget_seconds": 3600,
               "legacy_pilot_ce_hours": 1, "legacy_pilot_task_budget_seconds": 3000,
               "ce_job_submitted": False,
