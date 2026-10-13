@@ -140,7 +140,9 @@ class WorkerTests(unittest.TestCase):
         self.assertFalse(rational["hits"][0]["sqrt_integer"])
 
     def test_production_precision_refines_without_changing_results(self):
-        pairs=[(1,10**10+1),(3,10**11+3),(7,10**11+1)]
+        # 10**10+1 has obstructing prime 3541; use a surviving fibre to
+        # exercise refinement rather than the new successful-empty shortcut.
+        pairs=[(1,10**10+9),(3,10**11+3),(7,10**11+1)]
         pairs=[p for p in pairs if gcd(*p)==1]
         low=self.invoke(pairs,"--precision-bits","64","--relax-congruences")
         high=self.invoke(pairs,"--precision-bits","1024","--relax-congruences")
@@ -151,7 +153,7 @@ class WorkerTests(unittest.TestCase):
             self.assertGreater(int(l["precision_bits"]),64)
 
     def test_precision_cap_is_reported_as_error_not_empty_complete(self):
-        row=self.invoke([(1,10000000001)],"--precision-bits","64",
+        row=self.invoke([(1,10000000009)],"--precision-bits","64",
                         "--max-precision-bits","64","--relax-congruences")[0]
         self.assertEqual(row["status"],"error",row)
 
