@@ -1,6 +1,7 @@
 // CE390: certified continued-fraction search of absolute-slope fibres.
 // All acceptance decisions use GMP integers/rationals, never floating point.
 #include <gmpxx.h>
+#include "q_sieve.hpp"
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
@@ -15,7 +16,7 @@
 namespace {
 using Z = mpz_class;
 using Q = mpq_class;
-constexpr const char* VERSION = "3.2.0";
+constexpr const char* VERSION = "3.2.1";
 
 Z integer(const std::string& s) {
     if (s.empty()) throw std::runtime_error("empty integer");
@@ -191,6 +192,7 @@ struct Result {
     unsigned precision=0;
     unsigned long long convergents=0;
     bool excluded_by_congruence=false;
+    bool excluded_by_q_sieve=false;
     bool excluded_by_bounds=false;
 };
 
@@ -271,6 +273,13 @@ Result solve(const Config& cfg,const Z& a,const Z& q) {
         || (cfg.congruences && (mpz_even_p(a.get_mpz_t()) || mpz_even_p(q.get_mpz_t()))))
         throw std::runtime_error("a and q must satisfy 0<a<q and gcd(a,q)=1; enforced congruences require both odd");
     Result result;
+    // This obstruction follows from the equation and integral y, independently
+    // of --relax-congruences and the signs. Never apply it to rational y.
+    if (ce390_q_sieve::reject_q(q, cfg.integer_sqrt)) {
+        result.excluded_by_congruence=true;
+        result.excluded_by_q_sieve=true;
+        return result;
+    }
     bool any_congruence_eligible=false, any_bounds_eligible=false;
     std::set<std::pair<std::string,std::string>> seen;
     for (int tau: {1,-1}) {
@@ -360,6 +369,7 @@ int main(int argc,char** argv) {
                   <<",\"signs\":"<<quoted(cfg.signs)<<",\"congruences_enforced\":"<<(cfg.congruences?"true":"false")
                   <<",\"integer_sqrt_required\":"<<(cfg.integer_sqrt?"true":"false")
                   <<",\"excluded_by_congruence\":"<<(r.excluded_by_congruence?"true":"false")
+                  <<",\"excluded_by_q_sieve\":"<<(r.excluded_by_q_sieve?"true":"false")
                   <<",\"excluded_by_bounds\":"<<(r.excluded_by_bounds?"true":"false")
                   <<",\"precision_bits\":"<<r.precision<<",\"convergents\":"<<r.convergents<<",\"hits\":[";
                 for(std::size_t i=0;i<r.hits.size();++i) {if(i)output<<',';output<<r.hits[i].json();}

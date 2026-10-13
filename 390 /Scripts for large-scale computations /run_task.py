@@ -18,6 +18,7 @@ import sys
 import time
 from typing import Any
 from parameter_space import GeneralAQ
+from q_sieve import reject_q
 
 SCHEMA = "ce390-task-v2"
 PARAMETERIZATION = "absolute-slope-a-over-q-v1"
@@ -434,7 +435,7 @@ def run(args: argparse.Namespace) -> int:
     deadline = started_monotonic + parsed["seconds"]
     initial_cursor = cursor
     counters = {"fibers_completed": 0, "cf_fibers_completed": 0, "non_coprime_skipped": 0,
-                "congruence_excluded": 0, "bounds_excluded": 0, "new_hits": 0, "convergents": 0}
+                "congruence_excluded": 0, "q_sieve_excluded": 0, "bounds_excluded": 0, "new_hits": 0, "convergents": 0}
     stop_signal: list[int] = []
 
     def on_signal(signum: int, _frame: Any) -> None:
@@ -509,6 +510,13 @@ def run(args: argparse.Namespace) -> int:
                     cursor += 1
                 elif q % 3 == 0 or a % 3 == 0:
                     counters["congruence_excluded"] += 1
+                    cursor += 1
+                elif reject_q(q, require_integer_sqrt=task["search"].get("require_integer_sqrt", False)):
+                    # Integer y implies q | |x| | |36*n^3-65|. An obstructing
+                    # prime proves this indexed fibre empty. Keep its index
+                    # and the common checkpoint/deadline path unchanged.
+                    counters["congruence_excluded"] += 1
+                    counters["q_sieve_excluded"] += 1
                     cursor += 1
                 else:
                     assert worker is not None

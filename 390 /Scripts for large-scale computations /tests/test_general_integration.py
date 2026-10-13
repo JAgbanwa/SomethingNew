@@ -185,6 +185,13 @@ class GeneralIntegrationTests(unittest.TestCase):
         self.assertIn("requires both --q-min and --q-max", result.stderr)
 
     def test_deadline_at_q_boundary_resumes_on_new_host_and_collects_without_gaps(self):
+        # The original two q rows contain obstructing primes 73 and 14221.
+        # Use surviving adjacent rows so the unfinished worker query is still
+        # reached; keep every deadline, replay and coverage assertion intact.
+        self.Q_MIN += 6
+        self.Q_MAX += 6
+        self.assertFalse(run_task.reject_q(self.Q_MIN, require_integer_sqrt=True))
+        self.assertFalse(run_task.reject_q(self.Q_MIN + 2, require_integer_sqrt=True))
         first_row = self.production_row(self.Q_MIN)
         boundary = len(first_row)
         second_q = self.Q_MIN + 2
@@ -193,7 +200,7 @@ class GeneralIntegrationTests(unittest.TestCase):
         hang_pair = second_row[hang_offset]
         cut = boundary + hang_offset
         page_path, _, tasks, paths = self.generate(
-            "resume", candidates_per_task=str(boundary-2), page_start="1", seconds=1)
+            "resume", candidates_per_task=str(boundary-2), page_start="1", seconds=5)
         task, task_path = tasks[0], paths[0]
         start, stop = int(task["slice"]["start"]), int(task["slice"]["stop"])
         self.assertLess(start, boundary)

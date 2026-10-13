@@ -145,8 +145,15 @@ def checked_status(status: Any, original: dict[str, Any], returned: dict[str, An
         raise ValueError("complete state does not match the final cursor")
     counters = status["counters_this_invocation"]
     keys(counters, {"fibers_completed", "non_coprime_skipped", "new_hits", "convergents"},
-         {"cf_fibers_completed", "congruence_excluded", "bounds_excluded"}, "status counters")
+         {"cf_fibers_completed", "congruence_excluded", "bounds_excluded", "q_sieve_excluded"}, "status counters")
     counters = {k: integer(v, "status counter " + k) for k, v in counters.items()}
+    # Diagnostic subset of congruence_excluded, never an additional coverage
+    # category. Absence means a historical status from before the q sieve.
+    q_excluded = counters.get("q_sieve_excluded", 0)
+    if q_excluded > counters.get("congruence_excluded", 0):
+        raise ValueError("q-sieve count exceeds congruence exclusions")
+    if q_excluded and not returned["search"].get("require_integer_sqrt", False):
+        raise ValueError("q-sieve exclusions are invalid in rational-square-root mode")
     if "cf_fibers_completed" in counters:
         if not {"congruence_excluded", "bounds_excluded"} <= counters.keys():
             raise ValueError("incomplete categorized fiber counters")

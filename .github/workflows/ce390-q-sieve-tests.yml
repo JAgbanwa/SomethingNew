@@ -1,0 +1,56 @@
+name: CE390 q-sieve tests
+
+on:
+  pull_request:
+    paths:
+      - '390 /Scripts for large-scale computations /**'
+      - '.github/workflows/ce390-q-sieve-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+        working-directory: '390 /Scripts for large-scale computations /.'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Preserve exact source for review
+        run: |
+          mkdir -p "$RUNNER_TEMP/q-sieve-evidence"
+          python3 - <<'PY'
+          import os, pathlib, zipfile
+          root = pathlib.Path.cwd()
+          output = pathlib.Path(os.environ['RUNNER_TEMP']) / 'q-sieve-evidence'
+          (output / 'source-commit.txt').write_text(os.environ['GITHUB_SHA'] + '\n')
+          with zipfile.ZipFile(output / 'source.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
+              for path in sorted(root.rglob('*')):
+                  if path.is_file() and not any(p in {'bin', '__pycache__', '.git'} for p in path.relative_to(root).parts):
+                      archive.write(path, 'ce390-q-sieve/' + str(path.relative_to(root)))
+          PY
+      - name: Verify source integrity
+        run: sha256sum --check SHA256SUMS | tee "$RUNNER_TEMP/q-sieve-evidence/integrity.txt"
+      - name: Install native build dependencies
+        run: sudo apt-get update && sudo apt-get install -y g++ make libgmp-dev
+      - name: Run the complete regression suite
+        run: make -j2 && make test 2>&1 | tee "$RUNNER_TEMP/q-sieve-evidence/tests.txt"
+      - name: Build and smoke-test the Docker runtime
+        run: |
+          docker build --progress=plain --tag ce390-q-sieve-ci . 2>&1 | tee "$RUNNER_TEMP/q-sieve-evidence/docker-build.txt"
+          docker run --rm --network none --entrypoint python3 ce390-q-sieve-ci -c \
+            'import run_task; from q_sieve import reject_q; assert reject_q(7, require_integer_sqrt=True); assert not reject_q(65, require_integer_sqrt=True); assert not reject_q(7, require_integer_sqrt=False)'
+      - name: Upload source and validation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ce390-q-sieve-${{ github.sha }}
+          path: ${{ runner.temp }}/q-sieve-evidence/
+          retention-days: 30
