@@ -1,0 +1,22 @@
+{
+  "campaign_id": "ce390-rational-smoke-b51",
+  "candidates_per_task": "2000",
+  "coverage_note": "Only these slope indices at this exact common reduced coordinate denominator are assigned. No other denominators or unprocessed indices are covered.",
+  "next_page_start": null,
+  "page_start": "0",
+  "page_task_count": 1,
+  "schema": "ce390-rational-page-v1",
+  "tasks": [
+    {
+      "file": "task-000000000000-40503e0b6d12c05d.json",
+      "ordinal": "0",
+      "slice": {
+        "start": "0",
+        "stop": "1052"
+      },
+      "task_id": "40503e0b6d12c05d09db2ed72e894fc2d8e1457a6fbd35af804783baedd921d6"
+    }
+  ],
+  "total_candidate_indices": "1052",
+  "total_tasks": "1"
+}

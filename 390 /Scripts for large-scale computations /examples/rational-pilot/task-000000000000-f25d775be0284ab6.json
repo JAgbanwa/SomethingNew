@@ -1,0 +1,32 @@
+{
+  "campaign_id": "ce390-rational-b2-pilot",
+  "execution": {
+    "checkpoint_seconds": 5,
+    "max_precision_bits": 16384,
+    "precision_bits": 512,
+    "time_limit_seconds": 3600
+  },
+  "fibers": {
+    "mode": "equal-denominator-general-aq-v1",
+    "q_max": "89442719099991587856366946740000000000000000000000000000000000000000000000000000000",
+    "q_min": "1"
+  },
+  "parameterization": "equal-reduced-coordinate-denominator-v1",
+  "schema": "ce390-rational-task-v1",
+  "search": {
+    "congruence_policy": "none",
+    "coordinate_denominator": "2",
+    "n_max": "1000000000000000000000000000000000000000000000",
+    "n_min": "10000000000000000000000000000000000000000000",
+    "require_integer_sqrt": false,
+    "require_noninteger_d": false,
+    "signs": "all",
+    "x_max": "10000000000000000000000000000000000000000000000000000000",
+    "x_min": "1000000000000000000000000000000000000000000000000000000"
+  },
+  "slice": {
+    "start": "0",
+    "stop": "30000"
+  },
+  "task_id": "f25d775be0284ab680d709949491d580382176283642612674fee3108f65b41a"
+}

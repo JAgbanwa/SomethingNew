@@ -1,0 +1,22 @@
+{
+  "campaign_id": "ce390-rational-b2-pilot",
+  "candidates_per_task": "30000",
+  "coverage_note": "Only these slope indices at this exact common reduced coordinate denominator are assigned. No other denominators or unprocessed indices are covered.",
+  "next_page_start": "1",
+  "page_start": "0",
+  "page_task_count": 1,
+  "schema": "ce390-rational-page-v1",
+  "tasks": [
+    {
+      "file": "task-000000000000-f25d775be0284ab6.json",
+      "ordinal": "0",
+      "slice": {
+        "start": "0",
+        "stop": "30000"
+      },
+      "task_id": "f25d775be0284ab680d709949491d580382176283642612674fee3108f65b41a"
+    }
+  ],
+  "total_candidate_indices": "47952000000000000144000000854080666278884321445579621711241695670663713320782279925229978091885626851548094339220780516533782034002692204016153224096982525991",
+  "total_tasks": "1598400000000000004800000028469355542629477381519320723708056522355457110692742664174332603062854228384936477974026017217792734466756406800538440803232751"
+}

@@ -47,6 +47,31 @@ jobs:
           docker build --progress=plain --tag ce390-q-sieve-ci . 2>&1 | tee "$RUNNER_TEMP/q-sieve-evidence/docker-build.txt"
           docker run --rm --network none --entrypoint python3 ce390-q-sieve-ci -c \
             'import run_task; from q_sieve import reject_q; assert reject_q(7, require_integer_sqrt=True); assert not reject_q(65, require_integer_sqrt=True); assert not reject_q(7, require_integer_sqrt=False)'
+      - name: Run and verify a nonempty rational-coordinate job in the runtime image
+        run: |
+          evidence="$RUNNER_TEMP/q-sieve-evidence/rational-smoke"
+          mkdir -p "$evidence/returned"
+          docker run --rm --network none --cpus 1 --memory 512m \
+            --mount type=bind,src="$(pwd)/examples/rational-smoke",dst=/local/input,readonly \
+            --mount type=bind,src="$evidence/returned",dst=/local/output \
+            ce390-q-sieve-ci python3 /app/run_rational_task.py \
+            --task /local/input/task-000000000000-40503e0b6d12c05d.json --output-dir /local/output \
+            2>&1 | tee "$evidence/console.txt"
+          python3 collect_rational.py --page examples/rational-smoke/page-000000000000.json \
+            --results-dir "$evidence/returned" --output-dir "$evidence/collected" \
+            > "$evidence/collection.txt"
+          docker run --rm --network none \
+            --mount type=bind,src="$(pwd)/examples/rational-smoke",dst=/local/input,readonly \
+            --mount type=bind,src="$evidence/returned",dst=/local/output,readonly \
+            ce390-q-sieve-ci python3 /app/verify_rational.py /local/output/hits.jsonl \
+            --task /local/input/task-000000000000-40503e0b6d12c05d.json \
+            > "$evidence/verification.txt"
+          python3 - "$evidence/collected/summary.json" <<'PY'
+          import json, sys
+          s=json.load(open(sys.argv[1]))
+          assert s['complete_selected_page'] is True, s
+          assert s['unique_verified_solutions'] == 1, s
+          PY
       - name: Upload source and validation evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

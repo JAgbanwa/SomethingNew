@@ -1,0 +1,32 @@
+{
+  "campaign_id": "ce390-rational-smoke-b51",
+  "execution": {
+    "checkpoint_seconds": 5,
+    "max_precision_bits": 16384,
+    "precision_bits": 512,
+    "time_limit_seconds": 3600
+  },
+  "fibers": {
+    "mode": "equal-denominator-general-aq-v1",
+    "q_max": "2341",
+    "q_min": "2341"
+  },
+  "parameterization": "equal-reduced-coordinate-denominator-v1",
+  "schema": "ce390-rational-task-v1",
+  "search": {
+    "congruence_policy": "none",
+    "coordinate_denominator": "51",
+    "n_max": "3",
+    "n_min": "2",
+    "require_integer_sqrt": false,
+    "require_noninteger_d": false,
+    "signs": "all",
+    "x_max": "50",
+    "x_min": "40"
+  },
+  "slice": {
+    "start": "0",
+    "stop": "1052"
+  },
+  "task_id": "40503e0b6d12c05d09db2ed72e894fc2d8e1457a6fbd35af804783baedd921d6"
+}
