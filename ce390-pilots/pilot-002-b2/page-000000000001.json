@@ -1,0 +1,22 @@
+{
+  "campaign_id": "ce390-integer-components-pilot-002-b2",
+  "candidates_per_task": "1000000",
+  "coverage_note": "Only these slope indices at this exact common reduced x/y denominator are assigned. No other denominators or unprocessed indices are covered.",
+  "next_page_start": "2",
+  "page_start": "1",
+  "page_task_count": 1,
+  "schema": "ce390-xy-page-v1",
+  "tasks": [
+    {
+      "file": "task-000000000001-56177f0462780a47.json",
+      "ordinal": "1",
+      "slice": {
+        "start": "1000000",
+        "stop": "2000000"
+      },
+      "task_id": "56177f0462780a47b6988e19b6873e830ceee0c205f6f61dfb43fcad47a970eb"
+    }
+  ],
+  "total_candidate_indices": "453600000000000001368000008208000049248000295487000000011880000000000000036000000216000001296000007808",
+  "total_tasks": "453600000000000001368000008208000049248000295487000000011880000000000000036000000216000001296001"
+}
