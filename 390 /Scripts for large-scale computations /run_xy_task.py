@@ -206,6 +206,8 @@ def _run_locked(args: argparse.Namespace, task: dict, parsed: dict, output: Path
              "--n-denominators", ",".join(map(str, task["search"]["n_denominators"]))]
     if task["search"]["require_noninteger_d"]:
         argv.append("--noninteger-d")
+    if task["search"].get("require_integer_components", False):
+        argv.append("--require-integer-components")
     log(f"Starting task {task['task_id']} at candidate {cursor}, stop {parsed['stop']}; worker SHA256 {worker_sha}")
     checkpoint("running", "started")
     worker: Worker | None = None
@@ -254,6 +256,9 @@ def _run_locked(args: argparse.Namespace, task: dict, parsed: dict, output: Path
                             or result.get("congruence_policy") != task["search"]["congruence_policy"]
                             or result.get("noninteger_d_required") is not task["search"]["require_noninteger_d"]):
                         raise RuntimeError("worker reply used the wrong rational-coordinate policy")
+                    if (result.get("integer_components_required", False)
+                            is not task["search"].get("require_integer_components", False)):
+                        raise RuntimeError("worker reply used the wrong integer-component policy")
                     for flag in ("excluded_by_congruence", "excluded_by_bounds", "excluded_by_q_sieve", "excluded_by_denominator"):
                         if type(result.get(flag)) is not bool:
                             raise RuntimeError(f"worker reply has a missing or nonboolean {flag} flag")

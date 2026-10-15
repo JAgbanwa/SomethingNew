@@ -34,7 +34,7 @@ jobs:
           with zipfile.ZipFile(output / 'source.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
               for path in sorted(root.rglob('*')):
                   if path.is_file() and not any(p in {'bin', '__pycache__', '.git'} for p in path.relative_to(root).parts):
-                      archive.write(path, 'ce390-xy-denominators/' + str(path.relative_to(root)))
+                      archive.write(path, 'ce390-integer-components/' + str(path.relative_to(root)))
           PY
       - name: Verify source integrity
         run: sha256sum --check SHA256SUMS | tee "$RUNNER_TEMP/ce390-evidence/integrity.txt"
@@ -46,8 +46,8 @@ jobs:
         run: |
           docker build --progress=plain --tag ce390-xy-ci . 2>&1 | tee "$RUNNER_TEMP/ce390-evidence/docker-build.txt"
           docker run --rm --network none --entrypoint python3 ce390-xy-ci -c \
-            'from q_sieve import reject_q; from xy_common import reject_xy_q; assert reject_q(7, require_integer_sqrt=True); assert not reject_q(7, require_integer_sqrt=False); assert reject_xy_q(7); assert not reject_xy_q(65)'
-      - name: Run and verify a nonempty corrected-target job in the container
+            'from q_sieve import reject_q; from xy_common import reject_xy_q; import cube_campaign; assert reject_q(7, require_integer_sqrt=True); assert not reject_q(7, require_integer_sqrt=False); assert reject_xy_q(7); assert not reject_xy_q(65)'
+      - name: Preserve the historical broader rational nonempty regression
         run: |
           evidence="$RUNNER_TEMP/ce390-evidence"
           mkdir -p "$evidence/input" "$evidence/output"
@@ -68,10 +68,50 @@ jobs:
           row=json.loads((root/'collected/hits.jsonl').read_text())
           assert (row['n_num'],row['n_den'],row['x_num'],row['x_den'],row['y_num'],row['y_den'])==('-65','1','5785','6','3391','6')
           PY
+      - name: Run both final integer-component pilots in the container
+        run: |
+          evidence="$RUNNER_TEMP/ce390-evidence/components"
+          for b in 1 2; do
+            mkdir -p "$evidence/input/b$b" "$evidence/results/b$b"
+            cp examples/integer-components-pilot/b$b/task-*.json "$evidence/input/b$b/task.json"
+            docker run --rm --network none --cpus 1 --memory 512m --read-only \
+              --user "$(id -u):$(id -g)" \
+              --mount "type=bind,src=$evidence/input/b$b,dst=/local/input,readonly" \
+              --mount "type=bind,src=$evidence/results/b$b,dst=/local/output" \
+              ce390-xy-ci python3 /app/run_xy_task.py --task /local/input/task.json --output-dir /local/output \
+              | tee "$evidence/console-b$b.txt"
+            python3 verify_xy.py "$evidence/results/b$b/hits.jsonl" --task "$evidence/input/b$b/task.json" \
+              | tee "$evidence/verified-b$b.json"
+          done
+          python3 collect_xy.py \
+            --page examples/integer-components-pilot/b1/page-000000000000.json \
+            --page examples/integer-components-pilot/b2/page-000000000000.json \
+            --results-dir "$evidence/results" --output-dir "$evidence/collected"
+          python3 - <<'PY'
+          import json, os, pathlib
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])/'ce390-evidence/components'
+          observations=[]
+          for b in (1,2):
+              task=json.loads((root/f'input/b{b}/task.json').read_text())
+              status=json.loads((root/f'results/b{b}/status.json').read_text())
+              verified=json.loads((root/f'verified-b{b}.json').read_text())
+              assert task['search']['require_integer_components'] is True
+              assert task['search']['xy_denominator']==str(b)
+              assert status['state']=='complete' and status['complete'] is True
+              assert status['output_coverage']=={'start':'0','stop':'30000'}
+              assert status['next_index']=='30000' and status['remaining_indices']=='0'
+              assert verified['status']=='verified' and verified['integer_components_required'] is True
+              observations.append({'xy_denominator':b,'elapsed_seconds':status['elapsed_seconds'],
+                  'unique_hits':int(status['unique_hits_in_this_output']),
+                  'counters':status['counters_this_invocation']})
+          summary=json.loads((root/'collected/summary.json').read_text())
+          assert summary['complete_selected_page'] and len(summary['tasks'])==2
+          (root/'observations.json').write_text(json.dumps(observations,indent=2)+'\n')
+          PY
       - name: Upload source and validation evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: ce390-xy-${{ github.sha }}
+          name: ce390-integer-components-${{ github.sha }}
           path: ${{ runner.temp }}/ce390-evidence/
           retention-days: 30

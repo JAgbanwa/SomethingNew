@@ -18,7 +18,7 @@
 namespace {
 using Z = mpz_class;
 using Q = mpq_class;
-constexpr const char* VERSION = "1.0.0";
+constexpr const char* VERSION = "1.1.0";
 
 Z integer(const std::string& s) {
     if (s.empty()) throw std::runtime_error("empty integer");
@@ -56,6 +56,7 @@ struct Config {
     std::string congruence_policy = "none";
     std::vector<unsigned long> n_denominators = {1,2,3,6};
     bool noninteger_d = false;
+    bool integer_components = false;
     std::string signs = "all";
 };
 
@@ -103,10 +104,20 @@ Isolation isolate(const Polynomial& f, const Z& a, const Z& q, unsigned bits) {
     }
 }
 
+// Structural integrality only. The original equation and cube sum are checked
+// separately before acceptance. BOTH choices of the +/- expression are required.
+bool integral_components(const Q& n, const Q& x, const Q& y, Z& plus, Z& minus, Z& third) {
+    Q A=-x+y, B=-x-y, C=2*x+6*n;
+    A.canonicalize(); B.canonicalize(); C.canonicalize();
+    if (A.get_den()!=1 || B.get_den()!=1 || C.get_den()!=1) return false;
+    plus=A.get_num(); minus=B.get_num(); third=C.get_num();
+    return true;
+}
+
 struct Hit {
     Q n, x, y, d, gap;
-    std::string json() const {
-        return "{\"n_num\":" + quoted(n.get_num().get_str())
+    std::string json(bool include_components=false) const {
+        std::string result = "{\"n_num\":" + quoted(n.get_num().get_str())
           + ",\"n_den\":" + quoted(n.get_den().get_str())
           + ",\"x_num\":" + quoted(x.get_num().get_str())
           + ",\"x_den\":" + quoted(x.get_den().get_str())
@@ -116,7 +127,18 @@ struct Hit {
           + ",\"d_den\":" + quoted(d.get_den().get_str())
           + ",\"gap_num\":" + quoted(gap.get_num().get_str())
           + ",\"gap_den\":" + quoted(gap.get_den().get_str())
-          + ",\"sqrt_integer\":" + (y.get_den() == 1 ? "true" : "false") + "}";
+          + ",\"sqrt_integer\":" + (y.get_den() == 1 ? "true" : "false");
+        if (include_components) {
+            Z plus,minus,third;
+            if (!integral_components(n,x,y,plus,minus,third)
+                    || plus*plus*plus+minus*minus*minus+third*third*third!=390)
+                throw std::runtime_error("invalid integer cube certificate during serialization");
+            result += ",\"cube_plus\":"+quoted(plus.get_str())
+                    + ",\"cube_minus\":"+quoted(minus.get_str())
+                    + ",\"cube_third\":"+quoted(third.get_str())
+                    + ",\"cube_sum\":\"390\"";
+        }
+        return result+"}";
     }
 };
 
@@ -163,12 +185,17 @@ void verify_and_add(const Config& cfg, const Z& a, const Z& q, int tau,
     Q y=sx*scaled_w/b; y.canonicalize();
     // The requested equality is den(x)==den(y), NOT den(n)==den(x).
     if (y<0 || y.get_den()!=b) return;
+    Z cube_plus,cube_minus,cube_third;
+    if (cfg.integer_components && !integral_components(n,x,y,cube_plus,cube_minus,cube_third)) return;
     Q S=x+6*n, A=36*n*n*n-65;
     Q d=-(y+S)/(2*x); d.canonicalize();
     if (cfg.noninteger_d && d.get_den()==1) return;
     Q gap=y-S; gap.canonicalize();
     if (y*y!=S*S+A/x || A!=-2*d*x*x*gap)
         throw std::runtime_error("internal original-equation verification failed");
+    if (cfg.integer_components && (cube_plus*cube_plus*cube_plus+cube_minus*cube_minus*cube_minus
+            +cube_third*cube_third*cube_third!=390 || n.get_den()!=1))
+        throw std::runtime_error("internal integer cube sum / integral-n verification failed");
     auto key=std::make_pair(Ksigned.get_str(),Xsigned.get_str());
     if (seen.insert(key).second) hits.push_back({n,x,y,d,gap});
 }
@@ -304,6 +331,9 @@ Result solve(const Config& cfg,const Z& a,const Z& q) {
     if (a<=0 || 2*q<=a || !coprime(a,q))
         throw std::runtime_error("a and q must satisfy 0<a<2*q and gcd(a,q)=1");
     Result result;
+    // Defend direct solve() calls as well as validated CLI tasks.
+    if (cfg.integer_components && cfg.xy_denominator!=1 && cfg.xy_denominator!=2)
+        throw std::runtime_error("integer components require x/y denominator 1 or 2");
     // q|X and gcd(X,b)=1 are necessary for the corrected equal-x/y target.
     if (!coprime(q,cfg.xy_denominator)) {
         result.excluded_by_denominator=true;
@@ -355,6 +385,7 @@ Config arguments(int argc,char** argv) {
         if (name=="--help") {
             std::cout<<"Usage: xy_cf_worker --xy-denominator B [--n-denominators 1,2,3,6]\n"
                 <<"  [--congruence-policy none|numerators|rational-mod] [--noninteger-d]\n"
+                <<"  [--require-integer-components] (both -x +/- y and 2*x+6*n integral)\n"
                 <<"  [--n-min N --n-max N --x-min X --x-max X] [--signs all|pp|pn|np|nn]\n"
                 <<"  [--precision-bits 512 --max-precision-bits 16384]\n"
                 <<"Bounds apply to the rational VALUES. Read coprime 0<a<2*q.\n"
@@ -362,6 +393,7 @@ Config arguments(int argc,char** argv) {
             std::exit(0);
         }
         if (name=="--noninteger-d") {c.noninteger_d=true;continue;}
+        if (name=="--require-integer-components") {c.integer_components=true;continue;}
         if (i+1==argc) throw std::runtime_error("missing value for "+name);
         std::string val=argv[++i];
         if (name=="--xy-denominator") {
@@ -392,6 +424,8 @@ Config arguments(int argc,char** argv) {
         else throw std::runtime_error("unknown option: "+name);
     }
     if (!have_denominator || c.xy_denominator<1) throw std::runtime_error("positive x/y denominator required");
+    if (c.integer_components && c.xy_denominator!=1 && c.xy_denominator!=2)
+        throw std::runtime_error("integer components require x/y denominator 1 or 2");
     if (c.congruence_policy!="none" && c.congruence_policy!="numerators" && c.congruence_policy!="rational-mod")
         throw std::runtime_error("congruence-policy must be none, numerators, or rational-mod");
     if (c.congruence_policy=="rational-mod") {
@@ -431,6 +465,7 @@ int main(int argc,char** argv) {
                   <<",\"xy_denominator\":"<<quoted(cfg.xy_denominator.get_str())
                   <<",\"congruence_policy\":"<<quoted(cfg.congruence_policy)
                   <<",\"noninteger_d_required\":"<<(cfg.noninteger_d?"true":"false")
+                  <<",\"integer_components_required\":"<<(cfg.integer_components?"true":"false")
                   <<",\"n_denominators\":[";
                 for (std::size_t i=0;i<cfg.n_denominators.size();++i) {if(i)output<<',';output<<cfg.n_denominators[i];}
                 output<<']'
@@ -439,7 +474,7 @@ int main(int argc,char** argv) {
                   <<",\"excluded_by_q_sieve\":"<<(r.excluded_by_q_sieve?"true":"false")
                   <<",\"excluded_by_bounds\":"<<(r.excluded_by_bounds?"true":"false")
                   <<",\"precision_bits\":"<<r.precision<<",\"convergents\":"<<r.convergents<<",\"hits\":[";
-                for(std::size_t i=0;i<r.hits.size();++i) {if(i)output<<',';output<<r.hits[i].json();}
+                for(std::size_t i=0;i<r.hits.size();++i) {if(i)output<<',';output<<r.hits[i].json(cfg.integer_components);}
                 output<<']';
             } catch(const std::exception& e) {
                 output<<"{\"a\":"<<quoted(sa)<<",\"q\":"<<quoted(sq)

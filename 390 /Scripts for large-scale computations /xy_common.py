@@ -40,9 +40,14 @@ def reject_xy_q(q: int) -> bool:
 
 def validate_search(search: Any) -> dict:
     keys(search, set(BOUND_KEYS) | {"signs", "xy_denominator", "n_denominators",
-         "congruence_policy", "require_noninteger_d"}, set(), "search")
+         "congruence_policy", "require_noninteger_d"}, {"require_integer_components"}, "search")
     bounds = {k: integer(search[k], k, positive=True) for k in BOUND_KEYS}
     b = integer(search["xy_denominator"], "xy_denominator", positive=True)
+    # Missing means the earlier broad x/y target, never a silent reinterpretation.
+    if type(search.get("require_integer_components", False)) is not bool:
+        raise ValueError("require_integer_components must be a boolean")
+    if search.get("require_integer_components", False) and b not in (1, 2):
+        raise ValueError("both -x+y and -x-y integral force the reduced x/y denominator to be 1 or 2")
     if bounds["n_min"] < 2 or bounds["n_min"] > bounds["n_max"] or bounds["x_min"] > bounds["x_max"]:
         raise ValueError("ordered magnitude bounds must have n_min >= 2")
     if bounds["x_min"] <= 6*bounds["n_max"]:
@@ -229,6 +234,21 @@ def coordinate_congruences(n: Fraction, x: Fraction, policy: str) -> bool:
     return (n.numerator-rn)%3 == 0 and (x.numerator-5*rx)%12 == 0 and x.numerator%7 != 0
 
 
+COMPONENT_KEYS = ("cube_plus", "cube_minus", "cube_third")
+
+
+def integer_components(n: Fraction, x: Fraction, y: Fraction) -> tuple[int, int, int]:
+    """Both signs of -x +/- y and 2*x+6*n; structural check, not an equation check.
+
+    Do not confuse testing ONE sign with the requested simultaneous conditions.
+    The caller must separately verify the radical and the cube sum 390.
+    """
+    values = (-x+y, -x-y, 2*x+6*n)
+    if any(v.denominator != 1 for v in values):
+        raise ValueError("-x+y, -x-y, and 2*x+6*n must ALL be integers")
+    return tuple(v.numerator for v in values)
+
+
 def verify_record(record: Any, search: dict) -> dict:
     """Independent original-equation verification; does not call the CF worker."""
     parsed = validate_search(search)
@@ -269,6 +289,22 @@ def verify_record(record: Any, search: dict) -> dict:
     out={k+s:str(getattr(v,attr)) for k,v in values.items()
          for s,attr in (("_num","numerator"),("_den","denominator"))}
     out["sqrt_integer"]=y.denominator==1
+    # The original radical and unsquared equation have already been checked.
+    # Also check supplied component fields in older/exploratory certificates.
+    component_keys = set(COMPONENT_KEYS) | {"cube_sum"}
+    if search.get("require_integer_components", False) or component_keys.intersection(record):
+        components = integer_components(n, x, y)
+        total = sum(v**3 for v in components)
+        if total != 390:
+            raise ValueError("integer components fail the exact cube sum 390")
+        # Cubes mod 9 force all three components ==1 mod3; parity forces
+        # their sum even. Hence n=(A+B+C)/6 is integral, a derived fact.
+        if n.denominator != 1:
+            raise ValueError("integer cube sum 390 requires integral n")
+        for key, value in zip(COMPONENT_KEYS + ("cube_sum",), components + (total,)):
+            if key in record and integer(record[key], key, signed=True) != value:
+                raise ValueError("incorrect " + key)
+            out[key] = str(value)
     return out
 
 
