@@ -1,4 +1,4 @@
-name: CE390 q-sieve tests
+name: CE390 regression tests
 
 on:
   pull_request:
@@ -25,32 +25,53 @@ jobs:
           persist-credentials: false
       - name: Preserve exact source for review
         run: |
-          mkdir -p "$RUNNER_TEMP/q-sieve-evidence"
+          mkdir -p "$RUNNER_TEMP/ce390-evidence"
           python3 - <<'PY'
           import os, pathlib, zipfile
           root = pathlib.Path.cwd()
-          output = pathlib.Path(os.environ['RUNNER_TEMP']) / 'q-sieve-evidence'
+          output = pathlib.Path(os.environ['RUNNER_TEMP']) / 'ce390-evidence'
           (output / 'source-commit.txt').write_text(os.environ['GITHUB_SHA'] + '\n')
           with zipfile.ZipFile(output / 'source.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
               for path in sorted(root.rglob('*')):
                   if path.is_file() and not any(p in {'bin', '__pycache__', '.git'} for p in path.relative_to(root).parts):
-                      archive.write(path, 'ce390-q-sieve/' + str(path.relative_to(root)))
+                      archive.write(path, 'ce390-xy-denominators/' + str(path.relative_to(root)))
           PY
       - name: Verify source integrity
-        run: sha256sum --check SHA256SUMS | tee "$RUNNER_TEMP/q-sieve-evidence/integrity.txt"
+        run: sha256sum --check SHA256SUMS | tee "$RUNNER_TEMP/ce390-evidence/integrity.txt"
       - name: Install native build dependencies
         run: sudo apt-get update && sudo apt-get install -y g++ make libgmp-dev
       - name: Run the complete regression suite
-        run: make -j2 && make test 2>&1 | tee "$RUNNER_TEMP/q-sieve-evidence/tests.txt"
+        run: make -j2 && make test 2>&1 | tee "$RUNNER_TEMP/ce390-evidence/tests.txt"
       - name: Build and smoke-test the Docker runtime
         run: |
-          docker build --progress=plain --tag ce390-q-sieve-ci . 2>&1 | tee "$RUNNER_TEMP/q-sieve-evidence/docker-build.txt"
-          docker run --rm --network none --entrypoint python3 ce390-q-sieve-ci -c \
-            'import run_task; from q_sieve import reject_q; assert reject_q(7, require_integer_sqrt=True); assert not reject_q(65, require_integer_sqrt=True); assert not reject_q(7, require_integer_sqrt=False)'
+          docker build --progress=plain --tag ce390-xy-ci . 2>&1 | tee "$RUNNER_TEMP/ce390-evidence/docker-build.txt"
+          docker run --rm --network none --entrypoint python3 ce390-xy-ci -c \
+            'from q_sieve import reject_q; from xy_common import reject_xy_q; assert reject_q(7, require_integer_sqrt=True); assert not reject_q(7, require_integer_sqrt=False); assert reject_xy_q(7); assert not reject_xy_q(65)'
+      - name: Run and verify a nonempty corrected-target job in the container
+        run: |
+          evidence="$RUNNER_TEMP/ce390-evidence"
+          mkdir -p "$evidence/input" "$evidence/output"
+          cp examples/xy-diagnostic/task-*.json "$evidence/input/task.json"
+          docker run --rm --network none --cpus 1 --memory 512m --read-only \
+            --user "$(id -u):$(id -g)" \
+            --mount "type=bind,src=$evidence/input,dst=/local/input,readonly" \
+            --mount "type=bind,src=$evidence/output,dst=/local/output" \
+            ce390-xy-ci python3 /app/run_xy_task.py --task /local/input/task.json --output-dir /local/output
+          python3 collect_xy.py --page examples/xy-diagnostic/page-000000000000.json \
+            --results-dir "$evidence/output" --output-dir "$evidence/collected"
+          python3 verify_xy.py "$evidence/collected/hits.jsonl" --task "$evidence/input/task.json"
+          python3 - <<'PY'
+          import json, os, pathlib
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])/'ce390-evidence'
+          summary=json.loads((root/'collected/summary.json').read_text())
+          assert summary['complete_selected_page'] and summary['unique_verified_solutions']==1
+          row=json.loads((root/'collected/hits.jsonl').read_text())
+          assert (row['n_num'],row['n_den'],row['x_num'],row['x_den'],row['y_num'],row['y_den'])==('-65','1','5785','6','3391','6')
+          PY
       - name: Upload source and validation evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: ce390-q-sieve-${{ github.sha }}
-          path: ${{ runner.temp }}/q-sieve-evidence/
+          name: ce390-xy-${{ github.sha }}
+          path: ${{ runner.temp }}/ce390-evidence/
           retention-days: 30
