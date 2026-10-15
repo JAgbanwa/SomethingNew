@@ -19,6 +19,8 @@ def generate(args: argparse.Namespace) -> dict:
     search["n_denominators"] = [int(d) for d in args.n_denominators.split(",")]
     search["congruence_policy"] = args.congruence_policy
     search["require_noninteger_d"] = args.noninteger_d
+    if getattr(args, "require_integer_components", False):
+        search["require_integer_components"] = True
     full = XYAQ(search)
     q_min = integer(args.q_min or "1", "q-min", positive=True)
     q_max = integer(args.q_max or str(full.full_q_max), "q-max", positive=True)
@@ -69,10 +71,18 @@ def generate(args: argparse.Namespace) -> dict:
     return manifest
 
 
-def main() -> int:
-    p = argparse.ArgumentParser(description=__doc__)
+def argument_parser(*, integer_components: bool = False) -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(description=(
+        "Generate the final integer-component target for b=1 and b=2; no jobs are submitted."
+        if integer_components else __doc__))
     p.add_argument("--campaign-id", required=True)
-    p.add_argument("--xy-denominator", required=True, help="exact common REDUCED denominator of x and y, b >= 1")
+    if integer_components:
+        p.add_argument("--xy-denominator", choices=("all", "1", "2"), default="all",
+                       help="all (default) generates BOTH exact reduced denominator cases; 1 or 2 restricts the search")
+    else:
+        p.add_argument("--xy-denominator", required=True, help="exact common REDUCED denominator of x and y, b >= 1")
+    p.add_argument("--require-integer-components", action="store_true", default=integer_components,
+                   help="require BOTH -x+y and -x-y, and 2*x+6*n, integral; implies b=1 or 2")
     p.add_argument("--n-denominators", default="1,2,3,6", help="sorted comma-separated subset of 1,2,3,6; default all four")
     p.add_argument("--congruence-policy", default="none", choices=CONGRUENCE_POLICIES, help="no extra congruences by default; opt in explicitly")
     p.add_argument("--noninteger-d", action="store_true", help="optionally exclude integer d; by default every rational d is allowed")
@@ -92,7 +102,12 @@ def main() -> int:
     for name, default in (("n-min", DEFAULT_N_MIN), ("n-max", DEFAULT_N_MAX), ("x-min", DEFAULT_X_MIN), ("x-max", DEFAULT_X_MAX)):
         p.add_argument("--" + name, default=str(default), help="inclusive positive magnitude bound")
     p.add_argument("--output-dir", type=Path, default=Path("xy-tasks"))
-    args = p.parse_args()
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    p = argument_parser()
+    args = p.parse_args(argv)
     try:
         manifest = generate(args)
     except (ValueError, OSError) as exc:

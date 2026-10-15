@@ -51,6 +51,7 @@ def main() -> int:
                 count+=1
         print(json.dumps({"status":"verified","certificates":count,"unique_solutions":len(seen),
                           "xy_denominator":task["search"]["xy_denominator"],
+                          "integer_components_required":task["search"].get("require_integer_components",False),
                           "note":"Individual rational certificates only, not search coverage."},sort_keys=True))
         return 0
     except (ValueError,OSError,KeyError,TypeError) as error:
