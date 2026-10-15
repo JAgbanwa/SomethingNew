@@ -9,6 +9,7 @@ COPY Makefile Dockerfile ./
 COPY src/ ./src/
 COPY *.py ./
 COPY tests/ ./tests/
+COPY examples/ ./examples/
 RUN make -j2 all && make test
 
 FROM debian:bookworm-slim
