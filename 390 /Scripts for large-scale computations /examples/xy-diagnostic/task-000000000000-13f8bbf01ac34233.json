@@ -1,0 +1,37 @@
+{
+  "campaign_id": "ce390-xy-diagnostic",
+  "execution": {
+    "checkpoint_seconds": 5,
+    "max_precision_bits": 16384,
+    "precision_bits": 512,
+    "time_limit_seconds": 3600
+  },
+  "fibers": {
+    "mode": "n-sixths-xy-general-aq-v1",
+    "q_max": "5785",
+    "q_min": "5785"
+  },
+  "parameterization": "n-sixths-equal-xy-denominators-v1",
+  "schema": "ce390-xy-task-v1",
+  "search": {
+    "congruence_policy": "none",
+    "n_denominators": [
+      1,
+      2,
+      3,
+      6
+    ],
+    "n_max": "65",
+    "n_min": "65",
+    "require_noninteger_d": false,
+    "signs": "all",
+    "x_max": "965",
+    "x_min": "964",
+    "xy_denominator": "6"
+  },
+  "slice": {
+    "start": "0",
+    "stop": "111"
+  },
+  "task_id": "13f8bbf01ac34233bb6ee95816283d9e2894425e368ef00992d48ee41bbde831"
+}

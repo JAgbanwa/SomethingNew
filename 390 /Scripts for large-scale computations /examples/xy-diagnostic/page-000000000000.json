@@ -1,0 +1,22 @@
+{
+  "campaign_id": "ce390-xy-diagnostic",
+  "candidates_per_task": "10000",
+  "coverage_note": "Only these slope indices at this exact common reduced x/y denominator are assigned. No other denominators or unprocessed indices are covered.",
+  "next_page_start": null,
+  "page_start": "0",
+  "page_task_count": 1,
+  "schema": "ce390-xy-page-v1",
+  "tasks": [
+    {
+      "file": "task-000000000000-13f8bbf01ac34233.json",
+      "ordinal": "0",
+      "slice": {
+        "start": "0",
+        "stop": "111"
+      },
+      "task_id": "13f8bbf01ac34233bb6ee95816283d9e2894425e368ef00992d48ee41bbde831"
+    }
+  ],
+  "total_candidate_indices": "111",
+  "total_tasks": "1"
+}
