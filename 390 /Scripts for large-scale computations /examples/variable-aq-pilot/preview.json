@@ -1,0 +1,36 @@
+{
+  "task_id": "ab2c4ea54bf6ebf33a71430a09596a132387ff7eb598f850a3680e77568b2f05",
+  "mode": "n-sixths-xy-interleaved-aq-v1",
+  "scheduled_indices": 256,
+  "distinct_scheduled_a": 256,
+  "distinct_scheduled_q": 256,
+  "counts": {
+    "non_coprime": 98,
+    "denominator": 49,
+    "prime_sieve": 46,
+    "parity": 32,
+    "dispatched": 31
+  },
+  "distinct_dispatched_a": 31,
+  "note": "Traversal preview, not evidence of a solution or CE run. The task generates pairs dynamically.",
+  "first_dispatched": [
+    {
+      "index": "3",
+      "a": "16706312664233783730416231605766126259048832270",
+      "q": "18584350317444469934836453341974536983372146769783090787",
+      "result": "dispatched"
+    },
+    {
+      "index": "13",
+      "a": "3985647979143789729909783325188851237269796454",
+      "q": "1708582322647623117323931428670903212285662056652620763",
+      "result": "dispatched"
+    },
+    {
+      "index": "15",
+      "a": "18604623359887605578283883787993706367133797294",
+      "q": "7576101502844385994390565364292281051260340625257743959",
+      "result": "dispatched"
+    }
+  ]
+}

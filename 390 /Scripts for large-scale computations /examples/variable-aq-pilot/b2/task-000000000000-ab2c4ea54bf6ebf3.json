@@ -1,0 +1,38 @@
+{
+  "campaign_id": "ce390-variable-aq-pilot-b2",
+  "execution": {
+    "checkpoint_seconds": 5,
+    "max_precision_bits": 16384,
+    "precision_bits": 512,
+    "time_limit_seconds": 3600
+  },
+  "fibers": {
+    "mode": "n-sixths-xy-interleaved-aq-v1",
+    "q_max": "20000000000000000000000000000000000000000000000000000000",
+    "q_min": "1"
+  },
+  "parameterization": "n-sixths-equal-xy-denominators-v1",
+  "schema": "ce390-xy-task-v1",
+  "search": {
+    "congruence_policy": "none",
+    "n_denominators": [
+      1,
+      2,
+      3,
+      6
+    ],
+    "n_max": "1000000000000000000000000000000000000000000000",
+    "n_min": "10000000000000000000000000000000000000000000",
+    "require_integer_components": true,
+    "require_noninteger_d": false,
+    "signs": "all",
+    "x_max": "10000000000000000000000000000000000000000000000000000000",
+    "x_min": "1000000000000000000000000000000000000000000000000000000",
+    "xy_denominator": "2"
+  },
+  "slice": {
+    "start": "0",
+    "stop": "256"
+  },
+  "task_id": "ab2c4ea54bf6ebf33a71430a09596a132387ff7eb598f850a3680e77568b2f05"
+}
