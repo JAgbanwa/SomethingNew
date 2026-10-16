@@ -21,6 +21,7 @@ COPY --from=build /build/bin/ /app/bin/
 COPY campaign.py run_task.py parameter_space.py q_sieve.py verify.py run_task.sh container_entrypoint.sh /app/
 COPY xy_campaign.py xy_common.py run_xy_task.py collect_xy.py verify_xy.py /app/
 COPY cube_campaign.py /app/
+COPY aq_traversal.py /app/
 RUN chmod 0755 /app/run_task.sh /app/container_entrypoint.sh /app/bin/cf_worker /app/bin/xy_cf_worker \
     && mkdir -p /local/input /local/output
 ENV PYTHONUNBUFFERED=1

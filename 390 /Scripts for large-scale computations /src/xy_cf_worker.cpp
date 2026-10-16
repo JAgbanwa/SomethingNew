@@ -18,7 +18,7 @@
 namespace {
 using Z = mpz_class;
 using Q = mpq_class;
-constexpr const char* VERSION = "1.1.0";
+constexpr const char* VERSION = "1.1.1";
 
 Z integer(const std::string& s) {
     if (s.empty()) throw std::runtime_error("empty integer");
@@ -347,6 +347,12 @@ Result solve(const Config& cfg,const Z& a,const Z& q) {
     if (xy_prime_obstruction(q)) {
         result.excluded_by_congruence=true;
         result.excluded_by_q_sieve=true;
+        return result;
+    }
+    // For b=2, reduced X,Y are odd; the reduced slope has even a and odd q.
+    // This rules out odd a, but does NOT select a particular even numerator.
+    if (cfg.xy_denominator==2 && mpz_odd_p(a.get_mpz_t())) {
+        result.excluded_by_denominator=true;
         return result;
     }
     bool any_bounds_eligible=false;

@@ -17,13 +17,13 @@ import time
 from typing import Any
 from run_task import (Worker, Halt, DECIMAL, atomic_json, canonical, digest, integer,
                       keys, load_json, sha256_file)
-from xy_common import (PARAMETERIZATION, validate_task, validate_hit, reject_xy_q,
+from xy_common import (PARAMETERIZATION, validate_task, validate_hit, reject_xy_q, reject_xy_parity,
                              certificate_key, candidate_index, iter_candidates)
 
 
 def implementation_sha256() -> str:
     root=Path(__file__).resolve().parent
-    names=("run_xy_task.py", "xy_common.py", "run_task.py", "parameter_space.py", "q_sieve.py")
+    names=("run_xy_task.py", "xy_common.py", "run_task.py", "parameter_space.py", "q_sieve.py", "aq_traversal.py")
     return digest({name:sha256_file(root/name) for name in names})
 
 
@@ -180,7 +180,7 @@ def _run_locked(args: argparse.Namespace, task: dict, parsed: dict, output: Path
             "next_index": str(cursor), "remaining_indices": str(parsed["stop"] - cursor),
             "counters_this_invocation": {key: str(value) for key, value in counters.items()},
             "unique_hits_in_this_output": str(len(seen)),
-            "coverage_note": "Only completed slope indices at this exact reduced x/y denominator are covered; other b values and unfinished indices are not covered.",
+            "coverage_note": "Coverage is in the task's " + task["fibers"]["mode"] + " ordering at this exact reduced x/y denominator; other b values and unfinished indices are not covered.",
         }
 
     def checkpoint(state: str, reason: str) -> None:
@@ -208,6 +208,7 @@ def _run_locked(args: argparse.Namespace, task: dict, parsed: dict, output: Path
         argv.append("--noninteger-d")
     if task["search"].get("require_integer_components", False):
         argv.append("--require-integer-components")
+    log(f"Parameter traversal {task['fibers']['mode']}")
     log(f"Starting task {task['task_id']} at candidate {cursor}, stop {parsed['stop']}; worker SHA256 {worker_sha}")
     checkpoint("running", "started")
     worker: Worker | None = None
@@ -238,8 +239,15 @@ def _run_locked(args: argparse.Namespace, task: dict, parsed: dict, output: Path
                     counters["congruence_excluded"] += 1
                     counters["q_sieve_excluded"] += 1
                     cursor += 1
+                elif reject_xy_parity(a, q, parsed["denominator"]):
+                    # A proven denominator/parity obstruction, not a fixed-a search.
+                    # Preserve the index and the shared checkpoint/deadline path.
+                    counters["denominator_excluded"] += 1
+                    cursor += 1
                 else:
                     assert worker is not None
+                    if counters["fibers_completed"] < 8:
+                        log(f"Dispatch candidate {cursor}: a={a}; q={q}")
                     result = worker.query(a, q)
                     if not isinstance(result, dict) or result.get("a") != str(a) or result.get("q") != str(q):
                         raise RuntimeError("worker result did not match the submitted fiber")

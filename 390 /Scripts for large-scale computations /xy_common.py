@@ -10,6 +10,7 @@ from functools import lru_cache
 from q_sieve import forbidden_primes
 from typing import Any, Iterator
 from parameter_space import _floor_sum
+from aq_traversal import InterleavedAQ
 from run_task import (SIGN_POLICIES, HEX64, integer, small_int, keys, digest,
                       task_identity)
 
@@ -164,6 +165,26 @@ class XYAQ:
                     raise RuntimeError("x/y parameter iterator exhausted early")
 
 
+def parameter_space(search: dict, q_min: int = 1, q_max: int | None = None,
+                    mode: str = XYAQ.MODE):
+    if mode not in (XYAQ.MODE, InterleavedAQ.MODE):
+        raise ValueError("unsupported x/y fiber mode")
+    base = XYAQ(search, q_min, q_max)
+    return base if mode == XYAQ.MODE else InterleavedAQ(base)
+
+
+def reject_xy_parity(a: int, q: int, b: int) -> bool:
+    """Necessary condition only: b=2 forces even reduced a and odd q.
+
+    x=X/2 and y=Y/2 in lowest terms make X,Y odd. With k=6*n integral,
+    the slope numerator |Y-|X|+2*k*sign(X)| is even over an odd |X|.
+    Reducing by an odd gcd preserves those parities. This never fixes a=2.
+    """
+    if any(type(v) is not int or v < 1 for v in (a, q, b)):
+        raise ValueError("a, q and b must be positive integers")
+    return b == 2 and (a % 2 != 0 or q % 2 == 0)
+
+
 def validate_task(task: Any) -> dict:
     keys(task, {"schema", "parameterization", "campaign_id", "task_id", "search", "fibers", "slice", "execution"},
          {"resume_index", "expected_worker_sha256", "expected_implementation_sha256"}, "x/y task")
@@ -174,11 +195,9 @@ def validate_task(task: Any) -> dict:
         raise ValueError("campaign_id must be 1-96 safe ASCII characters")
     p = validate_search(task["search"])
     keys(task["fibers"], {"mode", "q_min", "q_max"}, set(), "fibers")
-    if task["fibers"]["mode"] != XYAQ.MODE:
-        raise ValueError("unsupported x/y fiber mode")
     qmin = integer(task["fibers"]["q_min"], "q_min", positive=True)
     qmax = integer(task["fibers"]["q_max"], "q_max", positive=True)
-    space = XYAQ(task["search"], qmin, qmax)
+    space = parameter_space(task["search"], qmin, qmax, task["fibers"]["mode"])
     keys(task["slice"], {"start", "stop"}, set(), "slice")
     start = integer(task["slice"]["start"], "slice.start")
     stop = integer(task["slice"]["stop"], "slice.stop", positive=True)

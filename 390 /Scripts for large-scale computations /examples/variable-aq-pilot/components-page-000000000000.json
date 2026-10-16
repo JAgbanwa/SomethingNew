@@ -1,0 +1,19 @@
+{
+  "both_xy_denominators_selected": false,
+  "coverage_note": "Only these pages are assigned. Both denominator cases do not imply completion of all slopes or of the n,x region. No jobs are submitted.",
+  "pages": [
+    {
+      "assigned_indices": "256",
+      "campaign_id": "ce390-variable-aq-pilot-b2",
+      "page": "b2/page-000000000000.json",
+      "page_task_count": 1,
+      "task_files": [
+        "b2/task-000000000000-ab2c4ea54bf6ebf3.json"
+      ],
+      "xy_denominator": "2"
+    }
+  ],
+  "require_integer_components": true,
+  "schema": "ce390-integer-components-plan-v1",
+  "total_tasks_written": 1
+}

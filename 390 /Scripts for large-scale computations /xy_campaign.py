@@ -8,7 +8,8 @@ import sys
 from run_task import (DEFAULT_N_MIN, DEFAULT_N_MAX, DEFAULT_X_MIN, DEFAULT_X_MAX,
                       SIGN_POLICIES, atomic_json, integer, task_identity)
 from xy_common import (SCHEMA, PARAMETERIZATION, PAGE_SCHEMA, CONGRUENCE_POLICIES,
-                             XYAQ, validate_task)
+                             XYAQ, parameter_space, validate_task)
+from aq_traversal import InterleavedAQ
 
 
 
@@ -26,9 +27,13 @@ def generate(args: argparse.Namespace) -> dict:
     q_max = integer(args.q_max or str(full.full_q_max), "q-max", positive=True)
     if (q_min != 1 or q_max != full.full_q_max) and not args.allow_q_window:
         raise ValueError("restricted slope-denominator windows require --allow-q-window")
-    space = XYAQ(search, q_min, q_max)
+    order = getattr(args, "parameter_order", "q-major")
+    if order not in ("q-major", "interleaved"):
+        raise ValueError("parameter order must be q-major or interleaved")
+    mode = XYAQ.MODE if order == "q-major" else InterleavedAQ.MODE
+    space = parameter_space(search, q_min, q_max, mode)
     count = space.count
-    fibers = {"mode": XYAQ.MODE, "q_min": str(q_min), "q_max": str(q_max)}
+    fibers = {"mode": space.MODE, "q_min": str(q_min), "q_max": str(q_max)}
     size = integer(args.candidates_per_task, "candidates-per-task", positive=True)
     page_start = integer(args.page_start, "page-start")
     if not 1 <= args.task_count <= 10000:
@@ -90,6 +95,9 @@ def argument_parser(*, integer_components: bool = False) -> argparse.ArgumentPar
     p.add_argument("--q-max", help="inclusive denominator upper bound; requires --allow-q-window when it restricts the full enclosure")
     p.add_argument("--allow-q-window", action="store_true",
                    help="explicitly allow a restricted q interval in general a/q mode (diagnostic only; not the default full enclosure)")
+    p.add_argument("--parameter-order", choices=("interleaved", "q-major"),
+                   default="interleaved" if integer_components else "q-major",
+                   help="interleave both a and q across the full enclosure; q-major preserves historical ordering")
     p.add_argument("--candidates-per-task", default="10000", help="candidate indices, including noncoprime pairs")
     p.add_argument("--page-start", default="0", help="zero-based task ordinal, not candidate index")
     p.add_argument("--task-count", type=int, default=1, help="emit only this page, at most 10000 tasks")

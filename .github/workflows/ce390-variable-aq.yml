@@ -1,0 +1,71 @@
+name: CE390 variable a-q runtime
+on:
+  pull_request:
+    paths:
+      - '390 /Scripts for large-scale computations /**'
+      - '.github/workflows/ce390-variable-aq.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  variable-aq:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+        working-directory: '390 /Scripts for large-scale computations /.'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Check integrity and retain exact source
+        run: |
+          mkdir -p "$RUNNER_TEMP/variable-aq"
+          sha256sum --check SHA256SUMS | tee "$RUNNER_TEMP/variable-aq/integrity.txt"
+          python3 - <<'PY'
+          import os,pathlib,zipfile
+          root=pathlib.Path.cwd()
+          out=pathlib.Path(os.environ['RUNNER_TEMP'])/'variable-aq'
+          (out/'source-commit.txt').write_text(os.environ['GITHUB_SHA']+'\n')
+          with zipfile.ZipFile(out/'source.zip','w',zipfile.ZIP_DEFLATED) as z:
+              for p in sorted(root.rglob('*')):
+                  if p.is_file() and not any(x in ('bin','__pycache__','.git') for x in p.relative_to(root).parts):
+                      z.write(p,'ce390-variable-aq/'+str(p.relative_to(root)))
+          PY
+      - name: Build image and run full regression suite in Docker
+        run: docker build --progress=plain -t ce390-variable-aq . 2>&1 | tee "$RUNNER_TEMP/variable-aq/docker-build.txt"
+      - name: Run variable a-q task and independently collect results
+        run: |
+          evidence="$RUNNER_TEMP/variable-aq"
+          mkdir -p "$evidence/input" "$evidence/output"
+          cp examples/variable-aq-pilot/b2/task-*.json "$evidence/input/task.json"
+          docker run --rm --network none --cpus 1 --memory 512m --read-only \
+            --user "$(id -u):$(id -g)" \
+            --mount "type=bind,src=$evidence/input,dst=/local/input,readonly" \
+            --mount "type=bind,src=$evidence/output,dst=/local/output" \
+            ce390-variable-aq python3 /app/run_xy_task.py --task /local/input/task.json --output-dir /local/output \
+            | tee "$evidence/console.txt"
+          python3 collect_xy.py --page examples/variable-aq-pilot/b2/page-000000000000.json \
+            --results-dir "$evidence/output" --output-dir "$evidence/collected"
+          python3 verify_xy.py "$evidence/output/hits.jsonl" --task "$evidence/input/task.json" | tee "$evidence/verified.json"
+          python3 - <<'PY'
+          import json,os,pathlib,re
+          out=pathlib.Path(os.environ['RUNNER_TEMP'])/'variable-aq'
+          status=json.loads((out/'output/status.json').read_text())
+          assert status['complete'] and status['next_index']=='256'
+          assert status['counters_this_invocation']['fibers_completed']=='31'
+          log=(out/'output/run.log').read_text()
+          pairs=re.findall(r'Dispatch candidate [0-9]+: a=([0-9]+); q=([0-9]+)',log)
+          assert len(pairs)==8 and len({a for a,q in pairs})==8 and len({q for a,q in pairs})==8
+          assert all(int(a)%2==0 and int(q)%2==1 for a,q in pairs)
+          summary=json.loads((out/'collected/summary.json').read_text())
+          assert summary['complete_selected_page']
+          PY
+      - name: Preserve source and runtime evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ce390-variable-aq-${{ github.sha }}
+          path: ${{ runner.temp }}/variable-aq/
+          retention-days: 30

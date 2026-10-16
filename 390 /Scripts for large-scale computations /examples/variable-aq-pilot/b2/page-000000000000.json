@@ -1,0 +1,22 @@
+{
+  "campaign_id": "ce390-variable-aq-pilot-b2",
+  "candidates_per_task": "256",
+  "coverage_note": "Only these slope indices at this exact common reduced x/y denominator are assigned. No other denominators or unprocessed indices are covered.",
+  "next_page_start": "1",
+  "page_start": "0",
+  "page_task_count": 1,
+  "schema": "ce390-xy-page-v1",
+  "tasks": [
+    {
+      "file": "task-000000000000-ab2c4ea54bf6ebf3.json",
+      "ordinal": "0",
+      "slice": {
+        "start": "0",
+        "stop": "256"
+      },
+      "task_id": "ab2c4ea54bf6ebf33a71430a09596a132387ff7eb598f850a3680e77568b2f05"
+    }
+  ],
+  "total_candidate_indices": "453600000000000001368000008208000049248000295487000000011880000000000000036000000216000001296000007808",
+  "total_tasks": "1771875000000000005343750032062500192375001154246093750046406250000000000140625000843750005062500031"
+}

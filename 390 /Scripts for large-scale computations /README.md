@@ -23,6 +23,20 @@ generated tasks still explicitly permit n denominators 1,2,3,6. Read
 Every accepted hit independently verifies all three integers and their cube sum,
 in addition to the original unsquared equation and nonnegative square root.
 
+## Variable a/q during new searches
+
+**Neither a=1 nor a=2 is fixed.** New `cube_campaign.py` tasks now default to
+an interleaved ordering across the full derived (a,q) enclosure. Both variables
+change during a run; run.log records the first eight dispatched pairs. No
+preferred numerator list or new parameter bound is introduced. For b=2 the
+proven even-a/odd-q filter runs before continued-fraction work; it does not
+select a=2. The new mode preserves the old enclosure by an invertible permutation.
+
+See [VARIABLE_AQ.md](VARIABLE_AQ.md) for the mapping, compatibility rules, and
+new test task. Old q-major pilot files and checkpoint meanings are preserved
+for historical reproduction, not silently relabeled as new searches. **Use a
+newly built image and new-mode task; an old CE reservation does not change.**
+
 ## Generate and run both denominator cases
 
 ```sh
@@ -39,7 +53,8 @@ python3 collect_xy.py --page cube-tasks/b1/page-000000000000.json \
 This writes TWO pilot tasks, one per exact x/y denominator. Defaults retain
 10^43<=|n|<=10^45 and 10^54<=|x|<=10^55 as rational VALUE bounds, all signs,
 and all rational d, without additional congruence restrictions. No jobs are
-submitted. Both input tasks are supplied in `examples/integer-components-pilot/`.
+submitted. Historical q-major inputs remain in `examples/integer-components-pilot/`.
+A new interleaved b2 test input is in `examples/variable-aq-pilot/`.
 The two denominator cases are exhaustive for the new condition; the two finite
 slope prefixes are NOT exhaustive for the n,x region. No target hit is claimed.
 
