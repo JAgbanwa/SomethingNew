@@ -1,0 +1,22 @@
+{
+  "campaign_id": "ce390-n-integer-b2-search-001-b2",
+  "candidates_per_task": "10000",
+  "coverage_note": "Only these slope indices at this exact common reduced x/y denominator are assigned. No other denominators or unprocessed indices are covered.",
+  "next_page_start": "2",
+  "page_start": "1",
+  "page_task_count": 1,
+  "schema": "ce390-xy-page-v1",
+  "tasks": [
+    {
+      "file": "task-000000000001-d13df5856519a9b6.json",
+      "ordinal": "1",
+      "slice": {
+        "start": "10000",
+        "stop": "20000"
+      },
+      "task_id": "d13df5856519a9b65cbba5325b9dd1b370198f937fe495fb379a9bbf22c361eb"
+    }
+  ],
+  "total_candidate_indices": "453600000000000001368000008208000049248000295487000000011880000000000000036000000216000001296000007808",
+  "total_tasks": "45360000000000000136800000820800004924800029548700000001188000000000000003600000021600000129600001"
+}
