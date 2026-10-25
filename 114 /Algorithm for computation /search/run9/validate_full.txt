@@ -1,0 +1,41 @@
+K = 573952 (6K = 3443712)
+  int  xroots box |X|<1200 |n|<400000: 38 integral solutions (20 from small triples)
+  int  dsweep/dsmooth --integral |G|<200000: all 20 known certificates found
+  half xroots box |X|<1200 |n|<400000: 8 integral solutions (4 from small triples)
+  half dsweep/dsmooth --integral |G|<200000: all 4 known certificates found
+K = -493088 (6K = -2958528)
+  int  xroots box |X|<1200 |n|<400000: 36 integral solutions (24 from small triples)
+  int  dsweep/dsmooth --integral |G|<200000: all 24 known certificates found
+  half xroots box |X|<1200 |n|<400000: 10 integral solutions (6 from small triples)
+  half dsweep/dsmooth --integral |G|<200000: all 6 known certificates found
+K = 1082612 (6K = 6495672)
+  int  xroots box |X|<1200 |n|<400000: 24 integral solutions (21 from small triples)
+  int  dsweep/dsmooth --integral |G|<200000: all 21 known certificates found
+  half xroots box |X|<1200 |n|<400000: 8 integral solutions (8 from small triples)
+  half dsweep/dsmooth --integral |G|<200000: all 8 known certificates found
+K = 260392 (6K = 1562352)
+  int  xroots box |X|<1200 |n|<400000: 16 integral solutions (12 from small triples)
+  int  dsweep/dsmooth --integral |G|<200000: all 12 known certificates found
+  half xroots box |X|<1200 |n|<400000: 17 integral solutions (12 from small triples)
+  half dsweep/dsmooth --integral |G|<200000: all 12 known certificates found
+K = 3 (6K = 18)
+  int  xroots box |X|<1200 |n|<400000: 4 integral solutions (3 from small triples)
+  int  dsweep/dsmooth --integral |G|<200000: all 2 known certificates found
+  half xroots box |X|<1200 |n|<400000: 9 integral solutions (6 from small triples)
+  half dsweep/dsmooth --integral |G|<200000: all 6 known certificates found
+K = 19 (6K = 114)
+  int  xroots box |X|<1200 |n|<400000: 0 integral solutions (0 from small triples)
+  int  dsweep/dsmooth --integral |G|<200000: all 0 known certificates found
+  half xroots box |X|<1200 |n|<400000: 0 integral solutions (0 from small triples)
+  half dsweep/dsmooth --integral |G|<200000: all 0 known certificates found
+6K =   42: half chart X = 102980666258459, n = 2083190438512862 found: True
+6K =   42: half chart X = 67936615514740343, n = 2083190438512862 found: True
+6K =   42: int chart X = -46518940721576573, n = 2083190438512862 found: True
+6K =  906: half chart X = -108016069294709881, n = 5515301649849914 found: True
+6K =  906: half chart X = 2870169716257019, n = 5515301649849914 found: True
+6K =  906: int chart X = 19481139890126947, n = 5515301649849914 found: True
+validation ok
+
+real	10m20.575s
+user	10m12.716s
+sys	0m0.881s

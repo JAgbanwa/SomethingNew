@@ -7,7 +7,9 @@ This note answers two questions about the machinery in [`grid/`](grid/):
    realistic prospects are of it eventually returning a solution of the requested family
    (`n = 3m`, `x = 12u + 7`) with very large `n`, `x`.
 
-The derivation and the work-unit format are in [`ALGORITHMS.md`](ALGORITHMS.md); the
+The derivation and the work-unit format are in [`README.md`](README.md) (section *Searching
+for rational `d`*; earlier versions called it `ALGORITHMS.md`); the half chart `x = X/2` and
+the integral-radical target are in [`HALF_INTEGER.md`](HALF_INTEGER.md) and §3 below; the
 mathematical facts used below are proved in Lean in
 [`RequestProject/Algorithm.lean`](RequestProject/Algorithm.lean) and
 [`RequestProject/Main.lean`](RequestProject/Main.lean). All throughput numbers quoted in
@@ -177,7 +179,7 @@ in `n`, whereas `xscan` is complete only inside its window. That is its real val
 finishing off a value of `x` once and for all, which is how the earlier runs closed
 `|x| ≤ 21 800` for *all* `n`.
 
-It is worth being precise about the amplification claim in `ALGORITHMS.md` §4: the group law
+It is worth being precise about the amplification claim in `README.md` §4: the group law
 produces points of height 10²⁰ easily, but those are *rational* points, and a solution needs
 an **integral** one. By Siegel's theorem each curve has only finitely many integral points,
 and multiples `kP` of a generator are almost never integral. The group law therefore does
@@ -205,7 +207,8 @@ Combining the above, honestly:
   10–14 digit range; it is not a plausible route to a 20-digit one in the unrestricted
   problem, let alone in the restricted family.
 * **The family restriction costs about a factor 4 in density** (this estimate supersedes the
-  "10–40 times rarer" guess made here earlier, see `CONSTRAINTS_TRADEOFF.md`). None of the
+  "10–40 times rarer" guess made here earlier; the note `CONSTRAINTS_TRADEOFF.md` it came
+  from is not in this repository). None of the
   eleven known solutions has `x ≡ 7 (mod 12)` — their `x` are `≡ 0, 3, 4 (mod 12)`. It is now
   *proved* (`DEquation.sat_x_mod_twelve`) that these four classes are the only ones that can
   occur at all, and a measurement of the 2- and 3-adic densities puts them within 2 % of each
@@ -234,3 +237,48 @@ Combining the above, honestly:
 The four are complementary precisely because their blind spots are disjoint: A is complete
 in the certificate, B and C are complete in `n` for the `x` they touch, and A′ trades
 completeness for size.
+
+---
+
+## 3. Addendum (October 2026): the half chart and integral radicals
+
+*Details in [`HALF_INTEGER.md`](HALF_INTEGER.md); runs in `search/run9/`.*
+
+**Modus operandi, half chart.**  For `x = X/2` with `X` odd the certificate of `d` is
+`V = dX²`, again an integer, with `V² + VX(X+12n) = 2X(36n³−19)` and the branch condition
+`(2V + X(X+12n))·X ≤ 0`; `X ∣ V²` and `72n³ − 12Vn = c + VX + 38`.  So Algorithms A, A′, B and
+C run unchanged in this chart (`--half`); only the constants of the cubic and of the Mordell
+curve (`V² = Z³ − 432X³(X³+456)`) change, and `|n| ≤ |V|` calibrates it as before.
+
+**Integral radicals.**  The square root is `y = −(x + 6n) − U/x = −(x + 6n) − V/X`, so it is
+an integer (resp. `Y/2`, `Y` odd) iff `x ∣ U` (resp. `X ∣ V`).  With `A = −x+y`, `B = −x−y`,
+`C = 2x+6n` these solutions are exactly the representations `114 = A³+B³+C³`: the integer
+chart is the pair sum of the two odd cubes, the half chart a pair sum containing the even
+one, so every representation shows up once in the integer chart and twice in the half
+chart.  The requested family `n = 3m, x = 12u+7` is precisely the congruence that the
+integer chart forces on them — which explains why none of the eleven known solutions (all
+with rational, non-integral `y`) lies in it.
+
+**Efficiency.**  For integral radicals, `X ∣ 36n³ − 19`, so for each `X` only the cube-root
+classes of `n` modulo `|X|` need testing — Booker–Sutherland's algorithm in these
+coordinates (`grid/xroots.c`, Algorithm D).  It tests about 6·10⁸ values of `n` per second
+per core in the half chart for small `|X|` (1.5 ns each, after the cube-root restriction and
+a CRT-folded 3-adic sieve that already removes 86 % of the classes), and the integer chart
+needs about a tenth of the work for the same box.  The certificate sweeps, by contrast, are
+the wrong tool here: Booker–Sutherland's search excludes every representation with
+`min(|A|,|B|,|C|) ≤ 10¹⁷`, which forces `|n| ≥ 9.8·10¹⁵` and certificates of at least 25
+digits, beyond `dsweep` entirely and reachable by `dsmooth` only as a lottery.
+
+**Prospects.**  Integral solutions exist if and only if 114 is a sum of three cubes; the
+conjectured count of representations grows like `c·log` of the height, and the cheapest
+unexplored region is small pair sums with `|n| > 1.667·10¹⁸` (third cube beyond `10¹⁹`).
+Exhausting `|X| < 10⁶` there up to `|n| = 1.667·10¹⁹` is about `9.5·10⁶` core-hours with the
+present code.  Rational-radical solutions in the half chart exist but appear sparser than in
+the integer chart: below `|V| = 10⁸` there are exactly two (`d = −142/4913`, `−9671/625`),
+against four of the integer chart's eleven below `|U| = 10⁸`.
+
+| algorithm | chart | enumerates | complete in | measured rate (this session) |
+|---|---|---|---|---|
+| D `xroots` | both, integral only | `X`, then cube-root classes of `n` mod `\|X\|` | its `(X, n)` box | half: 6·10⁸ `n`/s at `\|X\| < 10³`; int: about 10× less work per box |
+| A `dsweep --half` | half | `V`, divisors of `V²` (rational) or `V` (integral) | `\|V\|` interval | 2.5·10⁸ `\|V\|`/core-hour (rational, `\|V\| ~ 10⁸`) |
+

@@ -1,0 +1,1 @@
+DONE chart=half K=19 family=local X=[1,10000) n=[1667000000000000000,1667001000000000000) xsign=0 Xvals=3333 Xwithroots=1609 progressions=76593 tested=378884675828 cand=0 skipped=0 secs=557.3
