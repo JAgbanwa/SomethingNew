@@ -24,11 +24,15 @@ case "$algo" in
   dsweep) "$here/dsweep" $rest --out "$out" ;;
   xscan)  "$here/xscan"  $rest --out "$out" ;;
   dsmooth) "$here/dsmooth" $rest --out "$out" ;;
+  xroots) "$here/xroots" $rest --out "$out" ;;
   xcurve)
       u0=$(echo "$rest" | sed -n 's/.*--u0 \([0-9]*\).*/\1/p')
       u1=$(echo "$rest" | sed -n 's/.*--u1 \([0-9]*\).*/\1/p')
+      half=0; case "$rest" in *--half*) half=1 ;; esac
       if command -v gp >/dev/null 2>&1; then
-        XCURVE_U0="$u0" XCURVE_U1="$u1" gp -q "$here/xcurve.gp" > "$out"
+        XCURVE_U0="$u0" XCURVE_U1="$u1" XCURVE_HALF="$half" gp -q "$here/xcurve.gp" > "$out"
+      elif [ "$half" = 1 ]; then
+        python3 "$here/xcurve.py" --half --u "$u0" "$u1" > "$out"
       else
         python3 "$here/xcurve.py" --u "$u0" "$u1" > "$out"
       fi ;;
@@ -36,7 +40,7 @@ case "$algo" in
 esac
 
 if grep -q '^DONE' "$out"; then
-  hits=$(grep -c '^HIT\|^CAND' "$out" || true)
+  hits=$(grep -c '^HIT\|^HHIT\|^CAND\|^HCAND\|^ICAND' "$out" || true)
   echo "$id $algo hits=$hits" > "$outdir/$id.done"
   exit 0
 fi

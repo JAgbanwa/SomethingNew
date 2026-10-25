@@ -1,0 +1,7 @@
+HHIT -2414 -289 15
+HHIT -29087 -289 15
+HHIT 55150 125 114
+HHIT 112750 15125 309
+HHIT -241775 125 114
+DONE 2 100000000 pairs=18074460872 hits=5 skipped=0 certs=199999996 chart=half sqrt=rational family=none K=19
+wall 1381 s

@@ -1,0 +1,1 @@
+DONE chart=int K=19 family=local X=[1,10000) n=[1667000000000000000,1667001000000000000) xsign=0 Xvals=1666 Xwithroots=806 progressions=630432 tested=40641855055 cand=0 skipped=0 secs=42.7

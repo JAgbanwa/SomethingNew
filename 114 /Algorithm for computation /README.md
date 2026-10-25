@@ -12,8 +12,32 @@ Co-authored-by: Aristotle (Harmonic) <aristotle-harmonic@harmonic.fun>
 
 # `36n³ - 19 = -2d·x²·(-(x+6n) + √((x+6n)² + (36n³-19)/x))`
 
-Which rational `d` admit integer solutions `(n, x)`?
+Which rational `d` admit integer solutions `(n, x)`?  Most ideally with an **integral**
+square root — and, as a second case, with `x = X/2` and `√(…) = Y/2` for odd `X`, `Y` (the
+*half chart*).
 
+> **Update (October 2026) — the half chart and integral radicals.**  Every program in
+> `grid/` now runs in two charts — the integer chart (`x` an integer, Aristotle's setting)
+> and the half chart (`x = X/2`, `X` odd, flag `--half`, certificate `V = dX²`) — and for two
+> targets: any rational square root, or an *integral* one (`y` an integer, resp. `y = Y/2`
+> with `Y` odd).  The integral solutions are exactly the representations
+> `114 = A³+B³+C³` with `A = −x+y`, `B = −x−y`, `C = 2x+6n`: each representation gives one
+> integer-chart and two half-chart solutions, and Aristotle's family `n = 3m, x = 12u+7` is
+> precisely the integer chart's forced congruence.  Because Booker–Sutherland have excluded
+> every representation of 114 with `min(|A|,|B|,|C|) ≤ 10¹⁷`, an integral solution needs
+> `|n| ≥ 9.8·10¹⁵` and a ≥ 25-digit certificate, out of reach of the certificate sweeps; a new
+> engine, `grid/xroots.c` (Algorithm D, §2c), searches it by cube roots modulo `X`.  The
+> half chart also has rational-radical solutions, e.g. `d = −142/4913` at `(n, x) =
+> (15, −289/2)` and `d = −9671/625` at `(114, 125/2)`.  Details and proofs:
+> [`HALF_INTEGER.md`](https://github.com/JAgbanwa/SomethingNew/blob/main/114%20/Algorithm%20for%20computation%20/HALF_INTEGER.md);
+> runs: `search/run9/`.  Also fixed along the way: `dsmooth` silently capped `--B` at 3671,
+> `xscan` covered only `x > 0, n ≥ 0`, `xcurve.gp` defaulted `KMAX` to 0, and `dsweep` is
+> 1.5× faster.
+
+* `HALF_INTEGER.md` — **new**: the half chart (`x = X/2`), the certificate `V = dX²` and its
+  cubic, the equivalence of integral radicals (in either chart) with `114 = A³+B³+C³`, the
+  2‑/3‑adic congruences of both charts, what the Booker–Sutherland searches already exclude,
+  and Algorithm D with its measured throughput.
 * `SEARCH_NOTES.md` — the mathematical derivation, the list of admissible `d` found so far
   (eleven values, the largest with a nine-digit `n` and an eleven-digit `x`), the searches
   carried out and what is proved versus computed.
@@ -27,17 +51,24 @@ Which rational `d` admit integer solutions `(n, x)`?
   `1583/54`.  Completeness is proved for a general bound (`sat_exhaustive_of_scan`); running
   the same scan for `N = 1000` (which needs the kernel compiled to native code ahead of time)
   adds `(909,784)` and `(798,-1642284)`, i.e. `d = -414553/43904` and `d = -1/965662992`.
-* `ALGORITHMS.md` — the algorithms designed for a large grid (Charity Engine): the d-first
-  sweep over the certificate `U = 2dx²`, its smooth-certificate variant, the per-`x` scan
-  and the Mordell-curve phase, with their measured throughputs, the work-unit sizing for
-  one- to two-hour tasks and the digit-band escalation schedule.
-* `grid/` — those programs (`dsweep.c`, `dsmooth.c`, `xscan.c`, `xcurve.gp`, `xcurve.py`),
-  the exact verifier `verify.py`, the work-unit generator `make_jobs.py` and the node
-  wrapper `run_task.sh`.
+* The section *Searching for rational `d`* below (formerly referred to as `ALGORITHMS.md`,
+  which is not a separate file) — the algorithms designed for a large grid (Charity Engine):
+  the d-first sweep over the certificate `U = 2dx²` (or `V = dX²`), its smooth-certificate
+  variant, the cube-root engine for integral radicals, the per-`x` scan and the
+  Mordell-curve phase, with their measured throughputs, the work-unit sizing for one- to
+  two-hour tasks and the escalation schedules.
+* `grid/` — those programs (`dsweep.c`, `dsmooth.c`, `xroots.c`, `xscan.c`, `xcurve.gp`,
+  `xcurve.py`), the shared filters `filter.h` and `local.h`, the exact verifier `verify.py`,
+  the work-unit generator `make_jobs.py`, the node wrapper `run_task.sh`, and the tests
+  `selftest.sh` / `validate.py` (`make test`).  See `grid/README.md`.
+* `HOW_IT_WORKS.md` — how the search works and how efficient it is (with an addendum on the
+  half chart and Algorithm D).
 * `RequestProject/Algorithm.lean` — the Lean proofs the grid search relies on: correctness
   and completeness of the d-first sweep, the bound `|n| ≤ |U|` that calibrates the digit
   bands, the `mod 12` sieve for `x = 12u+7`, and the Mordell-curve correspondence.
-* `search/` — the C and Python search programs of the earlier runs and their logs.
+* `search/` — the C and Python search programs of the earlier runs and their logs;
+  `search/run9/` holds the runs of the half-chart / integral-radical session.
+
 # Searching for rational `d`: algorithms for a large grid
 
 Target equation, with `n, x` integers and `d` rational:
@@ -46,7 +77,10 @@ Target equation, with `n, x` integers and `d` rational:
 36 n³ − 19 = −2 d x² ( −(x + 6n) + √( (x + 6n)² + (36n³ − 19)/x ) )        (E)
 ```
 
-and the family asked for: `n = 3m`, `x = 12u + 7`.
+and the family asked for: `n = 3m`, `x = 12u + 7`.  Since the update, also the **half
+chart** `x = X/2` with `X` odd, and the **integral** target in which the square root is an
+integer (integer chart) or `Y/2` with `Y` odd (half chart); the family above is exactly the
+set of congruences forced on an integral integer-chart solution (§1, `HALF_INTEGER.md` §3).
 
 This note describes the algorithms, why they are the right ones, what each of them costs,
 how the work is cut into one‑ to two‑hour tasks, and — honestly — how far each of them can
@@ -105,6 +139,29 @@ DEquation.sat_iff_dSweep :
 
 read as a program: enumerate `U`, enumerate `x ∣ U²`, solve the cubic, check the branch.
 
+**The half chart** (`x = X/2`, `X` odd; `HALF_INTEGER.md` §1).  `DEquation.sat_iff` does not
+use that `x` is an integer, and with `V = dX²` it gives
+
+```
+V² + V X (X + 12n) = 2X (36n³ − 19),    (2V + X(X+12n))·X ≤ 0,                   (★½)
+```
+
+so `V` is always an integer (a root of a monic integer quadratic), `X ∣ V²`, and with
+`V² = c·X` the cubic is `72n³ − 12Vn = c + VX + 38`; again `|n| ≤ |V|`.  Every d‑first
+program runs in this chart with `--half` (output lines `HHIT V X n`); `d = V/X²`.
+
+**Integral radicals.**  The square root is `y = −(x + 6n + 2dx)` and `2dx = U/x = V/X`, so
+`y` is an integer (integer chart) iff `x ∣ U`, and `y = Y/2` with `Y` odd (half chart) iff
+`X ∣ V`.  In that case only the divisors of `|U|` (resp. `|V|`) — not of `U²` — need to be
+tried (`--integral`; the default in the half chart).  With `A = −x+y`, `B = −x−y`,
+`C = 2x+6n` one has identically `A³+B³+C³ − 114 = −6x(y² − (x+6n)² − (36n³−19)/x)`, so these
+are exactly the representations of 114 as a sum of three cubes; the chart is the parity of
+`A+B = −2x`.  For them the 2‑ and 3‑adic conditions are computed exactly (`grid/local.h`):
+integer chart `x ≡ 7 (mod 12)`, `n ≡ 0 (mod 3)`, `U ≡ 5, 11 (mod 12)` (the requested family
+and `sat_U_mod_twelve`), plus joint conditions on `(x mod 16, n mod 4)` and
+`(x mod 243, n mod 243)`; half chart `X ≡ 5, 11 (mod 12)`, `n ≡ 0 (mod 3)`, `V ≡ 1, 10
+(mod 12)`.
+
 ---
 
 ## 2. Algorithm A — the d‑first sweep (`grid/dsweep.c`)
@@ -123,7 +180,7 @@ for each |U| in the work unit’s interval, with U ≡ 5 or 11 (mod 12):
 *Cost.* One value of `U` costs an amortised factorisation plus about five divisor
 candidates, each a cube root and a couple of 128‑bit operations.  Measured on one core:
 
-| `|U|` | values of `U` per core‑hour |
+| `\|U\|` | values of `U` per core‑hour |
 |---|---|
 | 10⁹ | 2.4 × 10⁹ |
 | 10¹² | 1.9 × 10⁹ |
@@ -149,6 +206,20 @@ the three smallest known solutions, `d = −1/54` at `(n,x) = (1,−9)`, `d = 15
 `(−54,−9)` and `d = −1/965662992` at `(798,−1642284)` — the last one has a seven‑digit `x`
 although its certificate is only `U = −5586`, which illustrates why sweeping `U` is much
 better than sweeping `x`.
+
+*Half chart and integral radicals.*  `--half` sweeps `|V|` with the cubic of (★½) over the
+odd divisors of `V²` (`--rational-sqrt`) or of `V` (integral, the default there);
+`--integral` does the same in the integer chart; `--K k` replaces 19 by `k` for validation.
+Re-measured on this session's machine (about 1.6× slower than Aristotle's): the original
+mode now runs at 2.5·10⁹ `|U|` per core‑hour at `|U| ~ 10⁹`, 1.5× faster than before on the
+same machine (a cofactor left prime by the sieve is no longer re-tested by Miller–Rabin);
+the integral modes at 3.4–3.6·10⁹ `|G|` per core‑hour; `--half --rational-sqrt` (no family
+restriction is known there) at 2.5·10⁸ `|V|` per core‑hour at `|V| ~ 10⁸`.  Validation:
+`--half --rational-sqrt` over `|V| < 2.5·10⁵` returns exactly the two half-chart solutions
+that a brute force over `|n| ≤ 300`, odd `|X| ≤ 4·10⁵` finds (§6), and `--integral` finds
+every known certificate on equations with known integral solutions (`grid/validate.py`).
+For `K = 19` an integral certificate has at least 25 digits (`HALF_INTEGER.md` §5), so
+`dsweep` cannot meet one; integral solutions are the job of Algorithm D.
 
 ---
 
@@ -186,7 +257,48 @@ pairs each.
 
 Validation: run with `--test` (which drops the family restrictions) over `|U| ≤ 2·10⁴`, it
 reproduces exactly the same five certificates as `dsweep --general`, through a completely
-different enumeration and a different floating point path.
+different enumeration and a different floating point path.  (Correction: the original
+program kept only the first 512 primes, so `--B 20000` really meant `B = 3671`; in this
+validation it skipped 15 % of the certificates.  It now honours any `B`, and the pair count
+matches `dsweep --general` exactly.  Production runs with `B = 60` were not affected.)
+`dsmooth` takes the same `--half`, `--integral`, `--rational-sqrt`, `--K` flags as `dsweep`.
+
+---
+
+## 2c. Algorithm D — integral radicals by cube roots (`grid/xroots.c`, new)
+
+For an integral radical, `X ∣ 36n³ − 19` in both charts (integer chart: `y² − (x+6n)² =
+(36n³−19)/x` must be an integer; half chart: `Y² − (X+12n)² = 8(36n³−19)/X`, `X` odd).
+So for a fixed `X` the admissible `n` lie in the classes `n ≡ r (mod |X|)` with
+`36r³ ≡ 19` — about one class on average instead of all `|X|` — and only there is
+`(x+6n)² + (36n³−19)/x` (resp. `(X+12n)² + 8(36n³−19)/X`) tested for being a square.  This is
+the Booker–Sutherland algorithm written in the coordinates of (E): their `d = |x+y|` is our
+pair sum `|A+B|` (= `|X|` in the half chart, `2|x|` in the integer chart; odd ↔ half chart)
+and their `z` is our `C = X + 6n` (resp. `2x + 6n`).  The search fixes the denominator side
+of `d = (A+C)/(A+B)` and solves for the rest.
+
+```
+for each |X| in the unit's range (both signs), factored by a segmented sieve:
+    roots r of 36 r³ ≡ 19 modulo each prime power of X, combined by the CRT
+    fold in the 2-adic / 3-adic classes of n allowed for this X (local.h), by the CRT
+    for each progression n ≡ ρ (mod |X|·L) inside the window of n:
+        wheel over t mod 5005 (primes 5, 7, 11, 13), jump between passing positions,
+        residues mod 17 … 29 carried along, then 70 more primes on demand
+        → "ICAND chart X n", confirmed exactly by verify.py (prints d, y and (A, B, C))
+```
+
+A work unit is a range of `|X|` times a window of `n` (128‑bit), and it is **complete** for
+that box.  Validation (`grid/validate.py`): identical output to an independent brute force on
+boxes `|X| < 1200`, `|n| < 4·10⁵` for six values of `K` with known representations, in both
+charts and through all three inner loops; and the Booker–Sutherland solutions of `42` and
+`906` are found in all three of their charts at sixteen‑digit `n`.  Throughput at
+`n ≈ 2·10¹⁸`, window 10¹⁰, one core: half chart `|X| < 10³` in 5.2 s (3·10⁹ `n` tested,
+1.7 ns each), `[10³, 10⁵)` in 5.6 s, `[10⁵, 10⁶)` in 10.5 s; integer chart 0.5, 2.2, 5.2 s.
+
+Where to point it: for small `|X|` the Booker–Sutherland searches stop at `|C| = 10¹⁹`, i.e.
+`|n| = 1.667·10¹⁸`.  `make_jobs.py --target integral` tiles `|X| < 10⁶`,
+`1.667·10¹⁸ ≤ |n| < 1.667·10¹⁹` (both signs, both charts) into 1.5‑hour units, epoch by
+epoch; the whole box is about `9.5·10⁶` core‑hours, 90 % of it in the half chart.
 
 ---
 
@@ -214,6 +326,12 @@ value of `x` in about 1.5 h.
 This unit type is *complete in `m`* inside its window: if the requested family has a
 solution with a 10‑, 11‑ or 12‑digit `m` and a small `u`, this is the unit type that will
 find it.
+
+Since the update: `--half` scans `X = 6u+5` with `F_X(n) = X²(X+12n)² + 8X(36n³−19)`;
+`--xneg` / `--nneg` scan `x = −(12u+5)` (resp. `X = −(6u+1)`) and `n = −3m` — the original
+covered only `x > 0` and `n ≥ 0`, although the known solutions have every sign pattern
+(`make_jobs.py --signs all`, the default, issues all four).  For an *integral* radical
+Algorithm D is the right tool: it visits about one `n` in `|x|` instead of all.
 
 ---
 
@@ -248,6 +366,13 @@ grid itself; a block of 64 values of `u` per work unit is a reasonable starting 
 **This is where the 10–20 digit and 20–30 digit bands have to come from.**  No uniform
 search — over `n`, over `x`, or over `U` — can cover 10²⁰ candidates; the group law is the
 only mechanism that produces solutions of that size from computations of moderate size.
+(`HOW_IT_WORKS.md` §2.4 qualifies this: only *integral* points give solutions, and multiples
+`kP` are almost never integral.)
+
+Half chart: the curve is `V² = Z³ − 432X³(X³ + 456)` with `Z = 12X(6n + X)`, `V = 36X·W`,
+`W² = X²(X+12n)² + 8X(36n³−19)` — the integer-chart curve at `x = X/2` after
+`(Z, V) → (4Z, 8V)`.  `xcurve.py --half`, `XCURVE_HALF=1 gp -q xcurve.gp`; the self test now
+checks 14 solutions in both charts, including the integral one coming from 42.
 
 ---
 
@@ -255,7 +380,7 @@ only mechanism that produces solutions of that size from computations of moderat
 
 Band `D` = the targets with a `D`-digit `m`.  Work units are sized for 1.5 core‑hours.
 
-| band `D` (digits of `m`) | A: `dsweep` over `|U| ∈ [3·10^{D−1}, 3·10^{D+1})` | B: `xscan`, whole band, per `x` | C: `xcurve` |
+| band `D` (digits of `m`) | A: `dsweep` over `\|U\| ∈ [3·10^{D−1}, 3·10^{D+1})` | B: `xscan`, whole band, per `x` | C: `xcurve` |
 |---|---|---|---|
 | 10 | 200 units | 90 values of `x` per unit | any number of units, 64 `x` each |
 | 11 | 2 000 units | 9 values of `x` per unit | " |
@@ -287,6 +412,22 @@ Every unit is independent, takes its whole input from its command line, writes o
 file, and can be re‑issued or duplicated for validation; see `grid/README.md` for the
 manifest format and the wrapper script.
 
+**The same plan in the half chart** (rational radicals): `make_jobs.py --chart half` (or
+`--chart both`) issues `dsweep --half --rational-sqrt`, `xscan --half`, `dsmooth --half
+--rational-sqrt` and `xcurve --half` units over the same bands; `|n| ≤ |V|` calibrates them
+exactly as `|n| ≤ |U|` does in the integer chart.
+
+**The integral target** (the square root an integer, resp. `Y/2`, i.e. 114 = A³+B³+C³):
+
+1. Nothing below `|n| ≈ 10¹⁶` is worth searching — Booker–Sutherland's complete search
+   (`min(|A|,|B|,|C|) ≤ 10¹⁷`) already covers it (`HALF_INTEGER.md` §5).
+2. `make_jobs.py --target integral` (Algorithm D, both charts): `|X| < 10⁶` and
+   `1.667·10¹⁸ ≤ |n| < 1.667·10¹⁹`, the first decade beyond their 2020 search for small pair
+   sums, about `9.5·10⁶` core‑hours in 1.5‑hour units; a prefix of the manifest is always a
+   complete box.  Raise `--x-max` or move the `n` window outward as budget allows.
+3. `dsmooth --integral` (either chart) for 25–35 digit smooth certificates only with spare
+   cycles: a lottery, as in the rational case.
+
 ---
 
 ## 6. Expected yield — an honest estimate
@@ -302,6 +443,18 @@ manifest format and the wrapper script.
   modulo every prime power tested), but restricting to it plausibly costs a factor of
   around 10–40 in the density of solutions.  It is worth running a fraction of the grid
   budget in the unrestricted mode (`dsweep --general`) alongside the family search.
+  *Why the family looks empty:* `n = 3m, x = 12u+7` is exactly the set of congruences
+  forced on a solution whose square root is an integer, and such a solution is a
+  representation of 114 as a sum of three cubes — of which none is known.  All eleven known
+  solutions have a non-integral rational square root (`y = 8/3` at `(1, −9)`, for instance).
+  Within the family a rational-radical solution is still possible, but the family no longer
+  has any special status for it.
+* **Integral radicals (either chart).**  Every representation of 114 gives one
+  integer-chart and two half-chart solutions; Booker–Sutherland exclude all with
+  `min(|A|,|B|,|C|) ≤ 10¹⁷`, so `|n| ≥ 9.8·10¹⁵` and the certificate has ≥ 25 digits.
+  Heuristically 114 does have representations (Heath-Brown's conjecture predicts infinitely
+  many for every `k ≢ ±4 mod 9`, their number up to height `B` growing like `c_k·log B`), but
+  they are sparse, so a hit in any finite campaign remains a lottery.
 * The certificate ratios `|U|/|n|` of the known solutions range from 3 to 10¹³.  A sweep of
   `|U|` up to `3·10^{D+1}` therefore catches band `D` solutions whose `d` has a "small"
   numerator, which is precisely the kind of `d` the question asks for, but not those with a
@@ -311,6 +464,7 @@ manifest format and the wrapper script.
   runs), and now, with `x ≡ 7 (mod 12)`: all certificates `|U| < 2·10¹⁰` (the exhaustive
   d‑first sweep) and all 50‑smooth certificates with `10¹⁰ ≤ |U| < 10¹⁸` (the smooth sweep),
   together about 5·10¹¹ pairs `(U, x)`.  No solution of the family has appeared yet.
+  Half chart / integral target (`search/run9/`): see the README there.
 
 ---
 
@@ -328,3 +482,15 @@ manifest format and the wrapper script.
 | `DEquation.sat_U_mod_twelve` | the `mod 12` sieve for `x = 12u+7` |
 | `DEquation.mordell_of_sat`, `sat_of_mordell` | the Mordell curve view and the map back to `d` |
 | `DEquation.sat_abs_x_le_poly`, `sat_x_finite` | `\|x\| ≤ 24\|n\| + 14n² + 100`: finiteness for fixed `n` |
+
+Used by the half-chart and integral modes — elementary algebra and finite residue
+enumeration, checked symbolically (sympy), by `grid/local.h` and by `grid/validate.py`, **not
+yet formalised in Lean** (suggested statements in `HALF_INTEGER.md` §7):
+
+| statement | role |
+|---|---|
+| (★½) with `V = dX²` integral, `X ∣ V²`, `72n³ − 12Vn = c + VX + 38`, `\|n\| ≤ \|V\|` | Algorithms A, A′ in the half chart |
+| `A³+B³+C³ − 114 = −6x(y² − (x+6n)² − (36n³−19)/x)`, `A = −x+y`, `B = −x−y`, `C = 2x+6n` | integral radicals ⇔ representations of 114 |
+| integral ⇔ `x ∣ U` (integer chart) ⇔ `X ∣ V` (half chart) ⇒ `X ∣ 36n³ − 19` | `--integral`; the cube-root classes of Algorithm D |
+| the 2‑/3‑adic tables of `local.h` (e.g. `x ≡ 7`, `X ≡ 5, 11`, `V ≡ 1, 10 (mod 12)`, `n ≡ 0 (mod 3)`) | sieves of the integral modes |
+| `V² = Z³ − 432X³(X³+456)`, `Z = 12X(6n+X)`, `V = 36X·W` | Algorithm C in the half chart |

@@ -1,0 +1,13 @@
+dsweep int family |U| in [1e9,1e9+2e6)          3.1 s   DONE 1000000000 1002000000 pairs=9853362 hits=0 skipped=0 certs=666667 chart=int sqrt=rational family=x=7mod12 K=19
+dsweep int integral                             2.2 s   DONE 1000000000 1002000000 pairs=1226792 hits=0 skipped=0 certs=666667 chart=int sqrt=integral family=local K=19
+dsweep half integral                            2.3 s   DONE 1000000000 1002000000 pairs=3301005 hits=0 skipped=0 certs=666666 chart=half sqrt=integral family=local K=19
+dsweep half rational |V| in [1e8,1e8+2e5)       3.2 s   DONE 100000000 100200000 pairs=39587320 hits=0 skipped=0 certs=400000 chart=half sqrt=rational family=none K=19
+dsmooth int B=60 [1e20,1e21) shard 0/20000     42.5 s   DONE lo=100000000000000000000 hi=1000000000000000000000 B=60 shard=0/20000 U=4541 pairs=306431167 solved=654685 hits=0 skipped=2008 chart=int sqrt=rational family=x=7mod12 K=19
+xscan int x=7, 1e9 values of m                  9.6 s   DONE u=[0,1) m=[1000000000,2000000000) cands=0 chart=int xsign=1 nsign=1 K=19
+xscan half X=5, 1e9 values of m                26.8 s   DONE u=[0,1) m=[1000000000,2000000000) cands=0 chart=half xsign=1 nsign=1 K=19
+xroots half |X|<1e3 n in [2e18,+1e10)           5.2 s   DONE chart=half K=19 family=local X=[1,1000) n=[2000000000000000000,2000000010000000000) xsign=0 Xvals=333 Xwithroots=173 progressions=7359 tested=3052388302 cand=0 skipped=0 secs=5.1
+xroots half |X| in [1e3,1e5) n window 1e10      5.9 s   DONE chart=half K=19 family=local X=[1000,100000) n=[2000000000000000000,2000000010000000000) xsign=0 Xvals=33000 Xwithroots=14850 progressions=757086 tested=1456987984 cand=0 skipped=0 secs=5.9
+xroots half |X| in [1e5,1e6) n window 1e10      9.6 s   DONE chart=half K=19 family=local X=[100000,1000000) n=[2000000000000000000,2000000010000000000) xsign=0 Xvals=300000 Xwithroots=126515 progressions=6856641 tested=720878669 cand=0 skipped=0 secs=9.5
+xroots int |X|<1e3 n in [2e18,+1e10)            0.7 s   DONE chart=int K=19 family=local X=[1,1000) n=[2000000000000000000,2000000010000000000) xsign=0 Xvals=166 Xwithroots=85 progressions=53064 tested=312143408 cand=0 skipped=0 secs=0.7
+xroots int |X| in [1e3,1e5) n window 1e10       2.9 s   DONE chart=int K=19 family=local X=[1000,100000) n=[2000000000000000000,2000000010000000000) xsign=0 Xvals=16500 Xwithroots=7436 progressions=6120576 tested=183979779 cand=0 skipped=0 secs=2.7
+xroots int |X| in [1e5,1e6) n window 1e10       6.0 s   DONE chart=int K=19 family=local X=[100000,1000000) n=[2000000000000000000,2000000010000000000) xsign=0 Xvals=150000 Xwithroots=63186 progressions=16066083 tested=223576947 cand=0 skipped=0 secs=5.9

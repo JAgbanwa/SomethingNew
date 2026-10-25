@@ -324,3 +324,19 @@ worth recording that **none of the eleven known solutions lies in that family** 
 are `≡ 0, 3, 4 (mod 12)`, never `7`, and every one of them is divisible by 2 or by 3 — while
 there is no local obstruction to the family (the congruences are solvable modulo every
 prime power tested).
+
+## 7. The half chart `x = X/2` and integral square roots (October 2026)
+
+See [`HALF_INTEGER.md`](../HALF_INTEGER.md) and `search/run9/`.  In short:
+
+* With `x = X/2`, `X` odd, the certificate `V = dX²` is an integer and
+  `V² + VX(X+12n) = 2X(36n³−19)`; the d-first programs run in this chart with `--half`.
+  The certificate sweep over every `|V| < 10⁸` (all odd `X ∣ V²`) and a brute force over
+  `|n| ≤ 300`, odd `|X| ≤ 4·10⁵` give exactly two solutions there, both with a rational square
+  root: `d = −142/4913` at `(n, x) = (15, −289/2)` and `d = −9671/625` at `(114, 125/2)`.
+* A solution whose square root is an integer (integer chart) or half an odd integer (half
+  chart) is the same thing as a representation `114 = A³+B³+C³` (`A = −x+y`, `B = −x−y`,
+  `C = 2x+6n`); none is known, and Booker–Sutherland's searches force `|n| ≥ 9.8·10¹⁵` for
+  any.  The family `n = 3m, x = 12u+7` is exactly the integer chart's congruence condition
+  for such solutions.  None of the eleven solutions above has an integral square root.
+
