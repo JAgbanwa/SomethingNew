@@ -1,0 +1,1 @@
+420 admissible d with height <= 90 certified (all n, no bound on g) in 273.08100000000000000000000000000000000 s; half-chart points: 0

@@ -1,0 +1,42 @@
+{
+  "campaign_id": "ce390-dfirst-local-h1-20000",
+  "counters": {
+    "admissible": "14168321",
+    "convergents": "2763493506",
+    "exact_roots": "0",
+    "other_branch": "0",
+    "other_chart": "0",
+    "pairs": "800020000",
+    "refinements": "0",
+    "small_g_values": "1252",
+    "thue_solutions": "0"
+  },
+  "coverage_note": "Every admissible d = p/q with 1 <= max(|p|,q) < 20001 was solved for ALL half-chart points with 1 <= |g| <= 10^100 (x = -q*g/2). Inadmissible d provably have none.",
+  "elapsed_seconds": 3165.563,
+  "implementation_sha256": "603f100f66086016944f21d86ab7953432d9fd6e86881913c278a39fcfc42c3d",
+  "next_h": "20001",
+  "ordinal": "0",
+  "output_coverage": {
+    "start": "1",
+    "stop": "20001"
+  },
+  "reason": "shells_exhausted",
+  "remaining_shells": "0",
+  "schema": "ce390-dfirst-status-v1",
+  "search": {
+    "chart": "half",
+    "g_max_digits": 100,
+    "m": "65",
+    "parameterization": "dfirst-thue-height-shells-v1"
+  },
+  "shells": {
+    "start": "1",
+    "stop": "20001"
+  },
+  "started_utc": "2026-10-26T10:15:12.748080+00:00",
+  "state": "complete",
+  "task_id": "bde9b30cd0ad5c9c08de4e3faf392b6940532271d12f39e5e9784d9147a3cbc4",
+  "unique_hits_in_this_output": "0",
+  "updated_utc": "2026-10-26T11:07:58.311358+00:00",
+  "worker_sha256": "1573188e421d6117bd41787aca2bb0e6d956b64ea18678a23ad2f99d630b3c71"
+}

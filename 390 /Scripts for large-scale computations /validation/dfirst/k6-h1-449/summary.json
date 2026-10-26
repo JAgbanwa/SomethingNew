@@ -1,0 +1,52 @@
+{
+  "admissible_d_solved": "12447",
+  "all_tasks_complete": true,
+  "campaign_id": "k6-known-points-h1-449",
+  "campaign_shells": {
+    "start": "1",
+    "stop": "450"
+  },
+  "covered_shells": [
+    {
+      "start": "1",
+      "stop": "450"
+    }
+  ],
+  "error_returns": [],
+  "g_max_digits": 100,
+  "m": "1",
+  "schema": "ce390-dfirst-collection-v1",
+  "statement": "For every covered shell range [a, b): every d = p/q with a <= max(|p|, q) < b has NO half-chart point with 1 <= |g| <= 10^g_max_digits other than the verified hits listed.",
+  "tasks": [
+    {
+      "counters": {
+        "admissible": "12447",
+        "convergents": "2426554",
+        "exact_roots": "0",
+        "other_branch": "5",
+        "other_chart": "0",
+        "pairs": "403651",
+        "refinements": "0",
+        "small_g_values": "16",
+        "thue_solutions": "12"
+      },
+      "covered": [
+        {
+          "start": "1",
+          "stop": "450"
+        }
+      ],
+      "gaps": [],
+      "shells": {
+        "start": "1",
+        "stop": "450"
+      },
+      "task_id": "30d5992faa1579108be34b06f4b953b98398a3ac6553fe0be60818103754bb0d"
+    }
+  ],
+  "unrelated_status_files": [],
+  "verified_hits": 7,
+  "worker_sha256": [
+    "1573188e421d6117bd41787aca2bb0e6d956b64ea18678a23ad2f99d630b3c71"
+  ]
+}

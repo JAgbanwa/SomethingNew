@@ -1,0 +1,17 @@
+{
+  "campaign_id": "k6-known-points-h1-449",
+  "ordinal": "0",
+  "schema": "ce390-dfirst-task-v1",
+  "search": {
+    "chart": "half",
+    "g_max_digits": 100,
+    "m": "1",
+    "parameterization": "dfirst-thue-height-shells-v1"
+  },
+  "seconds": 3600,
+  "shells": {
+    "start": "1",
+    "stop": "450"
+  },
+  "task_id": "30d5992faa1579108be34b06f4b953b98398a3ac6553fe0be60818103754bb0d"
+}

@@ -22,7 +22,9 @@ COPY campaign.py run_task.py parameter_space.py q_sieve.py verify.py run_task.sh
 COPY xy_campaign.py xy_common.py run_xy_task.py collect_xy.py verify_xy.py /app/
 COPY cube_campaign.py /app/
 COPY aq_traversal.py /app/
-RUN chmod 0755 /app/run_task.sh /app/container_entrypoint.sh /app/bin/cf_worker /app/bin/xy_cf_worker \
+# d-first half-chart engine (D_FIRST.md): python3 /app/run_d_task.py --task ... --output-dir ...
+COPY dfirst_common.py d_campaign.py run_d_task.py collect_d.py verify_d.py /app/
+RUN chmod 0755 /app/run_task.sh /app/container_entrypoint.sh /app/bin/cf_worker /app/bin/xy_cf_worker /app/bin/dthue_worker \
     && mkdir -p /local/input /local/output
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
