@@ -16,6 +16,36 @@ for this corrected target.
 > A finite task covers only its assigned parameter indices. Successful execution
 > does not prove the absence of missed cases in the mathematical reduction.
 
+## 0. d-first engine for the half-integer target (recommended)
+
+[D_FIRST.md](D_FIRST.md) adds a second engine, `bin/dthue_worker`, that
+**enumerates rational `d` directly** for the half-integer target
+(`x = X/2`, `y = Y/2`, `X, Y` odd). For `d = p/q` in lowest terms, such points
+are exactly the integer solutions `(n, g)` of one Thue equation
+
+```text
+72 n^3 - 12 p q n g^2 + p q (p+q) g^3 = 130,   q g odd,   (2p+q) g > 12 n,
+```
+
+with `x = -q g/2` and `y = ((2p+q) g - 12 n)/2`. Each `d` is solved completely
+for `1 <= |g| <= 10^100`, which covers the 10^43–10^45 / 10^53–10^55
+rectangle for that `d`. The worker visits `d` in order of height
+`max(|p|, q)`, so a finished campaign proves a cumulative statement of the
+form "no such point for any `d` of height at most H".
+
+Proved filters on `p` and `q` remove about 98 % of pairs. One core handles
+about 4,700 admissible `d` per second, so all `d` up to height about 950,000
+cost about 2,000 core-hours. The k = 6 version of the same code recovers all of
+its known half-integer points, and its Thue solutions agree with PARI's
+unconditional `thue()` on 1,934 equations. All `d` up to height 12,000 have
+already been checked for k = 390. The rectangle search below is unchanged.
+
+```sh
+python3 d_campaign.py --campaign-id ce390-dfirst-001 --h-start 1 --h-stop 300001 --output-dir dfirst-tasks
+python3 run_d_task.py --task dfirst-tasks/task-000000-*.json --output-dir out/t0     # CE: /app/run_d_task.py
+python3 collect_d.py --page dfirst-tasks/page.json --results-dir out --output-dir collected
+```
+
 ## 1. Mathematical objective and notation
 
 Find rational `n,x,y,d`, with `x != 0`, satisfying
@@ -329,6 +359,7 @@ completeness. Historical counts and benchmarks in `VALIDATION.md` and
 
 | Document | Scope |
 | --- | --- |
+| [D_FIRST.md](D_FIRST.md) | d-first half-integer engine: Thue reduction, proofs, filters, validation, throughput |
 | [VARIABLE_AQ.md](VARIABLE_AQ.md) | Current ordering, parity proof and index compatibility |
 | [INTEGER_COMPONENTS.md](INTEGER_COMPONENTS.md) | Final target's integrality and cube identity; its old q-major examples are historical |
 | [XY_DENOMINATORS.md](XY_DENOMINATORS.md) | Broader equal-x/y engine, enclosure and continued-fraction derivation |
