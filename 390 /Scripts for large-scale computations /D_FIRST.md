@@ -182,9 +182,10 @@ height at most `H`.
 
 | Range | Method | `d` checked | Result |
 | --- | --- | --- | --- |
-| height <= 12,000 | worker, `|g| <= 10^100` | 5,252,925 admissible `d` | no point; no solution of (Thue) at all |
-| height <= 20,000 | `run_d_task.py` campaign task (`validation/dfirst/`) | see `validation/dfirst/README.md` | see `validation/dfirst/README.md` |
-| height <= 90 | PARI `thue()`, unconditional, **no bound** | see `validation/dfirst/README.md` | see `validation/dfirst/README.md` |
+| height <= 20,000 | `run_d_task.py` campaign task, `|g| <= 10^100` | 14,168,321 admissible `d` (800,020,000 pairs) | **no point**; no solution of (Thue) at all |
+| height <= 120 | PARI `thue()`, unconditional, **no bound on n or g** | 789 admissible `d` | **no point** |
+
+Files and details are in `validation/dfirst/`.
 
 ## 6. Throughput and the reach of a 2,000 core-hour budget
 
@@ -194,6 +195,7 @@ Measured on one core here (x86-64, g++ 13 `-O3`, GMP 6.3):
 | --- | --- | --- | --- |
 | 1 – 2,000 | 160,117 | 213 | 4.3 |
 | 1 – 12,000 | 5,252,925 | 218 | 3.97 |
+| 1 – 20,000 (campaign task) | 14,168,321 | 223 | 3.96 |
 | 100,000 – 100,004 | 37,795 | 211 | 4.0 |
 
 The cost per `d` does not grow with height, because the precision is set by
@@ -213,9 +215,10 @@ from the first returned `status.json` files: `elapsed_seconds / counters.pairs`.
 ## 7. Validation
 
 * **Known answers (k = 6, m = 1).** Shells `1 <= H < 450` report exactly
-  `d = 1, 22/7, -22/101, 1/181, 181, 7/439, 439/7`, which are the two
-  half-chart points of each of `2^3-1-1`, `65^3-58^3-43^3`, `236^3-235^3-55^3`
-  and `644^3-637^3-205^3` (both pairings, as section 1 predicts). They include
+  `d = 1, 22/7, -22/101, 1/181, 181, 7/439, 439/7`: the one point of
+  `2^3-1-1` (its two pairings coincide) and both half-chart pairings of each of
+  `65^3-58^3-43^3`, `236^3-235^3-55^3` and `644^3-637^3-205^3`, as section 1
+  predicts. They include
   the three points `n=-6, x=101/2`; `n=-9, x=-181/2`; `n=-33, x=-439/2`.
 * **PARI cross-check.** On 1,934 Thue equations, the worker's solution sets
   equal PARI's unconditional `thue()` sets exactly: 679 solutions, 10 of them

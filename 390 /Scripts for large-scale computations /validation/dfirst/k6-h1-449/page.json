@@ -1,0 +1,25 @@
+{
+  "campaign_id": "k6-known-points-h1-449",
+  "g_max_digits": 100,
+  "m": "1",
+  "note": "Writes task files only; nothing is submitted. Run each with run_d_task.py.",
+  "predicted_core_hours": 0.0,
+  "schema": "ce390-dfirst-page-v1",
+  "shells": {
+    "start": "1",
+    "stop": "450"
+  },
+  "tasks": [
+    {
+      "file": "task-000000-30d5992faa157910.json",
+      "pairs": "403651",
+      "predicted_seconds": 1.8,
+      "shells": {
+        "start": "1",
+        "stop": "450"
+      },
+      "task_id": "30d5992faa1579108be34b06f4b953b98398a3ac6553fe0be60818103754bb0d"
+    }
+  ],
+  "total_pairs": "403651"
+}

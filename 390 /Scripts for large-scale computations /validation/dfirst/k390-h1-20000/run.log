@@ -1,0 +1,2 @@
+2026-10-26T10:15:12.747931+00:00 task bde9b30cd0ad5c9c08de4e3faf392b6940532271d12f39e5e9784d9147a3cbc4 shells [1, 20001) m=65 resume at 1; worker 1573188e421d6117 implementation 603f100f66086016
+2026-10-26T11:07:58.312096+00:00 complete: shells_exhausted; covered shells [1, 20001); admissible d 14168321; hits 0

@@ -37,8 +37,10 @@ Proved filters on `p` and `q` remove about 98 % of pairs. One core handles
 about 4,700 admissible `d` per second, so all `d` up to height about 950,000
 cost about 2,000 core-hours. The k = 6 version of the same code recovers all of
 its known half-integer points, and its Thue solutions agree with PARI's
-unconditional `thue()` on 1,934 equations. All `d` up to height 12,000 have
-already been checked for k = 390. The rectangle search below is unchanged.
+unconditional `thue()` on 1,934 equations. For k = 390, every `d` up to
+height 20,000 (14,168,321 admissible values) has been checked with no point
+found, and every `d` up to height 120 has been certified with no bound
+(`validation/dfirst/`). The rectangle search below is unchanged.
 
 ```sh
 python3 d_campaign.py --campaign-id ce390-dfirst-001 --h-start 1 --h-stop 300001 --output-dir dfirst-tasks

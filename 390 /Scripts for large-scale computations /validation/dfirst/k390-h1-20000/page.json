@@ -1,0 +1,25 @@
+{
+  "campaign_id": "ce390-dfirst-local-h1-20000",
+  "g_max_digits": 100,
+  "m": "65",
+  "note": "Writes task files only; nothing is submitted. Run each with run_d_task.py.",
+  "predicted_core_hours": 1.0,
+  "schema": "ce390-dfirst-page-v1",
+  "shells": {
+    "start": "1",
+    "stop": "20001"
+  },
+  "tasks": [
+    {
+      "file": "task-000000-bde9b30cd0ad5c9c.json",
+      "pairs": "800020000",
+      "predicted_seconds": 3600.1,
+      "shells": {
+        "start": "1",
+        "stop": "20001"
+      },
+      "task_id": "bde9b30cd0ad5c9c08de4e3faf392b6940532271d12f39e5e9784d9147a3cbc4"
+    }
+  ],
+  "total_pairs": "800020000"
+}

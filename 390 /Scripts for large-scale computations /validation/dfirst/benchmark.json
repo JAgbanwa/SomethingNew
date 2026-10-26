@@ -1,0 +1,54 @@
+{
+  "worker": "dthue_worker 1.0.0",
+  "m": "65",
+  "g_max_digits": 100,
+  "platform": "Linux-6.18.44-fc-v153-x86_64-with-glibc2.39",
+  "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+  "flags": "-O3 -std=c++17",
+  "note": "Single core in a shared cloud sandbox; recalibrate on CE hosts from status.json (elapsed_seconds / counters.pairs).",
+  "runs": [
+    {
+      "shells": "1..2000",
+      "pairs": 8002000,
+      "admissible_d": 160117,
+      "seconds": 34.08,
+      "us_per_admissible_d": 212.8,
+      "us_per_pair": 4.26
+    },
+    {
+      "shells": "1..12000",
+      "pairs": 288012000,
+      "admissible_d": 5252925,
+      "seconds": 1144,
+      "us_per_admissible_d": 217.8,
+      "us_per_pair": 3.97,
+      "refinements": 0,
+      "thue_solutions": 0
+    },
+    {
+      "shells": "100000..100004",
+      "pairs": 2000035,
+      "admissible_d": 37795,
+      "seconds": 7.99,
+      "us_per_admissible_d": 211.4,
+      "us_per_pair": 4.0
+    },
+    {
+      "shells": "1..20000 (run_d_task.py campaign task)",
+      "pairs": 800020000,
+      "admissible_d": 14168321,
+      "seconds": 3165.6,
+      "us_per_admissible_d": 223.4,
+      "us_per_pair": 3.96,
+      "refinements": 0,
+      "thue_solutions": 0,
+      "note": "second core busy with PARI and tests during most of the run"
+    }
+  ],
+  "reach_core_hours": {
+    "H=100000": 22,
+    "H=300000": 200,
+    "H=500000": 556,
+    "H=950000": 2006
+  }
+}

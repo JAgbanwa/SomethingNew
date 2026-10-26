@@ -1,0 +1,1 @@
+1934 equations compared; 0 mismatches; 679 solutions, 10 beyond g0

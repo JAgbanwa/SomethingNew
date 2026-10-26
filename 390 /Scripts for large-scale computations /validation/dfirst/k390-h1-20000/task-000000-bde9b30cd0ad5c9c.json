@@ -1,0 +1,17 @@
+{
+  "campaign_id": "ce390-dfirst-local-h1-20000",
+  "ordinal": "0",
+  "schema": "ce390-dfirst-task-v1",
+  "search": {
+    "chart": "half",
+    "g_max_digits": 100,
+    "m": "65",
+    "parameterization": "dfirst-thue-height-shells-v1"
+  },
+  "seconds": 86400,
+  "shells": {
+    "start": "1",
+    "stop": "20001"
+  },
+  "task_id": "bde9b30cd0ad5c9c08de4e3faf392b6940532271d12f39e5e9784d9147a3cbc4"
+}
