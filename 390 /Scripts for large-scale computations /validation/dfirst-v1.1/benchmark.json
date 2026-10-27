@@ -1,0 +1,66 @@
+{
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+  "single_cpu_affinity": 0,
+  "compiler_flags": "-O3 -pipe -std=c++17",
+  "date": "2026-10-27",
+  "m": 65,
+  "note": "Short same-host sequential calibration; shared machine, not a full campaign or a guaranteed provider rate. Both executables used identical GMP dependencies; raw pair counts retain all modular exclusions.",
+  "runs": [
+    {
+      "worker": "baseline_1.0.0",
+      "shells": {
+        "start": 1,
+        "stop": 1001
+      },
+      "g_max_digits": 100,
+      "pairs": 2001000,
+      "admissible": 44281,
+      "hits": 0,
+      "elapsed_seconds": 9.762334,
+      "worker_sha256": "7bbdb98a78887723cad195878ec92e8449349252d27c42457ab9dbedb4a0aead",
+      "microseconds_per_pair": 4.8787276411793625
+    },
+    {
+      "worker": "baseline_1.0.0",
+      "shells": {
+        "start": 100000,
+        "stop": 100005
+      },
+      "g_max_digits": 100,
+      "pairs": 2000035,
+      "admissible": 37795,
+      "hits": 0,
+      "elapsed_seconds": 8.630058,
+      "worker_sha256": "7bbdb98a78887723cad195878ec92e8449349252d27c42457ab9dbedb4a0aead",
+      "microseconds_per_pair": 4.314953647810481
+    },
+    {
+      "worker": "mod4_1.1.0",
+      "shells": {
+        "start": 1,
+        "stop": 1001
+      },
+      "g_max_digits": 100,
+      "pairs": 2001000,
+      "admissible": 29633,
+      "hits": 0,
+      "elapsed_seconds": 5.399138,
+      "worker_sha256": "2dc9cb780439bb66ddeb1b305978e555e63085b2ea9e40d0a1abef381906a336",
+      "microseconds_per_pair": 2.6982197941043014
+    },
+    {
+      "worker": "mod4_1.1.0",
+      "shells": {
+        "start": 100000,
+        "stop": 100005
+      },
+      "g_max_digits": 100,
+      "pairs": 2000035,
+      "admissible": 22695,
+      "hits": 0,
+      "elapsed_seconds": 3.854018,
+      "worker_sha256": "2dc9cb780439bb66ddeb1b305978e555e63085b2ea9e40d0a1abef381906a336",
+      "microseconds_per_pair": 1.9269754719290066
+    }
+  ]
+}

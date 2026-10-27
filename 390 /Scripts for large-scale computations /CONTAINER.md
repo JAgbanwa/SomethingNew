@@ -1,210 +1,153 @@
-# CE390 container build and deployment
+# CE390 container: d-first half-integer target
 
-The account owner submits computations through the Charity Engine dashboard,
-Remote CLI or API. This repository provides the application and task inputs;
-building or testing it does not submit CE jobs or spend CE credits.
+Use a container built from the exact source revision containing the current
+modulo-4 filter, integer `n=1 (mod 3)` checks, and d-first entrypoint.
+The production target and 1,800-core-hour project plan are in
+[README.md](README.md). The other 200 hours remain reserved for other projects.
 
-## Build and test evidence
+Building, testing, or downloading the image does not submit CE jobs. A container's
+per-task deadline does not enforce an account-wide budget; follow
+[CE_OPERATIONS.md](CE_OPERATIONS.md) for central resource accounting.
 
-The repository workflow
-[CE390 container](https://github.com/JAgbanwa/SomethingNew/actions/workflows/ce390-container.yml)
-is defined in `.github/workflows/ce390-container.yml`. It runs when the package or
-workflow changes on `main`, and can also be started with **Run workflow** in GitHub
-Actions. Select a run for the exact source commit you intend to deploy.
+## Build and validate
 
-The workflow builds a `linux/amd64` Docker image named `ce390:<full-commit-SHA>`.
-The Docker build executes the complete Python/C++ regression suite, including
-general-parameter indexing and continuation checks. The runtime image contains Python, GMP
-and the compiled worker; the compiler and build dependencies remain in the build
-stage. Compilation does not request AVX or the build host's native CPU features.
+From this computation directory on a Docker host:
 
-`container_check.py` then checks the built image using Docker, including:
+```sh
+sha256sum --check SHA256SUMS
+docker build --platform linux/amd64 --tag ce390-dfirst-local .
+python3 container_check.py --image ce390-dfirst-local --output-dir container-evidence-local
+```
 
-- the historical pilot for compatibility, plus a general pilot with many numerators;
-- exact task policies, output files and coverage for both layouts;
-- disabled container networking, one CPU and a 512 MiB memory limit;
-- read-only application/input files and a writable `/local/output/` mount;
-- execution as a non-root user with a correctly owned output directory;
-- the default launch and CE's explicit command line;
-- an accelerated computation deadline and continuation into a new output directory;
-- SIGTERM handling and error artifacts for invalid input.
+The multi-stage Docker build installs GMP and a C++17 compiler, builds the native
+workers, and runs the regression suite. The runtime contains the compiled
+workers, Python, and GMP. It does not require a compiler or network access for
+searching. A build made under emulation is not a representative CE benchmark.
 
-These checks exercise the real container and its compiled search worker. Short
-deadline tests verify interruption and resumption; they are not hour-long
-benchmarks. Inspect the workflow logs and evidence report for the checks that
-actually ran and their results. This document describes the acceptance procedure;
-its existence is not evidence that a particular workflow run passed.
+The repository's [container workflow](https://github.com/JAgbanwa/SomethingNew/actions/workflows/ce390-container.yml)
+builds a Linux amd64 image named `ce390:<source-commit>`, runs its acceptance
+checks, exports and reloads the same image, and publishes a release only after
+successful checks. Inspect the actual workflow evidence for the source revision
+you intend to use. This guide is not evidence that any particular run passed.
 
-After all checks succeed, the workflow exports the image with `docker save`,
-removes the local tag, reloads the archive with `docker load` and checks that its
-image ID equals the tested image ID. It then publishes a GitHub Release with tag
-`ce390-container-<full-commit-SHA>-<workflow-run-ID>-<run-attempt>` and these assets:
+The matching release contains:
 
 | Asset | Purpose |
 | --- | --- |
-| `ce390-linux-amd64.tar` | Uncompressed Docker-save image archive, retaining the image tag |
-| `container-evidence.zip` | Container test report and retained evidence |
-| `SHA256SUMS` | Checksums of the release assets |
+| `ce390-linux-amd64.tar` | Uncompressed Docker-save image archive |
+| `container-evidence.zip` | Build and container acceptance evidence |
+| `SHA256SUMS` | Release asset checksums |
 
-Workflow artifacts also retain build/test evidence. Use the matching run and
-release, not an unrelated latest run. Treat released image archives and task URLs
-as immutable: never replace their contents while a campaign is running. Keep the
-same tested image for all tasks and continuations; continuations also pin the
-worker's SHA256 and reject a different binary.
+Select the successful run for the intended source commit and its corresponding
+release tag. Confirm that its assets exist. Do not use an old image merely
+because it has `dthue_worker`: it may lack the new exclusion, verifier assertion,
+or default command. Preserve the tested image ID, source SHA, archive checksum,
+and worker hash for the campaign and its continuations.
 
-## Download, verify and load the tested image
+## Load a released image
 
-Open the successful workflow run, note its complete 40-character commit SHA, and
-locate the matching tag on the repository's
-[Releases page](https://github.com/JAgbanwa/SomethingNew/releases). Download all
-three assets from that release into an otherwise empty directory. A rerun has a
-different release tag, even when its source commit is unchanged; select the
-release associated with the successful run you checked. Do not use a
-constructed URL as proof that an asset exists: confirm the release and files are
-present first.
-
-In Terminal, change into that directory, then verify the files:
+Download the three assets from the matching
+[GitHub Release](https://github.com/JAgbanwa/SomethingNew/releases), then run:
 
 ```sh
-# macOS
-shasum -a 256 -c SHA256SUMS
-
-# Linux alternative
-sha256sum -c SHA256SUMS
-```
-
-Run the command for your operating system; every listed file must report `OK`.
-Next load the archive into a running Docker installation:
-
-```sh
+sha256sum --check SHA256SUMS
 docker load --input ce390-linux-amd64.tar
 ```
 
-The load output identifies the loaded tag, `ce390:<full-commit-SHA>`. Set a shell
-variable to that exact tag, for example
-by copying it from the load output:
+On macOS, use `shasum -a 256 -c SHA256SUMS`. Record the exact loaded image tag.
+The intended external platform is Linux amd64. A source edit does not update
+previously published images, staged tasks, or jobs already submitted.
+
+## Stage and run a current pilot
+
+Generate a short d-first task page using the code from the same revision:
 
 ```sh
-CE390_IMAGE='ce390:REPLACE_WITH_THE_ACTUAL_FULL_COMMIT_SHA'
-docker image inspect "$CE390_IMAGE" --format '{{.Os}}/{{.Architecture}} {{.Id}}'
+python3 d_campaign.py --campaign-id ce390-container-dfirst-pilot \
+  --h-start 1 --h-stop 121 --output-dir container-pilot-tasks
+mkdir -p ce-input ce-output
+cp container-pilot-tasks/task-000000-*.json ce-input/task.json
 ```
 
-The platform must be `linux/amd64`. Record the image ID along with the source
-commit, archive checksum and workflow run URL. On Apple Silicon, running this
-image requires Docker's amd64 emulation; its speed is not representative of CE.
-
-From a checkout of that same commit, change into the directory containing this
-document. Run the supplied pilot in fresh input and output directories:
+Set `CE390_IMAGE` to the exact tested image tag. This local example uses the
+rebuilt tag from above:
 
 ```sh
-mkdir -p ce-input ce-output
-cp examples/general-pilot/task-000000000000-e8f317752153af5c.json ce-input/task.json
+CE390_IMAGE=ce390-dfirst-local
 docker run --rm --platform linux/amd64 --network none --cpus 1 --memory 512m \
   --mount type=bind,src="$(pwd)/ce-input",dst=/local/input,readonly \
   --mount type=bind,src="$(pwd)/ce-output",dst=/local/output \
   "$CE390_IMAGE"
 ```
 
-Check `ce-output/status.json`: a successful completed pilot has `state: "complete"`
-and the assigned interval is fully covered. An empty `hits.jsonl` is a valid search
-result, not a deployment failure. Use [CE_OPERATIONS.md](CE_OPERATIONS.md) for
-independent collection, verification and continuation handling.
-
-To repeat the container acceptance checks yourself from that package directory,
-use a fresh evidence path:
-
-```sh
-python3 container_check.py --image "$CE390_IMAGE" --output-dir container-evidence-local
-```
-
-## Make the image available to Charity Engine
-
-CE documents two image sources: Docker Hub and a publicly accessible custom image
-URL. The registry route is its recommended publication procedure. An account owner
-with a Docker Hub repository can publish the already-tested image without
-rebuilding it:
-
-```sh
-CE390_REMOTE_IMAGE='YOUR_DOCKER_HUB_ACCOUNT/ce390:THE_ACTUAL_FULL_COMMIT_SHA'
-docker tag "$CE390_IMAGE" "$CE390_REMOTE_IMAGE"
-docker login
-docker push "$CE390_REMOTE_IMAGE"
-```
-
-Replace both values with the real account and matching source commit. Use a public
-repository for CE's documented public-image workflow and preserve the digest from
-the push. The CE application field is `docker:` followed by that image name and
-tag. Do not put registry or CE credentials in repository files, task JSON, logs or
-GitHub Release assets.
-
-For the release archive route, CE documents the custom-image application syntax
-`docker:image-name https://public-host/image-file`. With this release's saved
-image tag, the corresponding form is:
+The current default entrypoint runs:
 
 ```text
-docker:ce390:<full-commit-SHA> <actual-public-image-archive-URL>
+python3 /app/run_d_task.py --task /local/input/task.json --output-dir /local/output
 ```
 
-Copy the actual download URL for `ce390-linux-amd64.tar` from the release tied to
-your successful workflow run. The workflow publishes a standard uncompressed
-Docker-save archive and tests reloading it; it does not depend on undocumented
-CE compression support. The first CE-hosted pilot must still confirm that CE can
-retrieve and import that public release asset.
-No authenticated GitHub Actions artifact URL should be supplied as a public image
-URL. Do not rebuild the image to work around transport issues: preserve the tested
-image and its worker hash.
+Supplying only runner arguments selects that same runner. An explicit command,
+including the command above, remains supported. The old `/app/run_task.sh`
+requires an explicitly historical task and is not the production default.
 
-## Submit one CE pilot
+Inspect `ce-output/status.json` and retain every output file. An empty
+`hits.jsonl` can be a correctly completed pilot. For the supplied half-open
+height range `[1,121)`, the strengthened production filter should admit 517
+fractions, including all cases left possible by its necessary local conditions.
+That count is a useful smoke check, not a proof that the entire solver is correct.
 
-Use the [CE dashboard](https://dashboard.charityengine.com/) or the documented
-Remote CLI/API with your own account. Supply:
+Collect the pilot and verify all returned certificates:
 
-| Setting | Pilot value |
+```sh
+python3 collect_d.py --page container-pilot-tasks/page.json \
+  --results-dir ce-output --output-dir ce-collected
+python3 verify_d.py ce-collected/hits.jsonl --m 65
+```
+
+This direct container run bypasses `run_d_campaign.py`'s local ledger. Account
+its actual usage within the same project allowance if it uses project resources.
+
+## Charity Engine settings
+
+Use a publicly accessible tested image archive or the intended published image
+reference. For the custom-image route, the application field has the form:
+
+```text
+docker:ce390:<actual-source-commit> <actual-public-image-archive-URL>
+```
+
+Copy the actual archive URL from the matching successful release. Do not use an
+authenticated Actions-artifact URL as a public CE input. Confirm the provider's
+current import and resource settings with a pilot before scaling up.
+
+| Setting | Current value |
 | --- | --- |
-| Application | Accessible image reference from the preceding section |
-| Input file | `examples/general-pilot/task-000000000000-e8f317752153af5c.json`, staged as `task.json` |
-| Command line | `/app/run_task.sh --task /local/input/task.json --output-dir /local/output` |
-| External allowance | Two hours (`--hours 2`) |
-| Internal computation budget | 3600 seconds; the small pilot normally finishes sooner |
-| Output collection | All files under `/local/output/`, including failure artifacts |
+| Input | One d-first task, staged as `/local/input/task.json` |
+| Command | `python3 /app/run_d_task.py --task /local/input/task.json --output-dir /local/output` |
+| Task parameterization | `dfirst-thue-height-shells-v1` |
+| Production target | `m=65`, `chart=half`, `g_max_digits=100` |
+| Coordinate ranges | No `n,x` rectangle |
+| Internal task budget | 3,600 seconds by default |
+| External allowance | Historically two hours for a 3,600-second task; confirm actual provider limits and charges |
+| Output | Every file under `/local/output/`, including failure and continuation records |
 
-The documented `C.2x2` instance offers two CPU cores and 2 GiB RAM. This package
-runs one single-threaded search worker per task; the container acceptance test uses
-one CPU and 512 MiB. It does not require a GPU or AVX. Initial CE measurements
-determine practical throughput; the local or GitHub runner's speed is not a CE
-performance guarantee.
+Reserve the full possible provider allocation for every submitted attempt before
+launch. All remote jobs, continuations, retries, and startup/output charges must
+fit within the project's **1,800-hour** allowance under the relevant accounting
+unit. The separate 200-hour reserve is unavailable to this project. The local
+serial controller cannot enforce the charges of independently submitted CE jobs.
 
-Retrieve the pilot's files and inspect `status.json`. A zero process exit code can
-also mean an intentional partial result, in which case submit
-`continuation.task.json` as the next `task.json` using the same image. Preserve
-earlier outputs and verify contiguous coverage before counting a task complete.
+Use the same tested image for a task and all its continuations. A continuation
+pins the worker and Python implementation; do not discard those pins to move an
+old task to the new filter. A successful local container workflow establishes
+build and runtime behavior; the first CE-hosted pilot separately establishes
+image import, scheduling, output retrieval, and real-host throughput.
 
-For one-hour searching, generate tasks with `--seconds 3600` (the new default)
-and submit them with CE `--hours 2`. The longer external allowance leaves time
-for startup and output handling; the search still stops at its one-hour soft
-budget or earlier when its slice is complete. `examples/general/` supplies
-initial pages of the general `a/q` enclosure without a chosen numerator list.
-The older 3000-second/`--hours 1` and 6000-second/`--hours 2` settings remain
-supported. Calibrate candidate counts as described in
-[CE_OPERATIONS.md](CE_OPERATIONS.md). The account owner decides how many jobs to
-submit against available credits. No aggregate CPU-hour cap is enforced by
-these per-task settings.
-
-The historical `examples/pilot/` retains its explicit `a=1` and 3000-second
-settings only for reproducibility checks. Use the general pilot for new CE
-calibration. The old restricted campaign's runtime estimate is not an estimate
-for general `a/q` coverage. Use this update's matching container; older images
-do not understand `general-aq-v1` task files.
-
-A passing container workflow establishes reproducible build and local container
-behavior. The first CE-hosted pilot separately establishes CE image import,
-execution, output retrieval and host performance. Neither test promises a
-mathematical solution in the selected search campaign.
+The previous coordinate-rectangle container guide is preserved in
+[HISTORICAL_CONTAINER.md](HISTORICAL_CONTAINER.md).
 
 ## References
 
-- [CE computing, applications and input/output](https://www.charityengine.com/docs/Computing+with+Charity+Engine)
+- [CE computing and input/output](https://www.charityengine.com/docs/Computing+with+Charity+Engine)
 - [CE Docker packaging](https://www.charityengine.com/docs/Packaging+as+a+Docker+container)
-- [CE Remote CLI](https://www.charityengine.com/docs/Charity+Engine+Remote+CLI)
-- [CE instance types](https://www.charityengine.com/docs/Charity+Engine+Instance+Types)
 - [Docker image load](https://docs.docker.com/reference/cli/docker/image/load/)

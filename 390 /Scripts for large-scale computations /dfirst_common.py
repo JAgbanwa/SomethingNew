@@ -63,11 +63,23 @@ def prime_cap(prime: int, m: int) -> int | None:
     return None if pow(m % prime, e, prime) == pow(36, e, prime) else 0
 
 
+def half_chart_mod4(p: int, q: int, m: int) -> bool:
+    """Necessary mod-4 condition for odd q and g; leave even-m tests unchanged.
+
+    The first two terms of F(n,g) vanish modulo 4. For odd m the remaining
+    term is p*q*(p+q)*g**3 == 2, and q*g**3 is odd. Thus p*(p+q) == 2.
+    Python's nonnegative remainder handles negative p without taking abs(p).
+    """
+    return m % 2 == 0 or (p * (p + q)) % 4 == 2
+
+
 def admissible(p: int, q: int, m: int) -> bool:
     """Necessary conditions on d = p/q (lowest terms, q > 0) for a half-chart point."""
     if q <= 0 or p == 0 or gcd(p, q) != 1 or q % 2 == 0:
         return False
     if p % 3 == 0 or q % 3 == 0 or p % 3 != q % 3:
+        return False
+    if not half_chart_mod4(p, q, m):
         return False
     for value in (p, q):
         for prime, exponent in _factor(value).items():
@@ -177,6 +189,10 @@ def verify_hit(record: Any, m: int, shells: tuple[int, int] | None = None) -> di
     if _decimal(record, "n_den") != 1 or _decimal(record, "x_den") != 2 or _decimal(record, "y_den") != 2:
         raise ValueError("expected integer n and x, y with denominator 2")
     n = _decimal(record, "n_num")
+    # Production invariant: the integer cube sum 390 forces n == 1 (mod 3).
+    # Do not impose this on the m=1 known-answer fixtures or other test targets.
+    if m == 65 and n % 3 != 1:
+        raise ValueError("production n must be congruent to 1 modulo 3")
     X, Y = _decimal(record, "x_num"), _decimal(record, "y_num")
     if X % 2 == 0 or Y % 2 == 0 or Y <= 0:
         raise ValueError("X and Y must be odd and Y positive")

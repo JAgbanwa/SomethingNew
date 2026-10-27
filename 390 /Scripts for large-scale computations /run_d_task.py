@@ -148,7 +148,9 @@ def run(args: argparse.Namespace) -> int:
             "--precision-bits", str(parsed["precision_bits"]),
             "--max-precision-bits", str(parsed["max_precision_bits"])]
     with (output / "worker.stderr.log").open("ab") as stderr, (hits_path).open("a", encoding="utf-8") as hits_out:
-        proc = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=stderr, start_new_session=True)
+        managed_group = getattr(args, "managed_process_group", False)
+        proc = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=stderr,
+                                start_new_session=not managed_group)
         assert proc.stdout is not None
         os.set_blocking(proc.stdout.fileno(), False)
         selector = selectors.DefaultSelector()
@@ -216,13 +218,20 @@ def run(args: argparse.Namespace) -> int:
             selector.close()
             if proc.poll() is None:
                 try:
-                    os.killpg(proc.pid, signal.SIGTERM)
+                    if managed_group:
+                        proc.terminate()
+                    else:
+                        os.killpg(proc.pid, signal.SIGTERM)
                     proc.wait(timeout=5)
                 except (ProcessLookupError, subprocess.TimeoutExpired):
                     try:
-                        os.killpg(proc.pid, signal.SIGKILL)
+                        if managed_group:
+                            proc.kill()
+                        else:
+                            os.killpg(proc.pid, signal.SIGKILL)
                     except ProcessLookupError:
                         pass
+                    proc.wait(timeout=5)
             proc.stdout.close()
     if state != "error":
         state = "complete" if cursor >= parsed["stop"] else "partial"
@@ -250,6 +259,8 @@ def main() -> int:
     parser.add_argument("--reserve-seconds", type=int, default=60,
                         help="stop starting new shells this many seconds before the task budget")
     parser.add_argument("--status-every", type=int, default=1, help="write status.json every N shells")
+    parser.add_argument("--managed-process-group", action="store_true",
+                        help="keep worker in the owning run_d_campaign.py process group for deadline cleanup")
     args = parser.parse_args()
     if args.status_every < 1 or args.reserve_seconds < 0:
         parser.error("--status-every must be >= 1 and --reserve-seconds >= 0")

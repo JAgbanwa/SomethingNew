@@ -1,0 +1,35 @@
+{
+  "budget": {
+    "accounting": "one reserved CPU core times invocation wall seconds",
+    "core_hours": "1800",
+    "enforcement": "run_d_campaign.py persistent ledger; direct/CE jobs require external accounting",
+    "limit_ns": 6480000000000000,
+    "planned_core_hours": "1600",
+    "schema": "ce390-core-hour-budget-v1",
+    "us_per_pair": "4.5"
+  },
+  "campaign_id": "ce390-dfirst-pilot-v2",
+  "g_max_digits": 100,
+  "m": "65",
+  "note": "Writes task files only; nothing is submitted. Use run_d_campaign.py for the project cap. No n/x rectangle is imposed; |g| <= 10^g_max_digits still bounds each d.",
+  "predicted_core_hours": 3.6e-05,
+  "schema": "ce390-dfirst-page-v1",
+  "shells": {
+    "start": "1",
+    "stop": "121"
+  },
+  "tasks": [
+    {
+      "file": "task.json",
+      "pairs": "28920",
+      "predicted_seconds": 0.1,
+      "shells": {
+        "start": "1",
+        "stop": "121"
+      },
+      "task_id": "3352c2b8e30785b86871a54d97348b66c136f2620b1e1001b14d990774d5dcca",
+      "task_sha256": "ef22f86bee4358903c922dc617e0fbcd6f14e93772806ada637bc0d3629f618d"
+    }
+  ],
+  "total_pairs": "28920"
+}

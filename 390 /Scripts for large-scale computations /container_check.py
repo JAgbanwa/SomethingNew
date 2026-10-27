@@ -19,6 +19,7 @@ import time
 import uuid
 
 from run_task import iter_candidates, load_json, sha256_file, validate_task
+from dfirst_common import validate_task as validate_d_task, verify_hit as verify_d_hit
 
 
 ROOT = Path(__file__).resolve().parent
@@ -42,6 +43,7 @@ class Check:
         self.commands: list[dict] = []
         self.containers: list[dict] = []
         self.worker_sha256: str | None = None
+        self.dfirst_worker_sha256: str | None = None
         self.report: dict = {
             "schema": "ce390-container-check-v1", "status": "running",
             "requested_image": image, "non_root_user": f"{self.uid}:{self.gid}",
@@ -100,6 +102,7 @@ class Check:
                   "task_sha256": sha256_file(inputs / "task.json"),
                   "results": str(results.relative_to(self.output))}
         self.containers.append(record)
+        is_dfirst = load_json(task_path).get("schema") == "ce390-dfirst-task-v1"
         argv = ["docker", "create", "--name", name, "--network", "none", "--cpus", "1",
                 "--memory", "512m", "--memory-swap", "512m", "--pids-limit", "64",
                 "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
@@ -111,9 +114,12 @@ class Check:
             argv.extend(["--entrypoint", "/app/run_task.sh"])
         argv.append(self.image)
         if mode == "explicit":
-            argv.extend(["/app/run_task.sh", "--task", "/local/input/task.json",
+            command = ["python3", "/app/run_d_task.py"] if is_dfirst else ["/app/run_task.sh"]
+            argv.extend([*command, "--task", "/local/input/task.json",
                          "--output-dir", "/local/output"])
-        require(mode in {"default", "explicit", "override"}, "Unknown launch mode")
+        elif mode == "arguments":
+            argv.extend(["--task", "/local/input/task.json", "--output-dir", "/local/output"])
+        require(mode in {"default", "arguments", "explicit", "override"}, "Unknown launch mode")
         created = False
         try:
             self.command(argv)
@@ -121,14 +127,23 @@ class Check:
             if check_image_files:
                 files = evidence / "image-files"
                 files.mkdir()
-                for name_in_app in ("run_task.py", "parameter_space.py", "verify.py", "campaign.py",
-                                    "run_task.sh", "container_entrypoint.sh"):
+                source_names = (("run_d_task.py", "dfirst_common.py", "d_campaign.py", "d_budget.py", "run_d_campaign.py",
+                                 "collect_d.py", "verify_d.py", "container_entrypoint.sh") if is_dfirst else
+                                ("run_task.py", "parameter_space.py", "verify.py", "campaign.py",
+                                 "run_task.sh", "container_entrypoint.sh"))
+                for name_in_app in source_names:
                     self.command(["docker", "cp", f"{name}:/app/{name_in_app}", str(files / name_in_app)])
                     require(sha256_file(files / name_in_app) == sha256_file(ROOT / name_in_app),
                             f"Image source differs from this checkout: {name_in_app}")
-                self.command(["docker", "cp", f"{name}:/app/bin/cf_worker", str(files / "cf_worker")])
-                self.worker_sha256 = sha256_file(files / "cf_worker")
-                self.report["worker_sha256"] = self.worker_sha256
+                worker_name = "dthue_worker" if is_dfirst else "cf_worker"
+                self.command(["docker", "cp", f"{name}:/app/bin/{worker_name}", str(files / worker_name)])
+                worker_sha = sha256_file(files / worker_name)
+                if is_dfirst:
+                    self.dfirst_worker_sha256 = worker_sha
+                    self.report["dfirst_worker_sha256"] = worker_sha
+                else:
+                    self.worker_sha256 = worker_sha
+                    self.report["worker_sha256"] = worker_sha
             # Do not --rm: retain inspect/log evidence even when the process fails.
             if stop_after_checkpoint:
                 self.command(["docker", "start", name])
@@ -172,6 +187,21 @@ class Check:
             require(not list(results.glob("startup-error-*.json")), f"{label}: unexpected startup error")
             status = load_json(results / "status.json")
             returned = load_json(results / "task.json")
+            if is_dfirst:
+                validate_d_task(returned)
+                require(returned["search"]["chart"] == "half", f"{label}: half-integer policy changed")
+                require(not any(k in returned["search"] for k in ("bounds", "n_min", "n_max", "x_min", "x_max")),
+                        f"{label}: unexpected coordinate rectangle")
+                require(status["state"] == "complete" and status["next_h"] == returned["shells"]["stop"],
+                        f"{label}: d-first pilot did not complete")
+                require(status["worker_sha256"] == self.dfirst_worker_sha256, f"{label}: d-first worker hash mismatch")
+                require(returned == load_json(task_path), f"{label}: returned task differs from submitted task")
+                for line in (results / "hits.jsonl").read_text(encoding="utf-8").splitlines():
+                    if line.strip():
+                        verify_d_hit(json.loads(line), int(returned["search"]["m"]),
+                                     (int(returned["shells"]["start"]), int(returned["shells"]["stop"])))
+                record["status"] = status
+                return status
             validate_task(returned)
             require(returned["search"].get("require_integer_sqrt") is True
                     and returned["search"]["signs"] == "all", f"{label}: search policy changed")
@@ -219,6 +249,29 @@ class Check:
         self.image = inspected["Id"]  # Pin every invocation to the inspected image.
         self.report.update(image_id=self.image, image_repo_digests=inspected.get("RepoDigests", []))
 
+        # The no-argument and argument-only entrypoints now run the requested
+        # half-integer d-first search. Old engines remain explicit commands.
+        d_tasks = self.output / "dfirst-pilot-tasks"
+        self.command([sys.executable, str(ROOT / "d_campaign.py"), "--campaign-id", "ce390-dfirst-container",
+                      "--h-start", "1", "--h-stop", "121", "--seconds", "120", "--target-seconds", "60",
+                      "--output-dir", str(d_tasks)])
+        d_task = next(d_tasks.glob("task-*.json"))
+        status = self.container("dfirst-default", d_task, self.output / "dfirst-results" / "default",
+                                mode="default", check_image_files=True)
+        require(int(status["counters"]["admissible"]) == 517, "D-first modulo-4 filter count disagrees")
+        self.container("dfirst-arguments", d_task, self.output / "dfirst-results" / "arguments", mode="arguments")
+        self.report["dfirst_pilot"] = {"height_stop_exclusive": 121, "admissible": 517,
+                                       "target": "integer n = 1 mod 3; odd X,Y; Y > 0", "rectangle": None}
+
+        known_tasks = self.output / "dfirst-known-tasks"
+        self.command([sys.executable, str(ROOT / "d_campaign.py"), "--campaign-id", "ce390-dfirst-known",
+                      "--m", "1", "--h-start", "1", "--h-stop", "450", "--seconds", "120",
+                      "--target-seconds", "60", "--output-dir", str(known_tasks)])
+        known_task = next(known_tasks.glob("task-*.json"))
+        known = self.container("dfirst-known", known_task, self.output / "dfirst-known-results", mode="explicit")
+        require(known["unique_hits_in_this_output"] == "7", "D-first known-answer test must recover seven points")
+        self.report["dfirst_known_answer_hits"] = 7
+
         supplied = ROOT / "examples" / "pilot"
         pages = sorted(supplied.glob("page-*.json"))
         require(len(pages) == 1, "Expected exactly one supplied pilot page")
@@ -231,7 +284,7 @@ class Check:
             shutil.copyfile(path, saved_pilot / path.name)
         self.report["supplied_pilot_sha256"] = {p.name: sha256_file(p) for p in (pages[0], pilot_task)}
         status = self.container("pilot", pilot_task, self.output / "pilot-results" / "run-01",
-                                mode="default", check_image_files=True)
+                                mode="explicit", check_image_files=True)
         require(status["complete"], "Supplied pilot did not complete within its assigned budget")
         self.report["pilot"] = self.collect(saved_pilot / pages[0].name, self.output / "pilot-results",
                                            self.output / "pilot-collected")

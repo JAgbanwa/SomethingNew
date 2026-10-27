@@ -6,25 +6,30 @@
 36n^3 - 65 = -2*d*x^2*( -(x+6n) + sqrt( (x+6n)^2 + (36n^3-65)/x ) )
 ```
 
-has a point with integer `n`, `x = X/2` (`X` odd) and
-`sqrt((x+6n)^2 + (36n^3-65)/x) = y = Y/2` (`Y` odd).
+has a point with integer `n = 1 (mod 3)`, `x = X/2` (`X` odd) and
+`sqrt((x+6n)^2 + (36n^3-65)/x) = y = Y/2` (`Y` odd and positive).
+Both signs of `n` and `X` are eligible. Production uses `m=65`.
 
 This engine enumerates **`d` itself**, ordered by height `H(d) = max(|p|, q)` for
 `d = p/q` in lowest terms. For each `d` it solves one binary cubic Thue
 equation and reports every such point with `1 <= |g| <= 10^100`, where `g`
 (defined below) satisfies `|x| = q|g|/2`. Every reported point is checked
-exactly against the original, unsquared equation. Every `d` that is processed
-is *settled* up to that bound, including all points inside the historical
-`10^43 <= |n| <= 10^45`, `10^53 <= |x| <= 10^55` rectangle.
+exactly against the original, unsquared equation. There is no selected `n,x`
+rectangle. A processed `d` is settled only up to the stated `g` bound, not
+for arbitrary coordinates.
 
-It runs alongside the existing a/q rectangle search. No existing file's
-behaviour is changed.
+This is the primary production workflow. Its project ceiling is **1,800
+aggregate core-hours**, with **200 separate hours reserved for other projects**.
+The default estimated-work plan is 1,600 hours inside that ceiling. The
+remaining 200 project hours provide headroom; they are distinct from the 200
+hours outside this project. See [README.md](README.md) for the budgeted runner.
 
 | File | Role |
 | --- | --- |
 | `src/dthue_worker.cpp` | Native GMP worker: shells of `d`, Thue solver, exact certificates |
 | `d_campaign.py` | Writes task files (disjoint height-shell ranges) and `page.json` |
 | `run_d_task.py` | Restartable runner: per-shell checkpoint, continuation, status |
+| `run_d_campaign.py` | Serial campaign controller with durable attempt accounting and the project ceiling |
 | `collect_d.py` | Coverage union, gaps, verified hit list for a campaign |
 | `verify_d.py` | Independent exact re-verification of `hits.jsonl` |
 | `dfirst_common.py` | Independent Python admissibility, shell order, verifier |
@@ -88,11 +93,26 @@ Cubes are `0, +-1 (mod 9)`, so `A == B == C (mod 3)`, which gives
 and `n = (A+B+C)/6` is an integer, even if `n` is allowed denominators
 2, 3 or 6. The worker refuses `m` divisible by 3.
 
-**Each representation appears twice.** `A+B+C` is even, so the number of
+**The production residue class.** When `m=65`, the cube sum is
+`390 = 3 (mod 9)`, so `A = B = C = 1 (mod 3)`. For every such integer `t`,
+`t^3 = 3t-2 (mod 27)`. Thus
+
+```text
+390 = 3(A+B+C)-6 = 18n-6 (mod 27),
+```
+
+which implies `n = 1 (mod 3)`. The production native and Python verifiers
+also check that residue explicitly. This production-only assertion is not
+applied to the `m=1` known-answer tests.
+
+**Every representation has a half-integer chart.** `A+B+C` is even, so the number of
 odd cubes is 0 or 2, and it cannot be 0 because `8 ∤ 6m` for odd `m`. So
 exactly one cube is even. Pairing it with either odd cube gives an odd pair
-sum `u`. So every representation yields exactly two half-chart points,
-with two different values of `d`. In the k = 6 test, `(-43, -58, 65)` gives
+sum `u`. So each representation admits two choices of the odd component left as `C`;
+these produce half-chart points, although repeated components can make the
+points or `d` values coincide. Order the other pair so `A>B`; then `Y>0` and
+`X` is odd. No integer representation of 390 is lost by the half-chart
+requirement when all signed coordinates are allowed. In the k = 6 test, `(-43, -58, 65)` gives
 `d = -22/101` and `d = 22/7`.
 
 ## 2. Solving one Thue equation completely up to |g| <= G
@@ -126,8 +146,9 @@ target `T = 2m` and real `t = n/g`, the bound `|t - beta| >= eta` gives
   it. On disagreement the precision is doubled and the expansion is replayed.
   The pass ends only when the next possible denominator exceeds
   `G = 10^g_max_digits`. A precision cap raises an error and never reports an
-  empty range as complete. With `G = 10^100`, 730 bits suffice. No
-  refinement was needed in any of the 5.25 million k=390 runs below.
+  empty range as complete. With `G = 10^100`, the historical runs below used their initial
+  precision without refinement. That observation is not a universal precision
+  guarantee; the exact enclosure and refinement checks remain required.
 * **Small g (exhaustive).** For `1 <= |g| <= g0` (a rigorous rational upper
   bound computed from the bracket), all integer roots `n` of the cubic
   `F_d(n, g) = T` are found by exact binary search on its at most three
@@ -150,14 +171,16 @@ certifies `1 <= |g| <= G`. For an **unbounded** certificate of a particular
 
 ## 3. Which d need to be tried (proved filters)
 
-All of the following are necessary for a half-chart point with `d = p/q`. Only
-about **1.9 %** of all pairs `(p, q)` survive them.
+All of the following are necessary for a half-chart point with reduced
+`d = p/q`, `q>0`. The earlier filter admitted about 1.9% of raw pairs in its
+recorded samples. The current modulo-4 filter is stronger; its runtime effect
+must be measured rather than inferred from that historical percentage.
 
 | Condition | Reason |
 | --- | --- |
 | `q` odd, `g` odd | `u = qg = -X` is odd |
 | `3 ∤ p q g`, `p ≡ q (mod 3)` | `A ≡ B ≡ C ≡ ε (mod 3)`, so `u ≡ w ≡ 2ε ≢ 0` |
-| `4 ∤ p` (m odd) | `v_2(uvw) = v_2(2(36n^3 - m)) = 1` |
+| `p(p+q) = 2 (mod 4)` (m odd) | Reduce (Thue) modulo 4 with odd `q,g`; this also implies `4 ∤ p` |
 | `25 ∤ pq`, `169 ∤ pq` (m = 65) | for `l | m`: `v_l(36n^3 - m) <= v_l(m)` when `v_l(m) <= 2` |
 | every prime `l ≡ 1 (mod 3)`, `l ∤ m`, dividing `p` **or** `q` must allow `36t^3 ≡ m (mod l)` | `u, w` divide `2(36n^3 - m)` |
 
@@ -166,19 +189,58 @@ The last row generalizes the repository's 733-prime q-sieve. It applies to
 as `q`. The test suite checks that, restricted to primes below 20,000, it
 reproduces `q_sieve.forbidden_primes()` exactly.
 
+
+### Proof and implementation of the stronger modulo-4 filter
+
+For odd `m`, reduce the Thue equation modulo 4:
+
+```text
+p*q*(p+q)*g^3 = 2*m = 2 (mod 4).
+```
+
+The half-chart requires `q,g` odd. Also `p(p+q)` is even because `q` is odd.
+Multiplication of an even residue by the odd residue `q*g^3` preserves
+whether it is 0 or 2 modulo 4. Therefore
+
+```text
+p*(p+q) = 2 (mod 4)
+```
+
+is necessary. With odd `q`, it is equivalent to `p = 2 (mod 4)` when `p` is
+even, or `p = q (mod 4)` when `p` is odd. For example `p=-1,q=5` satisfies
+the old `4 ∤ p` condition but fails the new condition; negative numerators
+must not be interpreted using an unnormalized language remainder.
+
+The native worker normalizes signed residues before evaluating the small
+modulo-4 product, avoiding large integer multiplication and overflow.
+`dfirst_common.admissible` implements the same necessary condition independently
+in Python; `tools/certify_d.gp` applies it before the PARI solve. The test suite
+covers signed cases, residue exhaustion against the Thue equation, agreement
+between worker and Python counts, and preservation of the known-answer hits.
+It does not apply this odd-`m` rule to even-`m` validation modes.
+
+At `m=65`, height at most 120 contains **517** currently admissible fractions,
+compared with **789** under the historical filter: 272 additional exclusions
+(34.47% of the earlier survivors). All seven recorded `k=6` half-chart points
+survive. This comparison measures solver candidates, not wall-time speedup.
+
 ## 4. What a completed task proves
 
 For a returned shell range `[a, b)`, `collect_d.py` states:
 
 > every `d = p/q` with `a <= max(|p|, q) < b` has **no** point with integer
-> `n`, `x = X/2`, `y = Y/2` (`X, Y` odd) and `1 <= |g| <= 10^100` (so
+> `n = 1 (mod 3)`, `x = X/2`, `y = Y/2` (`X, Y` odd, `Y>0`) and `1 <= |g| <= 10^100` (so
 > `|x| <= q * 10^100 / 2`) other than the listed, exactly verified hits.
 
 Inadmissible `d` have no such points at all (section 3). The shell order makes
 the statement cumulative: completing shells `1 .. H` settles **every** `d` of
 height at most `H`.
 
-## 5. Results so far for k = 390 (m = 65)
+## 5. Historical results for k = 390 (m = 65)
+
+These are retained records from the earlier filter and worker version. Their
+original counts and hashes are not relabeled as current runs. The strengthened
+filter retains the mathematical scope while excluding more impossible cases.
 
 | Range | Method | `d` checked | Result |
 | --- | --- | --- | --- |
@@ -187,30 +249,73 @@ height at most `H`.
 
 Files and details are in `validation/dfirst/`.
 
-## 6. Throughput and the reach of a 2,000 core-hour budget
+## 6. Planning inside the 1,800-core-hour project ceiling
 
-Measured on one core here (x86-64, g++ 13 `-O3`, GMP 6.3):
+The committed earlier-worker timings (x86-64, g++ 13 `-O3`, GMP 6.3, one core
+of a shared cloud sandbox) are calibration references:
 
-| Height range | Admissible `d` | µs per admissible `d` | µs per `(p, q)` pair |
+| Height range | Historical admissible `d` | Microseconds per admissible `d` | Microseconds per raw pair |
 | --- | --- | --- | --- |
-| 1 – 2,000 | 160,117 | 213 | 4.3 |
-| 1 – 12,000 | 5,252,925 | 218 | 3.97 |
-| 1 – 20,000 (campaign task) | 14,168,321 | 223 | 3.96 |
-| 100,000 – 100,004 | 37,795 | 211 | 4.0 |
+| 1–2,000 | 160,117 | 213 | 4.3 |
+| 1–12,000 | 5,252,925 | 218 | 3.97 |
+| 1–20,000 | 14,168,321 | 223 | 3.96 |
+| 100,000–100,004 | 37,795 | 211 | 4.0 |
 
-The cost per `d` does not grow with height, because the precision is set by
-`G`, not by `d`. Shell `H` has `4H - 1` pairs, so completing every shell up to
-`H` costs about `2H^2 * 4 µs`:
+Short native comparisons of the old and strengthened worker are recorded in
+[validation/dfirst-v1.1/benchmark.json](validation/dfirst-v1.1/benchmark.json):
 
-| Every `d` of height up to | Core-hours |
-| --- | --- |
-| 100,000 | ≈ 22 |
-| 300,000 | ≈ 200 |
-| 500,000 | ≈ 560 |
-| 950,000 | ≈ 2,000 |
+| Height range | Version 1.0.0: admissible / seconds | Version 1.1.0: admissible / seconds |
+| --- | ---: | ---: |
+| 1–1,000 | 44,281 / 9.762334 | 29,633 / 5.399138 |
+| 100,000–100,004 | 37,795 / 8.630058 | 22,695 / 3.854018 |
 
-`d_campaign.py --us-per-pair` (default 4.5) sizes the tasks. Recalibrate it
-from the first returned `status.json` files: `elapsed_seconds / counters.pairs`.
+Both versions used the same CPU affinity, target `m=65`, and `G=10^100`.
+These are short, unrepeated samples on a shared host; they are not a production
+throughput guarantee. Keep the 4.5-microsecond planning rate until deployment
+measurements justify changing it.
+
+These measurements do not establish a height-independent cost at arbitrary
+scale or performance on other hosts. Recalibrate the strengthened worker from
+returned statuses: `1e6 * elapsed_seconds / counters.pairs` is microseconds per
+raw pair. Account for runner and host overhead separately.
+
+Shell `H` has `4H-1` raw pairs, so cumulative pair count and projected work are
+
+```text
+P(H) = 2*H^2 + H,
+estimated core-hours = P(H) * microseconds_per_pair / 3,600,000,000.
+```
+
+At the conservative generator default of 4.5 microseconds per pair:
+
+| Cumulative height | Estimated search core-hours |
+| --- | ---: |
+| 100,000 | 25.000125 |
+| 300,000 | 225.000375 |
+| 500,000 | 625.000625 |
+| 799,999 | 1599.997000 |
+| 800,000 | 1600.001000 |
+| 900,000 | 2025.001125 |
+| 950,000 | 2256.251188 |
+
+The default generator derives height **799,999** and 1,901 tasks from a
+**1,600-hour estimated work allocation**. The project ledger's separate hard ceiling is **1,800 hours**.
+The **200 hours for other projects are outside that ceiling** and are never
+used for this project's retries or headroom. A budget can expire before all
+planned heights finish; the collector then reports the actual covered ranges.
+
+On Linux, `run_d_campaign.py` pins each runner and worker to one available CPU
+and reserves each invocation's full possible duration before
+launch and charges elapsed wall time after termination. Its serial one-worker
+accounting includes continuations, errors, and shutdown allowance. An unresolved
+crash reservation stays held against the allowance and blocks automatic restart. Preserve the
+ledger and manifest; do not start a fresh ledger to evade an exhausted budget.
+
+The controller bounds only invocations it launches. Manual distributed CE jobs
+need centralized accounting for the actual provider allocation or charges,
+including multiple cores and startup/output time. A per-task soft deadline or
+an estimated page cost cannot enforce a global external-service bill. See
+[CE_OPERATIONS.md](CE_OPERATIONS.md).
 
 ## 7. Validation
 
@@ -240,36 +345,80 @@ from the first returned `status.json` files: `elapsed_seconds / counters.pairs`.
 
 ## 8. Running it
 
+Run from this directory:
+
 ```sh
-make -j2 && make test                       # builds bin/dthue_worker too
-python3 d_campaign.py --campaign-id ce390-dfirst-001 --h-start 1 --h-stop 300001 \
-    --seconds 3600 --target-seconds 3000 --output-dir dfirst-tasks
-python3 run_d_task.py --task dfirst-tasks/task-000000-*.json --output-dir out/t0
-python3 collect_d.py --page dfirst-tasks/page.json --results-dir out --output-dir collected
-python3 verify_d.py collected/hits.jsonl --m 65
+make -j2
+make test
+python3 d_campaign.py --campaign-id ce390-dfirst-1800 \
+    --output-dir dfirst-tasks --plan-only
+python3 d_campaign.py --campaign-id ce390-dfirst-1800 \
+    --budget-core-hours 1800 --planned-core-hours 1600 \
+    --us-per-pair 4.5 --g-max-digits 100 --output-dir dfirst-tasks
+python3 run_d_campaign.py --page dfirst-tasks/page.json \
+    --output-dir dfirst-results --max-attempts 1
 ```
 
-On a Charity Engine host, with the task staged as `/local/input/task.json`:
+The last command runs one charged pilot attempt. Continue the same ledger by
+omitting `--max-attempts 1`; then collect all returned attempt directories:
 
 ```sh
+python3 run_d_campaign.py --page dfirst-tasks/page.json --output-dir dfirst-results
+python3 collect_d.py --page dfirst-tasks/page.json \
+    --results-dir dfirst-results --output-dir dfirst-collected
+python3 verify_d.py dfirst-collected/hits.jsonl --m 65
+```
+
+An explicit `--h-stop` selects a smaller finite range; endpoints are half-open.
+The generator creates files only and does not submit CE jobs. Directly running
+`run_d_task.py` bypasses the local campaign ledger and therefore requires
+separate project-level resource accounting.
+
+On a Charity Engine host, stage one task as `/local/input/task.json` and use
+
+```text
 python3 /app/run_d_task.py --task /local/input/task.json --output-dir /local/output
 ```
 
-Use `--hours 2` for `seconds: 3600`, as for the other task types. The runner
-stops starting new shells `--reserve-seconds` (default 60) before the budget.
-It checkpoints after every shell (a few seconds of work at `H ~ 10^5`) and
-writes `continuation.task.json` when shells remain. A continuation pins the
-worker and Python hashes. A worker hit is accepted only after the Python
-verifier reproduces it exactly, and it is `fsync`ed to `hits.jsonl` at once.
+The rebuilt container selects that command by default. Use an image whose
+source, worker version, and tests correspond to this change; a previously
+published image does not acquire the new filter or entrypoint automatically.
+An external two-hour allowance has historically been used for a 3,600-second
+internal task budget. Confirm provider limits and account for its actual
+resource charges inside 1,800 hours; see [CE_OPERATIONS.md](CE_OPERATIONS.md).
 
-## 9. Relation to the a/q rectangle search, and limits
+The task runner checkpoints each completed shell and writes
+`continuation.task.json` if work remains. Continuations pin the worker and
+Python hashes. A hit is accepted only after the independent verifier reproduces
+it exactly and is then flushed to `hits.jsonl`.
 
-For `x > 0` the old slope is `a/q = 2|d + 1|` (for `x < 0` it parametrizes
-the conjugate `v/u`), so the existing search was already organised around `d`.
-Its rectangle, however, forces `d` to heights near `10^55`, about
-`4.5*10^100` slopes. The new engine visits `d` in order of height and lets the
-size of `n, x` be unbounded up to `|g| <= 10^100`.
+## 9. Relation to the historical rectangle search
 
-Limits, stated plainly. A point is reached only once the campaign reaches the
-height of its `d = (A+C)/(A+B)` (reduced). The integer chart (`x` integral)
-is not searched by this engine. Adding it means allowing even `q` or even `g`.
+The production campaign no longer restricts `n,x` to the old large rectangle.
+Those interfaces and fixtures remain explicitly historical; see
+[HISTORICAL_RECTANGLE_SEARCH.md](HISTORICAL_RECTANGLE_SEARCH.md).
+
+For the old defaults `abs(n)<=10^45` and `abs(x)>=10^54`, put
+`r=abs(n)/abs(x)<=10^-9` and
+
+```text
+E = (36*r^3 + 65/abs(x)^3) / (2*(1-6*r)).
+```
+
+Rationalizing the radical gives `0<abs(d+1)<=6*r+E` when `x>0`, and
+`0<abs(d)<=E` when `x<0`. Since a reduced nonzero numerator has magnitude at
+least 1, a point in that rectangle needs `q>=166666667` in the positive-`x`
+case, and `q` at least approximately `5.55*10^25` in the negative-`x` case.
+These conservative bounds already exceed the height affordable in this
+campaign. Opening coordinate ranges therefore explores a different region;
+it does not make the old rectangle exhaustible.
+
+The unreduced pair sums can share large factors. Their size does not prove
+that the reduced rational height must be near `10^55`. A campaign reaches a
+point only after visiting the height of its reduced `d` and a sufficient `g`
+bound. Every finite run covers only its recorded heights and scale bound.
+
+The half-chart search retains every integer representation of 390 after an
+appropriate permutation of its components, but does not list every integer
+coordinate chart of that representation. Neither this parameter ordering nor
+a finite compute allowance guarantees finding a solution.
