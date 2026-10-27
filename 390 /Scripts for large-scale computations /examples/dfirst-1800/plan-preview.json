@@ -1,0 +1,23 @@
+{
+  "schema": "ce390-dfirst-page-v1",
+  "campaign_id": "ce390-dfirst-1800",
+  "m": "65",
+  "g_max_digits": 100,
+  "shells": {
+    "start": "1",
+    "stop": "800000"
+  },
+  "total_pairs": "1279997600001",
+  "predicted_core_hours": 1599.997,
+  "budget": {
+    "schema": "ce390-core-hour-budget-v1",
+    "core_hours": "1800",
+    "limit_ns": 6480000000000000,
+    "planned_core_hours": "1600",
+    "us_per_pair": "4.5",
+    "accounting": "one reserved CPU core times invocation wall seconds",
+    "enforcement": "run_d_campaign.py persistent ledger; direct/CE jobs require external accounting"
+  },
+  "note": "Writes task files only; nothing is submitted. Use run_d_campaign.py for the project cap. No n/x rectangle is imposed; |g| <= 10^g_max_digits still bounds each d.",
+  "task_count": 1901
+}

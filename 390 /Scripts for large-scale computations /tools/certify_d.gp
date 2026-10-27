@@ -16,7 +16,9 @@ certify(p, q, m) =
 {
   my(S = thue(thueinit(72*'x^3 - 12*p*q*'x + p*q*(p+q), 1), 2*m), pts = List(), n, g, Y);
   for (i = 1, #S, n = S[i][1]; g = S[i][2]; Y = (2*p + q)*g - 12*n;
-    if ((q*g) % 2 && Y > 0, listput(pts, [p/q, n, -q*g/2, Y/2])));
+    if ((q*g) % 2 && Y > 0,
+      if (m == 65 && lift(Mod(n, 3)) != 1, error("production n must be 1 modulo 3"));
+      listput(pts, [p/q, n, -q*g/2, Y/2])));
   pts;
 }
 
@@ -26,7 +28,8 @@ admissible(p, q, m) =
   my(f, l, e, c);
   if (p == 0 || q <= 0 || gcd(p, q) != 1 || q % 2 == 0, return(0));
   if (p % 3 == 0 || q % 3 == 0 || (p - q) % 3 != 0, return(0));
-  if (m % 2 && p % 4 == 0, return(0));
+  \\ Odd q,g and F=2m force p(p+q)=2 mod4 for odd m. Mod handles signed p.
+  if (m % 2 && lift(Mod(p, 4) * Mod(p+q, 4)) != 2, return(0));
   f = factor(abs(p*q));
   for (i = 1, #f~, l = f[i,1]; e = f[i,2];
     if (l <= 3, next);

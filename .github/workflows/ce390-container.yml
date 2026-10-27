@@ -63,7 +63,7 @@ jobs:
             > "$RUNNER_TEMP/ce390-evidence/docker-load.txt"
           test "$(docker image inspect --format '{{.Id}}' "$CE390_IMAGE")" = \
             "$(cat "$RUNNER_TEMP/ce390-evidence/image-id.txt")"
-          docker run --rm --network none "$CE390_IMAGE" /app/bin/cf_worker --version \
+          docker run --rm --network none "$CE390_IMAGE" /app/bin/dthue_worker --version \
             > "$RUNNER_TEMP/ce390-evidence/reloaded-worker-version.txt"
 
       - name: Package deployment evidence
@@ -83,11 +83,15 @@ jobs:
               "image_id": (evidence / "image-id.txt").read_text().strip(),
               "image_archive_url": base + "/ce390-linux-amd64.tar",
               "ce_application": "docker:" + os.environ["CE390_IMAGE"] + " " + base + "/ce390-linux-amd64.tar",
-              "ce_commandline": "/app/run_task.sh --task /local/input/task.json --output-dir /local/output",
+              "ce_commandline": "python3 /app/run_d_task.py --task /local/input/task.json --output-dir /local/output",
               "ce_hours": 2, "task_budget_seconds": 3600,
-              "parameter_mode": "general-aq-v1",
-              "pilot_task": "examples/general-pilot/task-000000000000-98cd2e9a64102cc7.json",
-              "supplied_pilot_ce_hours": 2, "supplied_pilot_task_budget_seconds": 3600,
+              "parameter_mode": "dfirst-thue-height-shells-v1",
+              "target": "n integer and 1 mod 3; x=X/2, y=Y/2; X,Y odd; Y>0; m=65",
+              "coordinate_rectangle": None, "g_max_digits": 100,
+              "project_budget_core_hours": 1800, "other_projects_reserved_hours": 200,
+              "budget_enforcement": "run_d_campaign.py for centrally managed execution; direct CE jobs need provider accounting",
+              "pilot_task": "examples/dfirst-pilot/task.json",
+              "supplied_pilot_ce_hours": 1, "supplied_pilot_task_budget_seconds": 120,
               "legacy_pilot_ce_hours": 1, "legacy_pilot_task_budget_seconds": 3000,
               "ce_job_submitted": False,
           }
@@ -103,7 +107,7 @@ jobs:
           (release / "release-tag.txt").write_text(tag + "\n")
           notes = (
               "Built from commit " + sha + ".\n\n"
-              "Linux amd64 image; regression suite, mixed-numerator general a/q pilot, legacy pilot, deadline/continuation, "
+              "Linux amd64 image; regression suite, d-first default and argument-only pilots, seven known k=6 points, legacy pilots, deadline/continuation, "
               "and independent collection checks passed. See the workflow logs and "
               "container-evidence.zip for exact observations.\n\n"
               "Workflow: " + deployment["workflow_run"] + "\n\n"
@@ -111,10 +115,14 @@ jobs:
               "CE command line:\n\n\x60\x60\x60text\n" + deployment["ce_commandline"] + "\n\x60\x60\x60\n\n"
               "Stage the selected task as task.json. Newly generated tasks default to a "
               "3,600-second search budget: use a two-hour CE allowance (--hours 2) so "
-              "startup and output handling have time. Use examples/general-pilot for calibration. "
-              "General campaigns derive all numerators from the integer bounds; no a=1 default remains. "
-              "Historical a=1 examples are retained only for reproducibility. "
-              "These are per-task limits, not an aggregate CPU-hour cap.\n\n"
+              "startup and output handling have time. Use examples/dfirst-pilot/task.json for the initial check. "
+              "The default search enumerates rational d by height with integer n=1 mod3, "
+              "x=X/2 and y=Y/2 for odd X,Y and positive Y. It has no n,x rectangle; |g|<=10^100 remains explicit. "
+              "The modulo-4 filter p(p+q)=2 mod4 is applied before solving. "
+              "run_d_campaign.py maintains the central 1,800-core-hour project ledger; 200 other-project hours "
+              "are outside this allowance. Direct distributed CE submissions require provider-side accounting "
+              "for all allocations, retries and overhead; per-task deadlines alone do not enforce the total. "
+              "Historical rectangle tools are available only through explicit commands.\n\n"
               "The archive is an uncompressed docker-save image; validate SHA256SUMS before "
               "loading it. Image URLs are unique per build and are never overwritten.\n\n"
               "No CE job was submitted by this workflow. The first CE-hosted pilot must "

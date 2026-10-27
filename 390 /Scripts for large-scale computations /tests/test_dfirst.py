@@ -118,10 +118,12 @@ class DFirstTests(unittest.TestCase):
         hits = [r for r in rows if r["type"] == "hit"]
         found = {(Fraction(int(h["d_num"]), int(h["d_den"])), int(h["n_num"]), Fraction(int(h["x_num"]), 2))
                  for h in hits}
-        for d, n, x in [(Fraction(-22, 101), -6, Fraction(101, 2)), (Fraction(1, 181), -9, Fraction(-181, 2)),
-                        (Fraction(7, 439), -33, Fraction(-439, 2)), (Fraction(22, 7), -6, Fraction(-7, 2)),
-                        (Fraction(1), 0, Fraction(-1, 2))]:
-            self.assertIn((d, n, x), found)
+        expected = {(Fraction(-22, 101), -6, Fraction(101, 2)), (Fraction(1, 181), -9, Fraction(-181, 2)),
+                    (Fraction(7, 439), -33, Fraction(-439, 2)), (Fraction(22, 7), -6, Fraction(-7, 2)),
+                    (Fraction(1), 0, Fraction(-1, 2)), (Fraction(181), -9, Fraction(-1, 2)),
+                    (Fraction(439, 7), -33, Fraction(-7, 2))}
+        self.assertEqual(found, expected)
+        self.assertEqual(len(hits), 7)
         for h in hits:
             verify_hit(h, 1, (1, 450))
         self.assertEqual(rows[-1], {"type": "end", "state": "complete", "next_h": 450})
@@ -135,11 +137,21 @@ class DFirstTests(unittest.TestCase):
             self.assertEqual(r["pairs"], len(pairs))
             self.assertEqual(r["admissible"], sum(admissible(p, q, 65) for p, q in pairs), r["h"])
         self.assertEqual(sum(r["pairs"] for r in shells), pairs_in_shells(1, 121))
+        self.assertEqual(sum(r["admissible"] for r in shells), 517)
         self.assertFalse([r for r in rows if r["type"] == "hit"])
 
     def test_k6_filter_counts_match(self):
         for r in [r for r in self.campaign(1, 1, 80) if r["type"] == "shell"]:
             self.assertEqual(r["admissible"], sum(admissible(p, q, 1) for p, q in shell_pairs(r["h"])))
+
+    def test_even_and_negative_targets_filter_counts_match(self):
+        # The extra mod-4 filter is conditional on m being odd. Signed p is
+        # enumerated in every shell, and negative m has the same parity rule.
+        for m in (-65, -2, 2):
+            for row in [r for r in self.campaign(m, 1, 31, digits=10) if r["type"] == "shell"]:
+                self.assertEqual(row["admissible"],
+                                 sum(admissible(p, q, m) for p, q in shell_pairs(row["h"])),
+                                 (m, row["h"]))
 
     def test_prime_conditions_agree_with_repository_733_prime_sieve(self):
         primes = [p for p in range(5, 20000) if all(p % d for d in range(2, isqrt(p) + 1))]
@@ -213,7 +225,11 @@ class DFirstTests(unittest.TestCase):
         self.assertIn("bin/dthue_worker: src/dthue_worker.cpp", (ROOT / "Makefile").read_text())
         self.assertIn("all: bin/cf_worker bin/xy_cf_worker bin/dthue_worker", (ROOT / "Makefile").read_text())
         docker = (ROOT / "Dockerfile").read_text()
-        self.assertIn("COPY dfirst_common.py d_campaign.py run_d_task.py collect_d.py verify_d.py /app/", docker)
+        app_sources = {source for line in docker.splitlines()
+                       if line.startswith("COPY ") and line.split()[-1] == "/app/"
+                       for source in line.split()[1:-1]}
+        self.assertTrue({"dfirst_common.py", "d_campaign.py", "run_d_task.py",
+                         "run_d_campaign.py", "collect_d.py", "verify_d.py"} <= app_sources)
         self.assertIn("/app/bin/dthue_worker", docker)
 
     def test_rejects_m_divisible_by_three(self):

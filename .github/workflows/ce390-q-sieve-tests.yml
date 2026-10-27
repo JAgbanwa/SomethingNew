@@ -68,6 +68,10 @@ jobs:
           row=json.loads((root/'collected/hits.jsonl').read_text())
           assert (row['n_num'],row['n_den'],row['x_num'],row['x_den'],row['y_num'],row['y_den'])==('-65','1','5785','6','3391','6')
           PY
+      - name: Verify d-first default entrypoints and exact known answers
+        run: |
+          python3 container_check.py --image ce390-xy-ci \
+            --output-dir "$RUNNER_TEMP/ce390-evidence/container-defaults"
       - name: Run both final integer-component pilots in the container
         run: |
           evidence="$RUNNER_TEMP/ce390-evidence/components"

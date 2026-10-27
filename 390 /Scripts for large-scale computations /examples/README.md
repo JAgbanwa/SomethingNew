@@ -1,32 +1,50 @@
 # CE390 task examples
 
-Use `general-pilot/` for new calibration and `general/` for initial general
-search pages. Neither contains a selected numerator list. Every allowed
-numerator for each assigned denominator is derived from the integer bounds.
+## Current d-first half-integer search
 
-- `general-pilot/`: one 30,000-index task using the full derived denominator
-  enclosure `[1, x_max]`. The page assigns only the first 30,000 indices in
-  the documented ordering, solely for runtime calibration. This does not assume
-  solutions occur in that prefix and is not full-region coverage.
-- `general/`: ten initial 50,000,000-index tasks in the full derived parameter
-  enclosure. The count is a chunk-size example to calibrate. Each task has a
-  3600-second soft budget and may return a continuation. The enormous total
-  in the manifest is an implicit mathematical domain, not a funded campaign.
+Generate new tasks with `d_campaign.py` from the current tested revision.
+Production searches rational `d`, integer `n=1 (mod 3)`, odd half-integer
+`x=X/2`, and odd positive half-integer principal radical `y=Y/2`.
+It uses height shells and an explicit `g` bound, with no `n,x` rectangle.
 
-The ordering is by increasing denominator, then increasing numerator. Early
-rows may have only a=1 because the exact bounds exclude other numerators there;
-later rows automatically introduce 5, 7, 11, and further admissible numerators.
-No numerator or denominator region is assumed to contain a solution. The pilot
-and first general page overlap in index coverage; do not submit both as separate
-work unless intentionally duplicating computation. No finite completed prefix
-establishes that the full integer rectangle has been searched.
+A small production pilot is:
 
-`pilot/`, `50min/`, `60min/`, and `100min/` are **historical a=1 fixtures**.
-Their original bytes remain available to verify old results and regression
-evidence. They are superseded for the requested general search. Do not mistake
-their old 49.95-billion-index total for the size of the new general campaign.
+```sh
+python3 d_campaign.py --campaign-id ce390-dfirst-pilot \
+  --h-start 1 --h-stop 121 --g-max-digits 100 \
+  --output-dir dfirst-pilot
+```
 
-All these parameter domains can overlap. Track exact completed coverage before
-submitting further work. The scripts do not submit CE jobs or enforce the
-campaign-wide 2,000 CPU-hour allowance. Submit 3600-second tasks with CE
-`--hours 2` to leave startup and output time.
+The strengthened filter admits 517 fractions in these shells. This count is a
+regression check, not a success probability. A full default plan is generated
+without `--h-stop`, using the 1,800-hour project ceiling, 1,600 estimated work
+hours, and the measured rate supplied with `--us-per-pair`.
+
+Use `run_d_campaign.py` for local serial execution under the durable project
+ledger. A direct single-task run or distributed CE submission needs separate
+central resource accounting. The project's 1,800 hours include its retries and
+pilots; the additional 200 hours are reserved for other projects. See
+[../README.md](../README.md) and [../CE_OPERATIONS.md](../CE_OPERATIONS.md).
+
+## Historical fixtures
+
+The existing example directories preserve earlier algorithms, task identities,
+and reproduction evidence. They are not inputs for the new default entrypoint.
+
+| Directories | Historical scope |
+| --- | --- |
+| `general-pilot/`, `general/` | Integer-coordinate rectangle and q-major auxiliary slopes |
+| `variable-aq-pilot/` | Interleaved rational-coordinate slopes with integer cube components |
+| `integer-components-pilot/` | Earlier q-major integer-component tasks |
+| `xy-pilot/`, `xy-diagnostic/` | Broader equal-denominator rational-coordinate tests |
+| `pilot/`, `50min/`, `60min/`, `100min/` | Earlier selected-numerator integer-coordinate fixtures |
+
+These historical files retain their original bytes. Explicit historical runners
+remain available for validation; do not stage one of these tasks as a d-first
+task or silently reinterpret its completed coverage. Different historical modes
+can overlap, so their counts must not be added as disjoint new coverage.
+
+`../validation/dfirst/` also retains recorded d-first results from the earlier
+filter, including the seven `k=6` known-answer certificates. Preserve their
+original counts, hashes, and timing attribution; use newly generated tasks to
+calibrate the current worker.

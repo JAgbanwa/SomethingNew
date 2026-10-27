@@ -1,0 +1,78 @@
+{
+  "budget_observations": {
+    "all_attempts_settled": true,
+    "attempts": 1,
+    "charged_core_hours": 0.00011587959027777778,
+    "limit_core_hours": 1800.0,
+    "repeat_invocation_started_zero_additional_attempts": true
+  },
+  "collection": {
+    "admissible_d_solved": "517",
+    "all_tasks_complete": true,
+    "campaign_id": "ce390-dfirst-pilot-v2",
+    "campaign_shells": {
+      "start": "1",
+      "stop": "121"
+    },
+    "covered_shells": [
+      {
+        "start": "1",
+        "stop": "121"
+      }
+    ],
+    "error_returns": [],
+    "g_max_digits": 100,
+    "m": "65",
+    "schema": "ce390-dfirst-collection-v1",
+    "statement": "For every covered shell range [a, b): every d = p/q with a <= max(|p|, q) < b has NO half-chart point with 1 <= |g| <= 10^g_max_digits other than the verified hits listed.",
+    "unrelated_status_files": [],
+    "verified_hits": 0,
+    "worker_sha256": [
+      "2dc9cb780439bb66ddeb1b305978e555e63085b2ea9e40d0a1abef381906a336"
+    ]
+  },
+  "date": "2026-10-27",
+  "scope": "Native m=65 pilot through rational height120, G=10^100; no coordinate rectangle.",
+  "status": {
+    "campaign_id": "ce390-dfirst-pilot-v2",
+    "counters": {
+      "admissible": "517",
+      "convergents": "100489",
+      "exact_roots": "0",
+      "other_branch": "0",
+      "other_chart": "0",
+      "pairs": "28920",
+      "refinements": "0",
+      "small_g_values": "1204",
+      "thue_solutions": "0"
+    },
+    "coverage_note": "Every admissible d = p/q with 1 <= max(|p|,q) < 121 was solved for ALL half-chart points with 1 <= |g| <= 10^100 (x = -q*g/2). Inadmissible d provably have none.",
+    "elapsed_seconds": 0.327,
+    "implementation_sha256": "7f823a6cbf9bb3529791d9dc3c04e737cdf5172c28a513e43dfa3b9bd19cf298",
+    "next_h": "121",
+    "ordinal": "0",
+    "output_coverage": {
+      "start": "1",
+      "stop": "121"
+    },
+    "reason": "shells_exhausted",
+    "remaining_shells": "0",
+    "schema": "ce390-dfirst-status-v1",
+    "search": {
+      "chart": "half",
+      "g_max_digits": 100,
+      "m": "65",
+      "parameterization": "dfirst-thue-height-shells-v1"
+    },
+    "shells": {
+      "start": "1",
+      "stop": "121"
+    },
+    "started_utc": "2026-10-27T16:30:45.531688+00:00",
+    "state": "complete",
+    "task_id": "3352c2b8e30785b86871a54d97348b66c136f2620b1e1001b14d990774d5dcca",
+    "unique_hits_in_this_output": "0",
+    "updated_utc": "2026-10-27T16:30:45.858560+00:00",
+    "worker_sha256": "2dc9cb780439bb66ddeb1b305978e555e63085b2ea9e40d0a1abef381906a336"
+  }
+}

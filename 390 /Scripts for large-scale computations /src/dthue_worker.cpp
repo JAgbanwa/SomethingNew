@@ -1,6 +1,7 @@
 // CE390 d-first half-chart engine. See D_FIRST.md for every proof used here.
 //
-// Target: rational d with integer n, x = X/2 (X odd), y = Y/2 (Y odd) and
+// Target: rational d with integer n (n == 1 mod 3 when m = 65),
+// x = X/2 (X odd), y = Y/2 (Y odd) and
 //   36n^3 - m = -2*d*x^2*(y - (x+6n)),  y = sqrt((x+6n)^2 + (36n^3-m)/x) >= 0,
 // with m = 65 for k = 390 (m is a parameter only so that k = 6m test cases
 // with KNOWN half-chart points, e.g. m = 1, can exercise the identical code).
@@ -32,7 +33,7 @@
 namespace {
 using Z = mpz_class;
 using Q = mpq_class;
-constexpr const char* VERSION = "1.0.0";
+constexpr const char* VERSION = "1.1.0";
 constexpr const char* PARAMETERIZATION = "dfirst-thue-height-shells-v1";
 
 Z integer(const std::string& s) {
@@ -365,7 +366,14 @@ struct Admissibility {
         uint64_t a = static_cast<uint64_t>(p < 0 ? -p : p);
         if (a % 3 == 0) return false;
         if (((p % 3) + 3) % 3 != q % 3) return false;
-        if ((m % 2 != 0) && a % 4 == 0) return false;
+        // For odd m and odd q,g, F(n,g) == 2m == 2 (mod 4) requires
+        // p(p+q) == 2 (mod 4). This also rejects odd p with p != q (mod 4).
+        // Normalize the SIGNED p residue and multiply only residues, so no
+        // signed-remainder mistake or overflow in p*(p+q) can remove a point.
+        if (m % 2 != 0) {
+            uint32_t p4 = static_cast<uint32_t>((p % 4 + 4) % 4);
+            if ((p4 * ((p4 + q % 4) % 4)) % 4 != 2) return false;
+        }
         if (!ok[a]) return false;
         return std::gcd(a, static_cast<uint64_t>(q)) == 1;
     }
@@ -373,6 +381,10 @@ struct Admissibility {
 
 // Exact verification of a half-chart point against the ORIGINAL equation.
 std::string certify(long long m, const Z& p, const Z& q, const Z& n, const Z& g, const char* source) {
+    // From the integer cube sum 390 modulo 9 and 27, n == 1 (mod 3).
+    // Keep this explicit production invariant separate from generic-m tests.
+    if (m == 65 && mpz_fdiv_ui(n.get_mpz_t(), 3) != 1)
+        throw std::runtime_error("internal production n == 1 (mod 3) check failed");
     Q x(-q * g, 2), y((2 * p + q) * g - 12 * n, 2), d(p, q);
     x.canonicalize(); y.canonicalize(); d.canonicalize();
     Q S = x + 6 * n, A = 36 * n * n * n - Z(static_cast<long>(m));
