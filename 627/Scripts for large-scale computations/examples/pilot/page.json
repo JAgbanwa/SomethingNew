@@ -1,0 +1,30 @@
+{
+  "campaign_id": "ce627-local-pilot",
+  "created": "2026-10-30T22:55:54.998288+00:00",
+  "estimated_core_hours": 0.08,
+  "g_max_digits": 100,
+  "h_start": 1,
+  "h_stop": 4000,
+  "k": 627,
+  "parameterization": "ce627-dfirst-thue-both-charts-v1",
+  "schema": "ce627-dfirst-page-v1",
+  "tasks": [
+    {
+      "estimated_core_hours": 0.049999,
+      "file": "tasks/ce627-local-pilot-0.json",
+      "h_start": 1,
+      "h_stop": 3163,
+      "pairs": 19999650,
+      "task_id": "ce627-local-pilot-0"
+    },
+    {
+      "estimated_core_hours": 0.029971,
+      "file": "tasks/ce627-local-pilot-1.json",
+      "h_start": 3163,
+      "h_stop": 4000,
+      "pairs": 11988351,
+      "task_id": "ce627-local-pilot-1"
+    }
+  ],
+  "us_per_pair": 9.0
+}

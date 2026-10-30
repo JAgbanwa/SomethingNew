@@ -1,0 +1,11 @@
+{
+  "campaign_id": "ce627-local-pilot",
+  "deadline_seconds": 0,
+  "g_max_digits": 100,
+  "h_start": 3163,
+  "h_stop": 4000,
+  "k": 627,
+  "parameterization": "ce627-dfirst-thue-both-charts-v1",
+  "schema": "ce627-dfirst-task-v1",
+  "task_id": "ce627-local-pilot-1"
+}

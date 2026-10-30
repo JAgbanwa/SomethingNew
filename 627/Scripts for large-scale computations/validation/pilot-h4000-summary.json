@@ -1,0 +1,30 @@
+{
+  "counters": {
+    "admissible": 820834,
+    "convergents": 160024865,
+    "exact_roots": 0,
+    "half_chart": 0,
+    "integer_chart": 0,
+    "other_branch": 0,
+    "pairs": 31988001,
+    "refinements": 0,
+    "small_g_values": 8328,
+    "thue_solutions": 0
+  },
+  "covered_heights": [
+    [
+      1,
+      4000
+    ]
+  ],
+  "errors": [],
+  "g_max_digits": [
+    100
+  ],
+  "gaps": [],
+  "half_chart_hits": 0,
+  "hits": 0,
+  "integer_chart_hits": 0,
+  "k": 627,
+  "task_dirs": 2
+}
