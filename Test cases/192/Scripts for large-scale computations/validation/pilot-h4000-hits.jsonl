@@ -1,0 +1,3 @@
+{"chart": "integer", "cube_a": "4", "cube_b": "4", "cube_c": "4", "d_den": "1", "d_num": "1", "g": "8", "k": "192", "n": "2", "s_den": "1", "s_num": "0", "source": "small_g", "type": "hit", "x_den": "1", "x_num": "-4"}
+{"chart": "integer", "cube_a": "16", "cube_b": "-20", "cube_c": "16", "d_den": "1", "d_num": "-8", "g": "-4", "k": "192", "n": "2", "s_den": "1", "s_num": "18", "source": "small_g", "type": "hit", "x_den": "1", "x_num": "2"}
+{"chart": "integer", "cube_a": "16", "cube_b": "16", "cube_c": "-20", "d_den": "8", "d_num": "-1", "g": "4", "k": "192", "n": "2", "s_den": "1", "s_num": "0", "source": "small_g", "type": "hit", "x_den": "1", "x_num": "-16"}
