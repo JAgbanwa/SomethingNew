@@ -11,7 +11,7 @@ A small production pilot is:
 
 ```sh
 python3 d_campaign.py --campaign-id ce390-dfirst-pilot \
-  --h-start 1 --h-stop 121 --g-max-digits 100 \
+  --h-start 1 --h-stop 121 --g-max-digits 2 \
   --output-dir dfirst-pilot
 ```
 

@@ -243,6 +243,9 @@ class DFirstTests(unittest.TestCase):
             env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
             subprocess.run([sys.executable, str(ROOT / "d_campaign.py"), "--campaign-id", "t", "--m", "1",
                             "--h-start", "1", "--h-stop", "450", "--target-seconds", "100",
+                            # Keep the pre-1.2.0 workload: the 1-second deadline below must
+                            # interrupt the run, and the default |g| <= 100 finishes too fast.
+                            "--g-max-digits", "100",
                             "--output-dir", str(tmp / "tasks")], check=True, capture_output=True, env=env)
             page = json.loads((tmp / "tasks/page.json").read_text())
             self.assertEqual(len(page["tasks"]), 1)

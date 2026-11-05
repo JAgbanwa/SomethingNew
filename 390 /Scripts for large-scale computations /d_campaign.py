@@ -58,7 +58,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--h-start", type=int, default=1, help="first height shell (inclusive)")
     ap.add_argument("--h-stop", type=int, help="last height shell (exclusive); otherwise derived from the planned hours")
     ap.add_argument("--m", type=int, default=65, help="65 for k = 390; other m only for validation")
-    ap.add_argument("--g-max-digits", type=int, default=100, help="every point with |g| <= 10^digits is found")
+    ap.add_argument("--g-max-digits", type=int, default=2,
+                    help="every point with |g| <= 10^digits is found (default 2: |g| <= 100, i.e. |g| < 100)")
     ap.add_argument("--seconds", type=int, default=3600, help="task wall-time budget (CE: --hours 2 for 3600)")
     ap.add_argument("--target-seconds", default="3000", help="predicted run time per task")
     ap.add_argument("--us-per-pair", default="4.5",

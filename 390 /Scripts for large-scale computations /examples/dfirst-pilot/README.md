@@ -1,7 +1,7 @@
 # Current d-first pilot
 
 `task.json` covers rational heights `1 <= H < 121` for `m=65`, with odd
-half-integer coordinates and `|g| <= 10^100`. The strengthened modulo-4 filter
+half-integer coordinates and `|g| <= 100`. The strengthened modulo-4 filter
 leaves **517** admissible fractions. There are no coordinate rectangle bounds.
 The task's soft deadline is 120 seconds; this is a short correctness check,
 not a representative campaign throughput estimate or an expected solution.

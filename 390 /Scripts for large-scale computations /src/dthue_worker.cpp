@@ -33,7 +33,7 @@
 namespace {
 using Z = mpz_class;
 using Q = mpq_class;
-constexpr const char* VERSION = "1.1.0";
+constexpr const char* VERSION = "1.2.0";
 constexpr const char* PARAMETERIZATION = "dfirst-thue-height-shells-v1";
 
 Z integer(const std::string& s) {
@@ -418,7 +418,7 @@ struct Config {
     long long m = 65;
     uint32_t h_start = 1, h_stop = 0;  // shells h_start <= H < h_stop
     Z G;                                // max |g|
-    unsigned g_digits = 100;
+    unsigned g_digits = 2;                  // G = 10^2 = 100 (see D_FIRST.md: |g| <= 100 == |g| < 100 here)
     double deadline = 0;                // seconds; 0 = none
     unsigned bits0 = 128, max_bits = 1u << 18;
     bool raw = false; Z raw_target, raw_gmax; bool have_raw_target = false, have_raw_gmax = false;
@@ -426,7 +426,7 @@ struct Config {
 
 void usage() {
     std::cout <<
-        "Usage (campaign): dthue_worker --h-start H0 --h-stop H1 [--m 65] [--g-max-digits 100]\n"
+        "Usage (campaign): dthue_worker --h-start H0 --h-stop H1 [--m 65] [--g-max-digits 2]\n"
         "                  [--deadline-seconds S] [--precision-bits 128] [--max-precision-bits 262144]\n"
         "  Sweeps every admissible d = p/q with H0 <= max(|p|,q) < H1 (one height shell at a time)\n"
         "  and reports every half-chart point with 1 <= |g| <= 10^digits (|x| = q|g|/2).\n"

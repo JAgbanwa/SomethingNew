@@ -36,8 +36,10 @@ That identity implies `n = 1 (mod 3)`; the production verifier also checks it
 explicitly. The mathematical reduction and congruence proof are in
 [D_FIRST.md](D_FIRST.md).
 
-The fast solver's default coverage is **`1 <= abs(g) <= 10^100`**. Therefore
-`abs(x) <= q*10^100/2` for each tested fraction. Removing the coordinate
+The fast solver's default coverage is **`1 <= abs(g) <= 100`** (`--g-max-digits 2`).
+Every accepted `g` is odd, so this is the same set as `abs(g) < 100`. Therefore
+`abs(x) <= q*100/2` for each tested fraction. (Versions before 1.2.0 defaulted
+to `abs(g) <= 10^100`; see the historical results below.) Removing the coordinate
 rectangle does not remove this limit or the finite rational-height range.
 Completed coverage means the assigned heights and the recorded `g` bound;
 it does not establish global nonexistence or promise a discovery within the
@@ -87,7 +89,7 @@ python3 d_campaign.py \
   --budget-core-hours 1800 \
   --planned-core-hours 1600 \
   --us-per-pair 4.5 \
-  --g-max-digits 100 \
+  --g-max-digits 2 \
   --output-dir dfirst-tasks
 ```
 

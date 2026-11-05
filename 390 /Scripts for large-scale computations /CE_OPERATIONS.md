@@ -4,7 +4,8 @@ The current search uses `d_campaign.py`, `run_d_task.py`, `collect_d.py`, and
 `verify_d.py`. It seeks rational `d`, integer `n = 1 (mod 3)`, and
 `x=X/2`, `y=Y/2` with odd `X,Y` and positive `Y`. It has no prescribed
 coordinate rectangle. The fast solver's finite scope is the assigned rational
-height shells and `1<=abs(g)<=10^g_max_digits`; the default exponent is 100.
+height shells and `1<=abs(g)<=10^g_max_digits`; the default exponent is 2
+(`abs(g)<=100`, identical to `abs(g)<100` because accepted `g` are odd).
 See [D_FIRST.md](D_FIRST.md) for the proof and exact acceptance conditions.
 
 ## 1. Project limit and units
@@ -24,7 +25,7 @@ requires CPU-affinity support and pins the runner and worker to one available CP
 ```sh
 python3 d_campaign.py --campaign-id ce390-dfirst-1800 \
   --budget-core-hours 1800 --planned-core-hours 1600 \
-  --us-per-pair 4.5 --g-max-digits 100 --output-dir dfirst-tasks
+  --us-per-pair 4.5 --g-max-digits 2 --output-dir dfirst-tasks
 python3 run_d_campaign.py --page dfirst-tasks/page.json \
   --output-dir dfirst-results --max-attempts 1
 ```
@@ -169,7 +170,7 @@ unfinished tasks, which remain part of its report.
 
 For a completed interval `[a,b)`, the finite statement is that each reduced
 `d=p/q` with `a<=max(abs(p),q)<b` has no qualifying point with
-`1<=abs(g)<=10^100` other than the listed verified hits. The local exclusions
+`1<=abs(g)<=10^g_max_digits` (default `abs(g)<=100`) other than the listed verified hits. The local exclusions
 prove impossibility for the rejected fractions. No finite interval certifies
 all rational parameters, arbitrary `g`, or the earlier coordinate rectangle.
 

@@ -11,7 +11,7 @@ The defaults give:
 - Separate reserve for other projects: **200 hours outside this project**.
 - Planning rate: **4.5 microseconds per raw pair**; recalibrate on the actual hosts.
 - Rational heights: **1 through 799,999**, inclusive.
-- Scope per rational parameter: **1 <= |g| <= 10^100**; no n,x rectangle.
+- Scope per rational parameter: **1 <= |g| <= 100** (same as |g| < 100: accepted g are odd); no n,x rectangle.
 - Generated task count: **1,901**; each task and its continuations retain exact coverage.
 
 Generate the actual page and tasks in a new directory:
