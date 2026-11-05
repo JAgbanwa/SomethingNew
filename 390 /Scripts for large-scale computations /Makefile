@@ -5,7 +5,7 @@ LDFLAGS ?=
 LDLIBS ?= -lgmpxx -lgmp
 
 .PHONY: all clean test
-all: bin/cf_worker bin/xy_cf_worker bin/dthue_worker
+all: bin/cf_worker bin/xy_cf_worker bin/dthue_worker bin/gap_worker
 
 bin/cf_worker: src/cf_worker.cpp src/q_sieve.hpp
 	mkdir -p bin
@@ -19,8 +19,12 @@ bin/dthue_worker: src/dthue_worker.cpp
 	mkdir -p bin
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $< $(LDFLAGS) $(LDLIBS) -o $@
 
+bin/gap_worker: src/gap_worker.cpp
+	mkdir -p bin
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $< $(LDFLAGS) -lgmp -o $@
+
 clean:
-	rm -f bin/cf_worker bin/xy_cf_worker bin/dthue_worker
+	rm -f bin/cf_worker bin/xy_cf_worker bin/dthue_worker bin/gap_worker
 
 test: all
 	python3 -m unittest discover -s tests -v

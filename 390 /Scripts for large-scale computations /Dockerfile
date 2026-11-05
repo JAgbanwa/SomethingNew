@@ -2,7 +2,7 @@
 # digests in deployment records; the tag here is intentionally readable.
 FROM debian:bookworm-slim AS build
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends g++ make libgmp-dev python3 \
+    && apt-get install -y --no-install-recommends g++ make libgmp-dev python3 python3-numpy \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /build
 COPY Makefile Dockerfile ./
@@ -22,9 +22,11 @@ COPY campaign.py run_task.py parameter_space.py q_sieve.py verify.py run_task.sh
 COPY xy_campaign.py xy_common.py run_xy_task.py collect_xy.py verify_xy.py /app/
 COPY cube_campaign.py /app/
 COPY aq_traversal.py /app/
+# Production: gap search (GAP_SEARCH.md): python3 /app/run_gap_task.py --task ... --output-dir ...
+COPY gap_common.py gap_campaign.py run_gap_task.py collect_gap.py audit_gap.py /app/
 # d-first half-chart engine (D_FIRST.md): python3 /app/run_d_task.py --task ... --output-dir ...
 COPY dfirst_common.py d_campaign.py d_budget.py run_d_task.py run_d_campaign.py collect_d.py verify_d.py /app/
-RUN chmod 0755 /app/run_task.sh /app/container_entrypoint.sh /app/bin/cf_worker /app/bin/xy_cf_worker /app/bin/dthue_worker \
+RUN chmod 0755 /app/run_task.sh /app/container_entrypoint.sh /app/bin/cf_worker /app/bin/xy_cf_worker /app/bin/dthue_worker /app/bin/gap_worker \
     && mkdir -p /local/input /local/output
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1

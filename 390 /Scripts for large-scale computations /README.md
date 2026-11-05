@@ -1,6 +1,38 @@
-# CE390: rational-d search with an 1,800-core-hour project limit
+# CE390 large-scale computations
 
-**Current target:** find a rational `d` and an integer `n = 1 (mod 3)` such that
+## Production search: the Booker–Sutherland gap (start here)
+
+The production engine searches `x^3 + y^3 + z^3 = 390` directly, in the part
+of the `(d, z)` plane, `d = |x+y|`, that Booker and Sutherland's 2020 search
+did not cover: `d > 10^19/54` with `3.847 d <= |z| <= 64 d`. That is the best
+place per core-hour we know of. Under their heuristic, a 2,000-core-hour run
+has about a 1 in 270,000 chance of a solution for 390 (1 in 89,000 for 627),
+and it yields a new exact exclusion region either way. Method, proofs,
+yield arithmetic, validation and commands: **[GAP_SEARCH.md](GAP_SEARCH.md)**.
+
+```sh
+make -j2 && make test
+python3 gap_campaign.py --calibrate
+python3 gap_campaign.py --campaign-id ce390-gap --core-hours 1800 --ratio-max 64 \
+    --us-per-d <measured> --output-dir gap-tasks
+python3 run_gap_task.py --task gap-tasks/tasks/<task>.json --output-dir gap-results/<task>
+python3 collect_gap.py --page gap-tasks/page.json --results gap-results --output-dir gap-collected
+python3 audit_gap.py --page gap-tasks/page.json --results gap-results --fraction 0.02
+```
+
+The container's default command runs `run_gap_task.py` on a staged gap task
+(it still runs `run_d_task.py` for a d-first task).
+
+---
+
+## Historical: rational-d (d-first) search
+
+The d-first engine below is kept for reproducibility. It is no longer the
+recommended use of compute: its reachable solutions have components of
+size about `H·g`, and the record three-cube solutions all have `g` at most
+16 with `H ~ 10^15 – 10^20` (GAP_SEARCH.md, section 1).
+
+**Former target:** find a rational `d` and an integer `n = 1 (mod 3)` such that
 
 ```text
 x = X/2,  X odd,

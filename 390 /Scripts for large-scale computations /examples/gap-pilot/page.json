@@ -1,0 +1,30 @@
+{
+  "campaign_id": "ce390-gap-pilot",
+  "created": "2026-11-05T21:50:52.394175+00:00",
+  "d_start": "185185185185185186",
+  "d_stop": "185185187185185186",
+  "estimated_core_hours": 0.15,
+  "heuristic_expected_solutions": 2.6848711040559325e-10,
+  "k": 390,
+  "method": "booker-sutherland-gap-v1",
+  "ratio_max": 64,
+  "rho": 0.032935,
+  "schema": "ce390-gap-page-v1",
+  "tasks": [
+    {
+      "d_start": "185185185185185186",
+      "d_stop": "185185186185185186",
+      "estimated_core_hours": 0.075,
+      "file": "tasks/ce390-gap-pilot-0.json",
+      "task_id": "ce390-gap-pilot-0"
+    },
+    {
+      "d_start": "185185186185185186",
+      "d_stop": "185185187185185186",
+      "estimated_core_hours": 0.075,
+      "file": "tasks/ce390-gap-pilot-1.json",
+      "task_id": "ce390-gap-pilot-1"
+    }
+  ],
+  "us_per_d": 0.27
+}

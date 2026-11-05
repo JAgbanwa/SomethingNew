@@ -1,0 +1,32 @@
+{
+  "campaign_id": "ce390-gap-pilot",
+  "counters": {
+    "candidates": 3220512879,
+    "d_live": 299024777,
+    "d_no_roots": 1034308557,
+    "d_skipped_mod3": 666666666,
+    "d_total": 2000000000,
+    "exact_checks": 58061,
+    "hits": 0,
+    "pass_2adic": 3220512879,
+    "pass_residue": 58061,
+    "roots": 722767311
+  },
+  "covered_d": [
+    [
+      "185185185185185186",
+      "185185187185185186"
+    ]
+  ],
+  "d_values_covered": 2000000000,
+  "errors": [],
+  "gaps": [],
+  "heuristic_expected_solutions_covered": 2.6848711040559325e-10,
+  "hits": 0,
+  "k": 390,
+  "ratio_max": 64,
+  "worker_core_hours": 0.145,
+  "worker_sha256": [
+    "8ead8c4ce833e8692c91cd7fdd40d150b29cfa794d090ea11556ec8c6eb368d5"
+  ]
+}
