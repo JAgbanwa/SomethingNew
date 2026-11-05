@@ -12,8 +12,8 @@ Both signs of `n` and `X` are eligible. Production uses `m=65`.
 
 This engine enumerates **`d` itself**, ordered by height `H(d) = max(|p|, q)` for
 `d = p/q` in lowest terms. For each `d` it solves one binary cubic Thue
-equation and reports every such point with `1 <= |g| <= 100` (`--g-max-digits 2`;
-since every accepted `g` is odd this is exactly `|g| < 100`), where `g`
+equation and reports every such point with `g = +-1` (`--g-max-digits 0`, `G = 1`;
+larger `G = 10^D` is available with `--g-max-digits D`), where `g`
 (defined below) satisfies `|x| = q|g|/2`. Every reported point is checked
 exactly against the original, unsquared equation. There is no selected `n,x`
 rectangle. A processed `d` is settled only up to the stated `g` bound, not
@@ -231,7 +231,7 @@ For a returned shell range `[a, b)`, `collect_d.py` states:
 
 > every `d = p/q` with `a <= max(|p|, q) < b` has **no** point with integer
 > `n = 1 (mod 3)`, `x = X/2`, `y = Y/2` (`X, Y` odd, `Y>0`) and `1 <= |g| <= 10^D`
-> (production default `D = 2`: `|g| <= 100`, so `|x| <= 50 q`) other than the listed,
+> (production default `D = 0`: `g = +-1`, so `|x| = q/2`) other than the listed,
 > exactly verified hits.
 
 Inadmissible `d` have no such points at all (section 3). The shell order makes
@@ -356,7 +356,7 @@ python3 d_campaign.py --campaign-id ce390-dfirst-1800 \
     --output-dir dfirst-tasks --plan-only
 python3 d_campaign.py --campaign-id ce390-dfirst-1800 \
     --budget-core-hours 1800 --planned-core-hours 1600 \
-    --us-per-pair 4.5 --g-max-digits 2 --output-dir dfirst-tasks
+    --us-per-pair 4.5 --g-max-digits 0 --output-dir dfirst-tasks
 python3 run_d_campaign.py --page dfirst-tasks/page.json \
     --output-dir dfirst-results --max-attempts 1
 ```

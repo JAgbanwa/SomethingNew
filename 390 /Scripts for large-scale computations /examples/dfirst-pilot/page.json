@@ -9,7 +9,7 @@
     "us_per_pair": "4.5"
   },
   "campaign_id": "ce390-dfirst-pilot-v2",
-  "g_max_digits": 2,
+  "g_max_digits": 0,
   "m": "65",
   "note": "Writes task files only; nothing is submitted. Use run_d_campaign.py for the project cap. No n/x rectangle is imposed; |g| <= 10^g_max_digits still bounds each d.",
   "predicted_core_hours": 3.6e-05,
@@ -27,8 +27,8 @@
         "start": "1",
         "stop": "121"
       },
-      "task_id": "93bcf3e94134d6c15efd9830ea98b46ac1bde1ef921288b96bf9fa2354d10556",
-      "task_sha256": "807160c07d1fd4ab58b2f8a6fd721c4f37b0a2b7e606522b4bac8c44442a07c1"
+      "task_id": "9e41a232ff916ce6ea9e383b5a567d4bf01e8fa9ba6fc7542fe1793d817cde24",
+      "task_sha256": "45508ac42927014a9f3a4d67b0bf57bcd025de7f3db078feb26a1f58188d3ac9"
     }
   ],
   "total_pairs": "28920"

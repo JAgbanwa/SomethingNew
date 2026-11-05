@@ -232,6 +232,19 @@ class DFirstTests(unittest.TestCase):
                          "run_d_campaign.py", "collect_d.py", "verify_d.py"} <= app_sources)
         self.assertIn("/app/bin/dthue_worker", docker)
 
+    def test_g_equals_one_is_exact_subset(self):
+        """--g-max-digits 0 (the default) reports exactly the g = +-1 points."""
+        full = [r for r in self.campaign(1, 1, 400, digits=100) if r["type"] == "hit"]
+        one = [r for r in self.campaign(1, 1, 400, digits=0) if r["type"] == "hit"]
+        key = lambda r: (r["d_num"], r["d_den"], r["g"], r["n_num"])
+        self.assertTrue(one)
+        self.assertTrue(all(abs(int(r["g"])) == 1 for r in one))
+        self.assertEqual(sorted(map(key, one)), sorted(key(r) for r in full if abs(int(r["g"])) == 1))
+        default = subprocess.run([str(self.worker), "--m", "1", "--h-start", "1", "--h-stop", "400"],
+                                 text=True, capture_output=True, timeout=600)
+        self.assertEqual(sorted(map(key, one)), sorted(key(json.loads(l)) for l in default.stdout.splitlines()
+                                                       if '"hit"' in l))
+
     def test_rejects_m_divisible_by_three(self):
         run = subprocess.run([str(self.worker), "--m", "3", "--h-start", "1", "--h-stop", "5"],
                              text=True, capture_output=True)

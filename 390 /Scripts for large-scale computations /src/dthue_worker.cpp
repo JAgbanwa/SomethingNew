@@ -33,7 +33,7 @@
 namespace {
 using Z = mpz_class;
 using Q = mpq_class;
-constexpr const char* VERSION = "1.2.0";
+constexpr const char* VERSION = "1.3.0";
 constexpr const char* PARAMETERIZATION = "dfirst-thue-height-shells-v1";
 
 Z integer(const std::string& s) {
@@ -418,7 +418,7 @@ struct Config {
     long long m = 65;
     uint32_t h_start = 1, h_stop = 0;  // shells h_start <= H < h_stop
     Z G;                                // max |g|
-    unsigned g_digits = 2;                  // G = 10^2 = 100 (see D_FIRST.md: |g| <= 100 == |g| < 100 here)
+    unsigned g_digits = 0;                  // G = 10^0 = 1: only g = +-1 (see D_FIRST.md)
     double deadline = 0;                // seconds; 0 = none
     unsigned bits0 = 128, max_bits = 1u << 18;
     bool raw = false; Z raw_target, raw_gmax; bool have_raw_target = false, have_raw_gmax = false;
@@ -426,7 +426,7 @@ struct Config {
 
 void usage() {
     std::cout <<
-        "Usage (campaign): dthue_worker --h-start H0 --h-stop H1 [--m 65] [--g-max-digits 2]\n"
+        "Usage (campaign): dthue_worker --h-start H0 --h-stop H1 [--m 65] [--g-max-digits 0]\n"
         "                  [--deadline-seconds S] [--precision-bits 128] [--max-precision-bits 262144]\n"
         "  Sweeps every admissible d = p/q with H0 <= max(|p|,q) < H1 (one height shell at a time)\n"
         "  and reports every half-chart point with 1 <= |g| <= 10^digits (|x| = q|g|/2).\n"
@@ -447,7 +447,7 @@ Config arguments(int argc, char** argv) {
         if (a == "--m") { Z z = integer(v); if (z == 0 || abs(z) > Z("1000000000")) throw std::runtime_error("m out of range"); c.m = z.get_si(); }
         else if (a == "--h-start") { Z z = integer(v); if (z < 1 || z > Z("200000000")) throw std::runtime_error("h-start out of range"); c.h_start = static_cast<uint32_t>(z.get_ui()); have_start = true; }
         else if (a == "--h-stop") { Z z = integer(v); if (z < 2 || z > Z("200000001")) throw std::runtime_error("h-stop out of range"); c.h_stop = static_cast<uint32_t>(z.get_ui()); have_stop = true; }
-        else if (a == "--g-max-digits") { Z z = integer(v); if (z < 1 || z > 100000) throw std::runtime_error("g-max-digits out of range"); c.g_digits = static_cast<unsigned>(z.get_ui()); }
+        else if (a == "--g-max-digits") { Z z = integer(v); if (z < 0 || z > 100000) throw std::runtime_error("g-max-digits out of range"); c.g_digits = static_cast<unsigned>(z.get_ui()); }
         else if (a == "--deadline-seconds") { Z z = integer(v); if (z < 0) throw std::runtime_error("deadline must be >= 0"); c.deadline = z.get_d(); }
         else if (a == "--precision-bits") { Z z = integer(v); if (z < 64 || z > (1 << 20)) throw std::runtime_error("precision out of range"); c.bits0 = static_cast<unsigned>(z.get_ui()); }
         else if (a == "--max-precision-bits") { Z z = integer(v); if (z < 64 || z > (1 << 24)) throw std::runtime_error("max precision out of range"); c.max_bits = static_cast<unsigned>(z.get_ui()); }

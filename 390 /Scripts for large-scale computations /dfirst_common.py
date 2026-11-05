@@ -122,8 +122,8 @@ def validate_search(search: Any) -> dict[str, Any]:
     if m == 0 or m % 3 == 0 or abs(m) > 10**9:
         raise ValueError("m must be nonzero, not divisible by 3, and |m| <= 10^9")
     digits = search["g_max_digits"]
-    if isinstance(digits, bool) or not isinstance(digits, int) or not 1 <= digits <= 100000:
-        raise ValueError("g_max_digits must be an integer between 1 and 100000")
+    if isinstance(digits, bool) or not isinstance(digits, int) or not 0 <= digits <= 100000:
+        raise ValueError("g_max_digits must be an integer between 0 and 100000")
     return {"m": m, "g_max_digits": digits}
 
 

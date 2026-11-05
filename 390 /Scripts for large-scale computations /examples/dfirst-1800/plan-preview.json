@@ -2,7 +2,7 @@
   "schema": "ce390-dfirst-page-v1",
   "campaign_id": "ce390-dfirst-1800",
   "m": "65",
-  "g_max_digits": 2,
+  "g_max_digits": 0,
   "shells": {
     "start": "1",
     "stop": "800000"
