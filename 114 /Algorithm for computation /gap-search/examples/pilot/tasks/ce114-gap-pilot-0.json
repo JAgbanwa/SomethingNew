@@ -1,0 +1,11 @@
+{
+  "campaign_id": "ce114-gap-pilot",
+  "d_start": "185185185185185186",
+  "d_stop": "185185186185185186",
+  "deadline_seconds": 0,
+  "k": 114,
+  "method": "booker-sutherland-gap-v1",
+  "ratio_max": 64,
+  "schema": "ce114-gap-task-v1",
+  "task_id": "ce114-gap-pilot-0"
+}

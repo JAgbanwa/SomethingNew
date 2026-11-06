@@ -12,6 +12,19 @@ Co-authored-by: Aristotle (Harmonic) <aristotle-harmonic@harmonic.fun>
 
 # `36n³ - 19 = -2d·x²·(-(x+6n) + √((x+6n)² + (36n³-19)/x))`
 
+> **Update (November 2026): the recommended computation is [`gap-search/`](gap-search/README.md).**
+> Both acceptable results (an integral radical in the integer chart, or `x = X/2`, `√ = Y/2`
+> with `X, Y` odd) are exactly the integer solutions of `a³+b³+c³ = 114`. Each one gives one
+> result-1 and two result-2 values of `d`, via `d = (A+C)/(A+B)`. Following Dr. Grechuk's advice
+> to use the best known algorithm and aim it beyond what has been checked, `gap-search/` runs the
+> Booker–Sutherland method on the part of the search space their 2020 run for 114 left out
+> (`|a+b| > 10¹⁹/54`, `|c| <= 64|a+b|`). It is sized for **1,800 core-hours**, and `to_d.py`
+> turns any hit into the verified rational `d`. Under their heuristic the chance is about
+> 1 in 190,000. The rational-radical sweeps below (`dsweep`, `dsmooth`, `xscan`, `xcurve`)
+> cannot give an acceptable result unless the radical happens to be integral. `xroots`
+> (Algorithm D) searches small pair sums with very large `n`, which by the same heuristic is
+> over 10⁵ times less productive per core-hour. They are kept for reproducibility.
+
 Which rational `d` admit integer solutions `(n, x)`?  Most ideally with an **integral**
 square root — and, as a second case, with `x = X/2` and `√(…) = Y/2` for odd `X`, `Y` (the
 *half chart*).

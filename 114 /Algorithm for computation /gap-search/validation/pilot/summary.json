@@ -1,0 +1,32 @@
+{
+  "campaign_id": "ce114-gap-pilot",
+  "counters": {
+    "candidates": 3083598613,
+    "d_live": 298253608,
+    "d_no_roots": 1035079726,
+    "d_skipped_mod3": 666666666,
+    "d_total": 2000000000,
+    "exact_checks": 114859,
+    "hits": 0,
+    "pass_2adic": 3083598613,
+    "pass_residue": 114859,
+    "roots": 692024248
+  },
+  "covered_d": [
+    [
+      "185185185185185186",
+      "185185187185185186"
+    ]
+  ],
+  "d_values_covered": 2000000000,
+  "errors": [],
+  "gaps": [],
+  "heuristic_expected_solutions_covered": 4.765595259511333e-10,
+  "hits": 0,
+  "k": 114,
+  "ratio_max": 64,
+  "worker_core_hours": 0.173,
+  "worker_sha256": [
+    "e65139f315ada6f215d88a2d9940ab9a042ac29b5aae88ed0f907df123a928fd"
+  ]
+}
