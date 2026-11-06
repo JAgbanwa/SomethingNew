@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -88,6 +89,10 @@ class Equivalence(unittest.TestCase):
             total += found
         self.assertGreater(total, 10)
 
+    def test_repeated_component(self):
+        # 8478 = 2(-21)^3 + 30^3: a repeated component gives only two distinct points
+        self.assertEqual(sorted(p["result"] for p in points(-21, -21, 30, k=8478)), [1, 2])
+
     def test_rejects_non_representation(self):
         with self.assertRaises(ValueError):
             points(1, 2, 3, k=114)
@@ -104,13 +109,13 @@ class EndToEnd(unittest.TestCase):
                               "--ratio-max", str(-(-z // d0) + 1)], capture_output=True, text=True, check=True).stdout
         hits = [line for line in out.splitlines() if '"hit"' in line]
         self.assertEqual(len(hits), 1)
-        tmp = ROOT / "tests" / "_hits_tmp.jsonl"
-        try:
-            tmp.write_text(hits[0] + "\n")
-            r = subprocess.run([sys.executable, str(ROOT / "to_d.py"), "--k", "42", str(tmp)],
+        with tempfile.TemporaryDirectory() as td:
+            raw = Path(td) / "worker.out"          # raw worker output, with start/chunk/end records
+            raw.write_text(out)
+            dup = Path(td) / "hits.jsonl"         # the same hit again: must be listed once
+            dup.write_text(hits[0] + "\n")
+            r = subprocess.run([sys.executable, str(ROOT / "to_d.py"), "--k", "42", str(raw), str(dup)],
                                capture_output=True, text=True, check=True).stdout
-        finally:
-            tmp.unlink(missing_ok=True)
         self.assertEqual(r.count("result 1 (integer chart)"), 1)
         self.assertEqual(r.count("result 2 (half chart)"), 2)
 

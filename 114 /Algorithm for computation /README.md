@@ -20,10 +20,12 @@ Co-authored-by: Aristotle (Harmonic) <aristotle-harmonic@harmonic.fun>
 > Booker–Sutherland method on the part of the search space their 2020 run for 114 left out
 > (`|a+b| > 10¹⁹/54`, `|c| <= 64|a+b|`). It is sized for **1,800 core-hours**, and `to_d.py`
 > turns any hit into the verified rational `d`. Under their heuristic the chance is about
-> 1 in 190,000. The rational-radical sweeps below (`dsweep`, `dsmooth`, `xscan`, `xcurve`)
-> cannot give an acceptable result unless the radical happens to be integral. `xroots`
+> 1 in 190,000 – 200,000. The certificate sweeps below (`dsweep`, `dsmooth`) and `xscan` cannot
+> reach the ≥ 25-digit certificates or `|n| ≥ 9.8·10¹⁵` that any acceptable result needs (see
+> `HALF_INTEGER.md`). `xcurve` is unbounded in `n`, but small `|x|` holds almost nothing beyond
+> what Booker–Sutherland excluded (~7·10⁻⁹ for all `|x| ≤ 5000`). `xroots`
 > (Algorithm D) searches small pair sums with very large `n`, which by the same heuristic is
-> over 10⁵ times less productive per core-hour. They are kept for reproducibility.
+> about 10⁵ times less productive per core-hour. They are kept for reproducibility.
 
 Which rational `d` admit integer solutions `(n, x)`?  Most ideally with an **integral**
 square root — and, as a second case, with `x = X/2` and `√(…) = Y/2` for odd `X`, `Y` (the

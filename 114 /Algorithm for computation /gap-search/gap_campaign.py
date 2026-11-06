@@ -8,7 +8,7 @@ floor(3.847 d) <= |z| <= ratio_max * d.
   # 1. measure this host (about a minute), print the cost model and the best ratio_max
   python3 gap_campaign.py --calibrate
   # 2. preview a 1800 core-hour plan with the measured cost
-  python3 gap_campaign.py --campaign-id ce114-gap --core-hours 1800 --us-per-d 0.27 --ratio-max 64 \
+  python3 gap_campaign.py --campaign-id ce114-gap --core-hours 1800 --us-per-d 0.293 --ratio-max 64 \
       --output-dir gap-tasks --plan-only
   # 3. write it (drop --plan-only)
 
@@ -97,6 +97,8 @@ def main() -> int:
         ap.error("ratio_max * d must stay below 2^64")
     per_task = a.task_d_count or max(1, int(a.task_hours * 3600e6 / a.us_per_d))
     n = d_stop - a.d_start
+    if not a.task_d_count:                 # spread evenly: no near-empty final task
+        per_task = -(-n // max(1, round(n / per_task)))
     est_hours = n * a.us_per_d / 3600e6
     rho = a.rho if a.rho is not None else RHO.get(a.k)
     e = expected_solutions(rho, a.d_start, d_stop, a.ratio_max) if rho else None

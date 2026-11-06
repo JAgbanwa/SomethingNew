@@ -16,9 +16,10 @@ integer solution of `a^3 + b^3 + c^3 = 114`. So the best algorithm for this
 problem is the best algorithm for 114 = sum of three cubes on 1,800 hours.
 That algorithm is the Booker–Sutherland method aimed at the part of the search
 space their 2020 run for 114 left out. Under their own heuristic, 1,800 hours
-give about a **1 in 190,000** chance of a solution on the development host's
-speed. That is small, but it is more than 10^5 times the chance from the folder's
-earlier engines on the same hours. A completed run also produces a new, exact
+give about a **1 in 190,000 – 200,000** chance of a solution at the
+development host's speed (0.29–0.31 µs per step). That is small, but it is
+about 10^5 times the chance from the folder's earlier engines on the same
+hours. A completed run also produces a new, exact
 exclusion region. Every solution found is turned into its three rational `d`:
 one of result 1 and two of result 2.
 
@@ -52,17 +53,32 @@ order the other two so that `A >= B` (so `s >= 0`), and put
 * the **half chart** when `A + B` is odd.
 
 114 ≡ 2 (mod 8) rules out three even components, so exactly one is even.
-Every representation therefore gives **one point of result 1** (the even
-component as `C`) **and two of result 2**, and so three rational `d`.
+The three components are also distinct: two equal ones would give
+`2a^3 + c^3 = 114`, which has no integer solution. PARI's unconditional
+Thue solver, `thue(thueinit(x^3+2,1),114)`, returns `[]`. And `A + B = 0`
+would force `C^3 = 114`. Every representation therefore gives **one point of
+result 1** (the even component as `C`) **and two of result 2**, and so three
+distinct rational `d`. (For other `6m` with a repeated component, `to_d.py`
+lists the two distinct points.)
 `to_d.py` performs this conversion and checks every point exactly against
 (E).
 
 Consequences for the older engines in this folder:
 
-* `dsweep`, `dsmooth`, `xscan` and `xcurve` find **rational** radicals. A
-  rational radical that is not integral (resp. not `Y/2` with `Y` odd) is
-  neither result 1 nor result 2. So those runs cannot produce an acceptable
-  result unless they stumble on a representation of 114.
+* `dsweep` and `dsmooth` do have integral modes (`--integral`, and the
+  default in the half chart). But they enumerate the certificate `U = 2dx^2`
+  (resp. `V = dX^2`). By Booker–Sutherland's bound, any integral solution
+  needs a certificate of at least 25 digits (`|V| >= 5.8·10^24`,
+  `../HALF_INTEGER.md`), while `dsweep` stops at 18 digits and `dsmooth`
+  reaches such sizes only for B-smooth certificates. `xscan` scans windows
+  of `n` far below the `|n| >= 9.8·10^15` that any acceptable result needs.
+  So these three cannot reach one.
+* `xcurve` (the Mordell curve of a fixed `x`) is not bounded in `n`, so it
+  could in principle find one at small `|x|`. But `|x| = |A+B|/2`, and for
+  pair sums up to 1.85×10^17 Booker–Sutherland already excluded
+  `|c| <= 10^19`. Under their heuristic, all `|x| <= 5000` together hold
+  about 7×10^-9 expected solutions beyond that bound, even if every curve
+  were solved completely.
 * `xroots` (Algorithm D) does search integral radicals, but along small pair
   sums `|X| < 10^6` with `|n|` pushed past 10^18. That is the least fertile
   direction, discussed next.
@@ -71,7 +87,7 @@ Consequences for the older engines in this folder:
 
 Booker and Sutherland (PNAS 2021, arXiv:2007.01209) use `δ = |a + b|` for a
 solution with `|a| > |b| > |c|`. They show `0 < δ < α|c|`, with
-`α = 2^(1/3) − 1`, and `c^3 ≡ 114·sign(c) (mod δ)`. For 114 they searched:
+`α = 2^(1/3) − 1`, and `c^3 ≡ 114 (mod δ)` (equivalently `|c|^3 ≡ 114·sign(c)`). For 114 they searched:
 
 * `|c| <= 10^17` completely (2019);
 * `|c| <= 10^19` with `δ <= 10^19/54` (2020).
@@ -93,11 +109,14 @@ unsearched ones: from `185185185185185186` upward.
 
 | Use of 1,800 core-hours (k = 114) | Expected solutions |
 | --- | --- |
-| **This engine**: `δ` from 1.852e17, `|c| <= 64δ` (0.293 µs per `δ`, 2.2e13 `δ`) | **5.3e-6 (1 in 190,000)** |
-| Algorithm D (`xroots`): its planned box `|X| < 10^6`, `|n|` 1.7e18 – 1.7e19 (9.5e6 core-hours by its own cost model) | ~1e-11 (rough mapping of `n` to `|c|`) |
-| Any rational-radical sweep (`dsweep`, `dsmooth`, `xscan`, `xcurve`) | 0 acceptable results unless the radical happens to be integral |
+| **This engine**: `δ` from 1.852e17, `|c| <= 64δ` (0.293 µs per `δ`, 2.2e13 `δ`) | **5.3e-6 (1 in 190,000)**; at 0.31 µs, 1 in 200,000 |
+| Algorithm D (`xroots`) spending the same 1,800 h in its planned box (`|X| < 10^6`, `|n|` 1.7e18 – 1.7e19); the whole box is 9.5e6 core-hours by its own cost model and worth ~5e-8 | ~1e-11; ~3–6e-11 if spent on its best slice |
+| `dsweep`, `dsmooth`, `xscan` | 0: they cannot reach the certificate size or `n` any solution needs (above) |
+| `xcurve` on every `|x| <= 5000`, solved completely | ~7e-9 in total |
 
-For scale, a 1% chance would take about 3.8×10^6 core-hours with this code.
+For scale: the chance grows linearly with hours. This code can reach at most
+about 0.9% (δ up to about 2.25×10^17, where `(R + 18)·δ` hits 2^64 at
+`R = 64`), in about 3.2×10^6 core-hours.
 
 ## 3. The engine
 
@@ -118,7 +137,7 @@ The filters are necessary conditions, so nothing in the region is lost. For
 `k = 114`, all three components are ≡ 2 (mod 3), `3 ∤ δ`, and
 `sign(c) = +1` exactly when `δ ≡ 2 (mod 3)`.
 
-## 4. Validation (`make test`, 17 tests)
+## 4. Validation (`make test`, 18 tests)
 
 * **Engine.**
   * Rediscovers the record solutions for k = 33, 42, 3, 165, 579, 795 and 906
@@ -139,7 +158,8 @@ The filters are necessary conditions, so nothing in the region is lost. For
     included) finds that every acceptable point is a representation and is
     listed by `to_d.py`. For `m = 19` it finds none, as Booker–Sutherland's
     bound implies.
-  * End to end, a worker hit for k = 42 becomes 1 + 2 points.
+  * End to end, raw worker output for k = 42 becomes exactly 1 + 2 points, even when the same
+    hit is given twice; a representation with a repeated component gives its two distinct points.
 * **Pilot.** `validation/pilot/`: 2×10^9 `δ` of the production region,
   0 hits, no gaps, audit agrees.
 
@@ -160,8 +180,10 @@ python3 to_d.py gap-collected/hits.jsonl            # the rational d of results 
 
 * **Defaults:** `k = 114` and 1,800 core-hours. The planner sizes the `δ`
   range from the measured µs per `δ`, so calibrate on the grid's hardware.
-  At this host's 0.293 µs, the plan is 1,801 one-hour tasks covering
-  `δ` in [185185185185185186, 185207301226140817).
+  At this host's 0.293 µs, the plan is 1,800 tasks of about one hour each
+  covering `δ` in [185185185185185186, 185207301226140817). Per-task set-up
+  (about 1–3 s) and a 2% audit (about 36 core-hours) come on top; keep them
+  in the project's headroom.
 * **Robustness:** tasks checkpoint every 2^24 `δ` (fsynced) and resume in
   place. A checkpoint records exactly the interval its directory searched.
   `audit_gap.py` re-runs a sample of returned chunks to catch faulty hosts;

@@ -94,6 +94,8 @@ def main() -> int:
         ap.error("ratio_max * d must stay below 2^64")
     per_task = a.task_d_count or max(1, int(a.task_hours * 3600e6 / a.us_per_d))
     n = d_stop - a.d_start
+    if not a.task_d_count:                 # spread evenly: no near-empty final task
+        per_task = -(-n // max(1, round(n / per_task)))
     est_hours = n * a.us_per_d / 3600e6
     rho = a.rho if a.rho is not None else RHO.get(a.k)
     e = expected_solutions(rho, a.d_start, d_stop, a.ratio_max) if rho else None
