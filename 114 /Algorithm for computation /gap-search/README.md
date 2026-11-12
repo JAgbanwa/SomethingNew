@@ -1,5 +1,7 @@
 # CE114 gap search: the recommended 1,800-core-hour computation
 
+The detailed write-up (proofs, figures, validation) is [`../ce114_rationale.pdf`](../ce114_rationale.pdf).
+
 **Problem.** Find rational `d` for which
 
 ```text

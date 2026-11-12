@@ -26,6 +26,8 @@ Co-authored-by: Aristotle (Harmonic) <aristotle-harmonic@harmonic.fun>
 > what Booker–Sutherland excluded (~7·10⁻⁹ for all `|x| ≤ 5000`). `xroots`
 > (Algorithm D) searches small pair sums with very large `n`, which by the same heuristic is
 > about 10⁵ times less productive per core-hour. They are kept for reproducibility.
+> Full rationale and modus operandi, with proofs, figures and validation:
+> [`ce114_rationale.pdf`](ce114_rationale.pdf) (source [`ce114_rationale.tex`](ce114_rationale.tex)).
 
 Which rational `d` admit integer solutions `(n, x)`?  Most ideally with an **integral**
 square root — and, as a second case, with `x = X/2` and `√(…) = Y/2` for odd `X`, `Y` (the
