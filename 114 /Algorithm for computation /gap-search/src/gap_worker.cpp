@@ -29,6 +29,7 @@
 #include <cstring>
 #include <iostream>
 #include <map>
+#include <numeric>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
@@ -199,14 +200,24 @@ struct Search {
     int eps3;                                    // eps mod 3 (1 or 2)
     std::vector<u32> small_p;                    // primes 2 <= p < BLOCK, p != 3
     std::vector<u64> small_next;                 // next multiple offset (relative to d_start)
+    std::vector<uint8_t> small_m;                // its multiplier mod 24 (primes >= 5)
     struct SmallInfo { bool kdiv, killer; std::vector<u64> roots; };
     std::vector<SmallInfo> sinfo;
-    struct Entry { u32 p, off; };                // off: bits 0..30 offset in block, bit 31 = killer
-    static constexpr u32 KILL = 1u << 31;
+    struct Entry { u32 p, off; };                // off: bits 0..15 offset in block, 16..20 wheel class
+    static constexpr u32 KILL = 1u << 31;        //      of the multiplier m (d = m p), bit 31 = killer
+    static constexpr u32 OFFMASK = BLOCK - 1;
+    static constexpr int MSHIFT = 16;
+    // Wheel mod 24 (see wheel_init): only d in allowed residue classes are ever sieved.
+    static constexpr u32 W = 24;
+    bool allowed[W]{};                 // d mod 24 is sieved
+    uint8_t cat[W]{};                  // dead[] code for d mod 24: 0, 2 (3 | d) or 4 (2-adic rule)
+    bool wheel2 = false;               // the 2-adic rule is applied through the wheel
+    uint8_t gap[W][W]{};               // gap[p mod 24][m mod 24]: next allowed multiplier m + gap
+    u32 maxgap = 1;
     // Buckets are singly linked lists of fixed-size pages drawn from one free pool, so memory
     // stays ~ (pending entries + one partial page per bucket) instead of every bucket keeping
     // the capacity of its fullest moment.
-    static constexpr u32 PAGE = 1024;
+    static constexpr u32 PAGE = 256;
     struct Page { Entry e[PAGE]; u32 n; Page* next; };
     std::vector<Page*> head;           // head[b]: page being filled (newest first)
     std::vector<Page*> pool;           // free pages
@@ -289,7 +300,45 @@ struct Search {
         return kdiv_cache.emplace(key, std::move(r)).first->second;
     }
 
+    // The wheel. allowed[r]: d == r (mod 24) can hold a solution: 3 does not divide r and, when
+    // the 2-adic rule applies to the whole range (k == 2 mod 4, d_start >= 27 so that
+    // floor(3.847 d)^3 > |k| for every d, filters on), two_adic_ok holds for r. two_adic_ok
+    // depends on d only through d mod 24 there (d mod 3 fixes the sign of z, d mod 8 the test),
+    // so evaluating it at a large representative of r is exact. --dump-factors sieves every d.
+    // For a prime p >= 5 (prime to 24) the multiple m p is in class (m mod 24)(p mod 24), so
+    // the multipliers to visit are fixed classes mod 24 and gap[][] steps between them.
+    void wheel_init() {
+        wheel2 = !c.dump_factors && !c.dump_roots && !c.no_filter && c.d_start >= 27
+                 && ((c.k % 4) + 4) % 4 == 2;
+        for (u32 r = 0; r < W; ++r) {
+            if (c.dump_factors) { allowed[r] = true; cat[r] = 0; continue; }
+            if (r % 3 == 0) { allowed[r] = false; cat[r] = 2; continue; }
+            u64 rep_d = 24000000ull + r;
+            long long K = (static_cast<int>(rep_d % 3) == eps3) ? c.k : -c.k;
+            if (wheel2 && !two_adic_ok(rep_d, K)) { allowed[r] = false; cat[r] = 4; continue; }
+            allowed[r] = true; cat[r] = 0;
+        }
+        maxgap = 1;
+        for (u32 pc = 1; pc < W; ++pc) {
+            if (std::gcd(pc, W) != 1) continue;
+            for (u32 m = 0; m < W; ++m) {
+                u32 g = 1;
+                while (!allowed[((m + g) * pc) % W]) ++g;   // g <= 24: m + 24 is in the class of m
+                gap[pc][m] = static_cast<uint8_t>(g);
+                if (allowed[(m * pc) % W] && g > maxgap) maxgap = g;
+            }
+        }
+    }
+
+    // First multiple m p >= d_start whose class is allowed: its offset and m mod 24.
+    std::pair<u64, u32> first_multiple(u64 p) const {
+        u64 m = (c.d_start + p - 1) / p;
+        if (p >= 5) while (!allowed[(m % W) * (p % W) % W]) ++m;
+        return {m * p - c.d_start, static_cast<u32>(m % W)};
+    }
+
     void sieve_primes() {
+        wheel_init();
         {   // P = isqrt(d_stop - 1): every composite d < d_stop has a prime factor <= P
             u64 x = static_cast<u64>(__builtin_sqrtl(static_cast<long double>(c.d_stop - 1)));
             while (x * x > c.d_stop - 1) --x;
@@ -298,7 +347,7 @@ struct Search {
         }
         u64 L = c.d_stop - c.d_start;
         nblocks = (L + BLOCK - 1) / BLOCK;
-        nb = P / BLOCK + 2;
+        nb = (static_cast<u64>(maxgap) * P) / BLOCK + 2;   // a step is at most maxgap * p
         head.assign(nb, nullptr);
         std::vector<u64> comp(((P >> 1) >> 6) + 2, 0);  // bit i <-> odd number 2i+1 is composite
         auto is_comp = [&](u64 i) { return (comp[i >> 6] >> (i & 63)) & 1; };
@@ -306,13 +355,13 @@ struct Search {
             if (!is_comp(i)) for (u64 j = (2 * i + 1) * (2 * i + 1) / 2; j <= P / 2; j += 2 * i + 1) comp[j >> 6] |= 1ull << (j & 63);
         auto add_prime = [&](u64 p) {
             if (p == 3 && !c.dump_factors) return;
-            u64 off = (p - c.d_start % p) % p;
-            if (p < BLOCK) { small_p.push_back(static_cast<u32>(p)); small_next.push_back(off); return; }
+            auto [off, m] = first_multiple(p);
+            if (p < BLOCK) { small_p.push_back(static_cast<u32>(p)); small_next.push_back(off); small_m.push_back(static_cast<uint8_t>(m)); return; }
             if (off >= L) return;
             u64 blk = off / BLOCK;
             // Precompute once: k is not a cube mod p (p == 1 mod 3), so every multiple of p is dead.
             bool killer = !c.dump_factors && p % 3 == 1 && !k_divisible(p) && pw(mod_signed(c.k, p), (p - 1) / 3, p) != 1;
-            push(blk % nb, {static_cast<u32>(p), static_cast<u32>(off % BLOCK) | (killer ? KILL : 0u)});
+            push(blk % nb, {static_cast<u32>(p), static_cast<u32>(off % BLOCK) | (m << MSHIFT) | (killer ? KILL : 0u)});
         };
         if (P >= 2) add_prime(2);
         for (u64 i = 1; 2 * i + 1 <= P; ++i) if (!is_comp(i)) add_prime(2 * i + 1);
@@ -481,10 +530,12 @@ struct Search {
         for (u64 b = 0; b < nblocks; ++b) {
             u64 base = c.d_start + b * BLOCK;
             u32 len = static_cast<u32>(std::min<u64>(BLOCK, c.d_stop - base));
+            u32 r24 = static_cast<u32>(base % W);
             for (u32 i = 0; i < len; ++i) {
                 cof[i] = base + i; nf[i] = 0;
-                dead[i] = (!c.dump_factors && (base + i) % 3 == 0) ? 2 : 0;
-                if (!dead[i] && !c.dump_factors && !c.dump_roots && !c.no_filter) {   // bit 4: 2-adic rule
+                dead[i] = cat[r24];                                  // 2: 3 | d; 4: 2-adic rule (wheel)
+                if (++r24 == W) r24 = 0;
+                if (!wheel2 && !dead[i] && !c.dump_factors && !c.dump_roots && !c.no_filter) {   // bit 4: 2-adic rule
                     u64 dd = base + i;
                     long long Kd = (static_cast<int>(dd % 3) == eps3) ? c.k : -c.k;
                     if (!two_adic_ok(dd, Kd)) dead[i] = 4;
@@ -494,31 +545,45 @@ struct Search {
             for (std::size_t j = 0; j < small_p.size() && !c.dump_factors; ++j) {
                 if (!sinfo[j].killer) continue;
                 u64 p = small_p[j];
-                for (u64 rel = small_next[j] - b * BLOCK; rel < len; rel += p) dead[rel] |= 1;
+                if (p < 5) { for (u64 rel = small_next[j] - b * BLOCK; rel < len; rel += p) dead[rel] |= 1; continue; }
+                const uint8_t* gp = gap[p % W]; u32 m = small_m[j];
+                for (u64 rel = small_next[j] - b * BLOCK; rel < len;) { dead[rel] |= 1; u32 g = gp[m]; rel += g * p; m += g; if (m >= W) m -= W; }
             }
             Page* cur = head[b % nb];      // detached: p >= BLOCK always lands in a later bucket
             head[b % nb] = nullptr;
             for (Page* pg = cur; pg; pg = pg->next)
                 for (u32 t = 0; t < pg->n; ++t) {
-                    u32 off = pg->e[t].off & ~KILL;
+                    u32 off = pg->e[t].off & OFFMASK;
                     if ((pg->e[t].off & KILL) && off < len) dead[off] |= 1;
                 }
             // Pass 2: factor the survivors; advance every prime.
             for (std::size_t j = 0; j < small_p.size(); ++j) {
                 u64 p = small_p[j];
                 u64 rel = small_next[j] - b * BLOCK;  // small_next[j] >= b*BLOCK invariant
-                if (!sinfo[j].killer || c.dump_factors) for (; rel < len; rel += p) hit(static_cast<u32>(rel), p, false);
-                else while (rel < len) rel += p;
+                bool fac = !sinfo[j].killer || c.dump_factors;
+                if (p < 5) {
+                    if (fac) for (; rel < len; rel += p) hit(static_cast<u32>(rel), p, false);
+                    else while (rel < len) rel += p;
+                } else {
+                    const uint8_t* gp = gap[p % W]; u32 m = small_m[j];
+                    while (rel < len) {
+                        if (fac) hit(static_cast<u32>(rel), p, false);
+                        u32 g = gp[m]; rel += g * p; m += g; if (m >= W) m -= W;
+                    }
+                    small_m[j] = static_cast<uint8_t>(m);
+                }
                 small_next[j] = b * BLOCK + rel;
             }
             for (Page* pg = cur; pg;) {
                 for (u32 t = 0; t < pg->n; ++t) {
                     const Entry& e = pg->e[t];
-                    u64 p = e.p; u32 off = e.off & ~KILL, kill = e.off & KILL;
+                    u64 p = e.p; u32 off = e.off & OFFMASK, kill = e.off & KILL, m = (e.off >> MSHIFT) & 31;
                     if (!kill && off < len) hit(off, p, false);
-                    u64 next = b * BLOCK + off + p;
+                    u32 g = gap[p % W][m];
+                    u64 next = b * BLOCK + off + static_cast<u64>(g) * p;
+                    m += g; if (m >= W) m -= W;
                     if (next < c.d_stop - c.d_start)
-                        push((next / BLOCK) % nb, {static_cast<u32>(p), static_cast<u32>(next % BLOCK) | kill});
+                        push((next / BLOCK) % nb, {static_cast<u32>(p), static_cast<u32>(next % BLOCK) | (m << MSHIFT) | kill});
                 }
                 Page* nx = pg->next; pool.push_back(pg); pg = nx;
             }

@@ -89,6 +89,27 @@ class Records(unittest.TestCase):
             self.assertEqual(a, b)
             self.assertTrue(a)
 
+    def test_wheel_matches_pre_wheel_counters(self):
+        # The mod-24 wheel only changes which d the sieve visits. Every deterministic counter
+        # must equal the pre-wheel engine's (recorded from it on the same windows, k = 114, R = 64):
+        # the same d have roots, with the same roots, candidates and exact checks.
+        want = {
+            185185185185185186: dict(d_skipped_mod3=666666, d_skipped_2adic=499999, d_no_roots=584825,
+                                     d_live=248510, roots=576394, candidates=2313025, exact_checks=69),
+            1000003: dict(d_skipped_mod3=666666, d_skipped_2adic=500001, d_no_roots=491649,
+                          d_live=341684, roots=576112, candidates=2310010, exact_checks=85),
+        }
+        for d0, exp in want.items():
+            out = worker("--k", "114", "--d-start", str(d0), "--d-stop", str(d0 + 2000000), "--ratio-max", "64").stdout
+            tot = {}
+            for line in out.splitlines():
+                r = json.loads(line)
+                if r["type"] == "chunk":
+                    for key, v in r["counters"].items():
+                        tot[key] = tot.get(key, 0) + int(v)
+            for key, v in exp.items():
+                self.assertEqual(tot[key], v, (d0, key))
+
     def test_two_adic_skip_is_safe(self):
         # k == 2 (mod 4) (like 114): even d with -sign(z) d != k (mod 8) are skipped. Over small d,
         # wide |z|, the hits equal --no-filter's (which disables the skip), even-d hits obey the
