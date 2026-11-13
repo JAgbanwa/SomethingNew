@@ -26,7 +26,7 @@
 via the Booker--Sutherland gap search\\[2pt]
 \large rationale and modus operandi of the current scripts}
 \author{Jamal Agbanwa}
-\date{12 November 2026}
+\date{12 November 2026; revised 13 November 2026}
 
 \begin{document}
 \maketitle
@@ -72,7 +72,11 @@ kinds:
 The code lives in
 \url{https://github.com/JAgbanwa/SomethingNew/tree/main/114%20/Algorithm%20for%20computation%20/gap-search}.
 This note describes the revision of 6 November 2026 (commits \texttt{d19a6a3} and
-\texttt{194e6ca}).
+\texttt{194e6ca}). The revision of 13 November 2026 adds Remark~\ref{rem:delta} (this $d$ is
+not Booker--Sutherland's $\delta$), Proposition~\ref{prop:only} (Results~1 and~2 are the only
+targets, and the only half-integral points that are representations of $114$), and the new
+cross-check \code{rational-d-search/} (Section~\ref{sec:older}). The search itself is
+unchanged: $k=114$ only.
 
 %====================================================================
 \section{The problem is exactly \texorpdfstring{$114=a^3+b^3+c^3$}{114 = a3 + b3 + c3}}\label{sec:reduction}
@@ -160,6 +164,40 @@ d\in\Bigl\{-\tfrac{102980666258459}{93037881443153146}\ (\text{Result 1}),\
 -\tfrac{93037881443153146}{67936615514740343},\
 -\tfrac{93037881443153146}{102980666258459}\ (\text{Result 2})\Bigr\}.
 \]
+\end{remark}
+
+\begin{proposition}[nothing else is targeted]\label{prop:only}
+Let $n\in\mathbb Z$, $x\in\tfrac12\mathbb Z\setminus\{0\}$ and $s\in\tfrac12\mathbb Z$ satisfy
+the square-root condition $s^2=(x+6n)^2+N(n)/x$. Then exactly one of the following holds:
+\begin{enumerate}[label=(\roman*)]
+  \item $x,s\in\mathbb Z$: Result~1;
+  \item $x=X/2$, $s=Y/2$ with $X,Y$ odd: Result~2;
+  \item $x\in\mathbb Z$ and $s=Y/2$ with $Y$ odd.
+\end{enumerate}
+The fourth combination, $x=X/2$ with $X$ odd and $s\in\mathbb Z$, is impossible. Case~(iii) is
+not a target of this project and is not searched. It corresponds to representations of
+$8\cdot114=912$ with two odd components, not to representations of $114$.
+\end{proposition}
+\begin{proof}
+If $x=X/2$ with $X$ odd, multiplying the square-root condition by $4X$ gives
+$X\bigl(4s^2-(X+12n)^2\bigr)=8N(n)$. When $s\in\mathbb Z$ the left side is odd (it is a
+product of two odd numbers), while the right side is even, a contradiction. In case~(iii),
+Proposition~\ref{prop:identity} applied to $2A,2B,2C$ (odd, odd, even) gives
+$(2A)^3+(2B)^3+(2C)^3=8\cdot114$.
+\end{proof}
+
+\noindent For example, the known point $(n,x)=(-1160307,-10431164)$ has $s=35094609/2$. It is
+of type~(iii), so it is neither Result~1 nor Result~2, and the campaign does not look for such
+points.
+
+\begin{remark}[this $d$ is not Booker--Sutherland's $\delta$]\label{rem:delta}
+Booker and Sutherland write $\delta=|a+b|$ for the two components of largest absolute value
+(Section~\ref{sec:excluded}). It is only a search coordinate. In the point of
+Proposition~\ref{prop:charts} whose $C$ is the component of smallest absolute value,
+$\delta=|A+B|=2|x|$ (Result~1) or $|X|$ (Result~2). The $d$ of \eqref{eq:E} is a different
+quantity, $d=(A+C)/(A+B)=-(s+x+6n)/(2x)$. This expression is $d$ itself, with its sign (for
+instance $d=-1/54$ at the non-integral point $(1,-9)$), and not $|d|$. The engine walks
+$\delta$, and \code{to_d.py} computes the three values of $d$ afterwards.
 \end{remark}
 
 \paragraph{Consequence.} Finding a rational $d$ of either acceptable kind is \emph{the same
@@ -572,6 +610,10 @@ stops at $10^{18}$, and \code{dsmooth} reaches that size only for $B$-smooth cer
 holds about $7\times10^{-9}$ expected solutions beyond $|c|=10^{19}$ for all $|x|\le5000$.\\
 \code{xroots} (Algorithm D) & Correct and complete for its boxes, but aimed at small
 $|X|<10^6$ with $|n|$ beyond $10^{18}$: about $10^{-11}$ per 1{,}800 hours.\\
+\code{rational-d-search/} (new) & Every $(n,x)$ in both charts whose square root is merely
+\emph{rational}, complete in $x$ for each $n$. It factors $36n^3-19$ completely (rho and
+ECM), matches a brute force for $|n|\le450$, and re-finds the eleven known integer-chart
+points. It is a cross-check only: its points are not Results~1 or~2.\\
 \code{RequestProject/*.lean} & Lean proofs of the reduction, the small-$|n|$ completeness
 and the earlier algorithms; unaffected.\\
 \bottomrule
@@ -579,7 +621,8 @@ and the earlier algorithms; unaffected.\\
 \end{center}
 
 \noindent The rational-$d$ points with non-integral radicals found by those programs (for
-example $d=-142/4913$ at $(n,x)=(15,-289/2)$) are genuine points of \eqref{eq:E}. They are
+example $d=-142/4913$ at $(n,x)=(15,-289/2)$, or the new $d=-41449/33275$ at
+$(309,15125/2)$ from \code{rational-d-search}) are genuine points of \eqref{eq:E}. They are
 not Results~1 or 2.
 
 %====================================================================

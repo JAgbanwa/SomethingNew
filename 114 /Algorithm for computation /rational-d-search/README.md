@@ -1,7 +1,8 @@
 # rational-d-search: every rational `d`, both charts, complete in `x` for each `n`
 
-This is a supporting tool. The 1,800-hour target is in [`../gap-search/README.md`](../gap-search/README.md)
-(§0, k = 114 and k = 912). This engine covers the general case, where the square root
+This is a supporting tool, **not** the 1,800-hour computation. The target (Results 1 and 2,
+k = 114) is computed by [`../gap-search/`](../gap-search/README.md). This engine covers the
+wider case, where the square root
 
 ```text
 y = sqrt((x+6n)^2 + (36n^3-19)/x)
@@ -41,9 +42,8 @@ The pruning bounds `|x|(x+6n)² ≤ N²` (integer chart, Lean `sat_abs_x_mul_sq_
 * It found a **new half-chart solution**: `n = 309`, `x = 15125/2`, `y = 207327/22`,
   `d = −41449/33275`.
 
-None of these has `y` an integer or an odd half, except the known
-`(n, x) = (−1160307, −10431164)` with `y = 35094609/2`. That is the 912 class of
-`../gap-search` §0.
+None of these is a Result 1 or 2: in every one, `y` is not an integer in the integer chart,
+nor an odd half in the half chart.
 
 ## Use
 

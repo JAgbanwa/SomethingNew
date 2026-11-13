@@ -122,34 +122,3 @@ class EndToEnd(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-class Result3(unittest.TestCase):
-    """x an integer and sqrt = Y/2 (Y odd) <=> 912 = a^3 + b^3 + c^3 with a, b odd and 4 | c."""
-
-    def test_known_solution_from_912(self):
-        from to_d import points_8k
-        pts = points_8k(55956937, -55648340, -14232281, k=114)
-        self.assertEqual(len(pts), 1)
-        p = pts[0]
-        self.assertEqual((p["n"], p["x"], p["sqrt"], p["d"]),
-                         ("-1160307", "-10431164", "35094609/2", "308597/41724656"))
-
-    def test_brute_force_small_box(self):
-        # every result-3 point of (E) with m in a few values, |n| <= 30, |x| <= 400, against points_8k
-        from to_d import points_8k
-        for m in (1, 2, 4, 5, 7, 19):
-            k = 6 * m
-            for n in range(-30, 31):
-                N = 36 * n ** 3 - m
-                for x in range(-400, 401):
-                    if x == 0:
-                        continue
-                    q = Fraction((x + 6 * n) ** 2) + Fraction(N, x)
-                    r = frac_sqrt(q)
-                    if r is None or r.denominator != 2:
-                        continue
-                    a, b, c = int(2 * (-x + r)), int(2 * (-x - r)), 2 * (2 * x + 6 * n)
-                    self.assertEqual(a ** 3 + b ** 3 + c ** 3, 8 * k)
-                    got = points_8k(a, b, c, k=k)
-                    self.assertEqual([(int(g["n"]), int(g["x"])) for g in got], [(n, x)])
