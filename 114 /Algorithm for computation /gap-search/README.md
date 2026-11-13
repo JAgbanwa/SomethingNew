@@ -25,6 +25,67 @@ hours. A completed run also produces a new, exact
 exclusion region. Every solution found is turned into its three rational `d`:
 one of result 1 and two of result 2.
 
+## 0. Correction (November 2026): a third class, 912 = a³ + b³ + c³
+
+The target is `n` an integer, `x` an integer or `X/2` (with `X` odd), and the square root
+`y = s` **an integer or a half-integer with odd numerator**, in either chart. That gives
+four combinations, not two:
+
+| `x` | `y` | equivalent to | status |
+| --- | --- | --- | --- |
+| integer | integer | 114 = A³+B³+C³ (result 1) | none known; searched to `min ≤ 10¹⁷` |
+| `X/2` | `Y/2` | 114 = A³+B³+C³ (result 2) | the same representations |
+| `X/2` | integer | — | impossible: `X(4y² − (X+12n)²) = 8N` with an odd left side |
+| **integer** | **`Y/2`** | **912 = a³+b³+c³, `a, b` odd, `4 \| c` (result 3)** | **one is known; it was missing from this search** |
+
+For result 3, `2A, 2B` are odd and `2C` is even in the same identity, so
+`(2A)³ + (2B)³ + (2C)³ = 8·114 = 912`. Conversely, such a representation gives
+
+```text
+x = −(a+b)/4,   y = (a−b)/4,   n = (a+b+c)/12,   d = (a+c)/(a+b).
+```
+
+Mod 8, `a + b ≡ 0`, so `n` is an integer exactly when `4 | c`.
+
+**Example.** `gap_worker --k 912` over `1 ≤ δ < 10⁹` (`|z| ≤ 64δ`, 387 core-seconds) finds
+
+```text
+912 = 55956937³ + (−55648340)³ + (−14232281)³   →   n = −1160307, x = −10431164,
+y = 35094609/2,   d = 308597/41724656
+```
+
+This is the seventh of the eleven solutions in `../root /SEARCH_NOTES.md`. It is therefore
+**already an acceptable result**, and the 114-only search below could never have produced it.
+`to_d.py --k 912` converts such hits (function `points_8k`; tested in `tests/test_to_d.py`
+against a brute force over (E)).
+
+**Consequence for the 1,800 core-hours.** The engine, runner, planner, collector and
+auditor take `--k 912` unchanged; only the starting `δ` differs. The heuristic in §2 makes
+solutions log-uniform in `δ`, about `ρ_k(1 − 1/√(αR))` per e-fold. The 114 plan buys about
+`10⁻⁴` e-folds at `δ ≈ 1.85·10¹⁷` (5·10⁻⁶ expected). The same hours on 912 from `δ = 10⁹`
+reach `δ ≈ 1.66·10¹³` at the measured 0.39 µs/δ, which is 9.7 e-folds. One representation of
+912 in `δ < 10⁹` suggests `ρ₉₁₂ ≈ 0.05`, so the expected count is roughly 0.2–0.5
+representations of 912 (an unknown share of them with `4 | c`).
+
+Caveats:
+
+* That estimate rests on one observation.
+* Booker's 2019 search of every `k < 1000` with `|z| ≤ 10¹⁶`, and Huisman's tables, have very
+  probably already seen these representations, so they would be new as values of `d`, not as
+  representations. Ask Booker or Sutherland (or check Huisman's published list for 912)
+  before launch: a list of 912's known representations may answer the question with no
+  computation at all.
+* Unlike the 114 gap, this region is not new territory for the three-cubes problem.
+
+```sh
+python3 gap_campaign.py --k 912 --calibrate --d-start 1000000000
+python3 gap_campaign.py --campaign-id ce912 --k 912 --d-start 1000000000 --core-hours 1800 \
+        --us-per-d <measured> --ratio-max 64 --output-dir gap-tasks-912
+python3 to_d.py --k 912 gap-collected-912/hits.jsonl      # result-3 d values, verified on (E)
+```
+
+The rest of this README (written for results 1 and 2 only) is unchanged.
+
 ## 1. Why the problem is exactly 114 = a³ + b³ + c³
 
 Put `A = −x + s`, `B = −x − s`, `C = 2x + 6n`. Identically,
