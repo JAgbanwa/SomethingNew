@@ -151,18 +151,18 @@ void hensel(u64 a, u64 q, std::vector<u64>& roots) {
 
 // ------------------------------------------------------------ the search
 struct Counters {
-    u64 d_total = 0, d_skipped_mod3 = 0, d_no_roots = 0, d_live = 0, roots = 0, candidates = 0,
+    u64 d_total = 0, d_skipped_mod3 = 0, d_skipped_2adic = 0, d_no_roots = 0, d_live = 0, roots = 0, candidates = 0,
         pass_2adic = 0, pass_residue = 0, exact_checks = 0, hits = 0;
     std::string json() const {
         std::ostringstream o;
-        o << "{\"d_total\":" << d_total << ",\"d_skipped_mod3\":" << d_skipped_mod3 << ",\"d_no_roots\":" << d_no_roots
+        o << "{\"d_total\":" << d_total << ",\"d_skipped_mod3\":" << d_skipped_mod3 << ",\"d_skipped_2adic\":" << d_skipped_2adic << ",\"d_no_roots\":" << d_no_roots
           << ",\"d_live\":" << d_live << ",\"roots\":" << roots << ",\"candidates\":" << candidates
           << ",\"pass_2adic\":" << pass_2adic << ",\"pass_residue\":" << pass_residue
           << ",\"exact_checks\":" << exact_checks << ",\"hits\":" << hits << "}";
         return o.str();
     }
     void add(const Counters& c) {
-        d_total += c.d_total; d_skipped_mod3 += c.d_skipped_mod3; d_no_roots += c.d_no_roots; d_live += c.d_live;
+        d_total += c.d_total; d_skipped_mod3 += c.d_skipped_mod3; d_skipped_2adic += c.d_skipped_2adic; d_no_roots += c.d_no_roots; d_live += c.d_live;
         roots += c.roots; candidates += c.candidates; pass_2adic += c.pass_2adic; pass_residue += c.pass_residue;
         exact_checks += c.exact_checks; hits += c.hits;
     }
@@ -255,6 +255,23 @@ struct Search {
             for (u32 x = 1; x < p; ++x) invtab[i][x] = static_cast<u32>(invmod(x, p));
             kmod_pos[i] = static_cast<u32>(mod_signed(c.k, p)); kmod_neg[i] = static_cast<u32>(mod_signed(-c.k, p));
         }
+    }
+
+    // 2-adic rule for k == 2 (mod 4) (e.g. 114), even d: a representation has exactly one even
+    // component, and d = |x+y| even forces x, y odd and z even, so x+y == x^3+y^3 == k - z^3 == k
+    // (mod 8). Since x+y has the sign of x^3+y^3 = k - z^3, it equals -sign(z)*d once |z|^3 > |k|,
+    // which holds on the whole walk when floor(3.847 d)^3 > |k|. Then -sign(z)*d == k (mod 8),
+    // sign(z) = sign(K). For k = 114 this is Result 1's x == 3 (mod 4) (x == 7 mod 12): 3/4 of the
+    // even d (3/8 of all d not divisible by 3) cannot hold a solution and are skipped before root
+    // finding. --no-filter disables the skip (validation).
+    bool two_adic_ok(u64 d, long long K) const {
+        if ((d & 1) || ((c.k % 4) + 4) % 4 != 2) return true;
+        u128 zlo = static_cast<u128>(d) * 3847 / 1000;
+        u128 kabs = static_cast<u128>(std::llabs(c.k));
+        if (zlo < 1 || (zlo <= 100 && zlo * zlo * zlo <= kabs)) return true;   // |k| <= 10^6 < 101^3
+        long long sgn = K > 0 ? 1 : -1;                 // sign(z) = sign(K)
+        long long xy8 = -sgn * static_cast<long long>(d % 8);
+        return ((xy8 - c.k) % 8 + 8) % 8 == 0;
     }
 
     bool k_divisible(u64 p) const { return static_cast<u64>(std::llabs(c.k)) % p == 0; }
@@ -467,6 +484,11 @@ struct Search {
             for (u32 i = 0; i < len; ++i) {
                 cof[i] = base + i; nf[i] = 0;
                 dead[i] = (!c.dump_factors && (base + i) % 3 == 0) ? 2 : 0;
+                if (!dead[i] && !c.dump_factors && !c.dump_roots && !c.no_filter) {   // bit 4: 2-adic rule
+                    u64 dd = base + i;
+                    long long Kd = (static_cast<int>(dd % 3) == eps3) ? c.k : -c.k;
+                    if (!two_adic_ok(dd, Kd)) dead[i] = 4;
+                }
             }
             // Pass 1: primes p == 1 (mod 3) modulo which k is not a cube kill every multiple (no division).
             for (std::size_t j = 0; j < small_p.size() && !c.dump_factors; ++j) {
@@ -505,6 +527,7 @@ struct Search {
                 u64 d = base + i;
                 ++chunk_ct.d_total;
                 if (dead[i] & 2) { ++chunk_ct.d_skipped_mod3; continue; }   // bit 2: d == 0 (mod 3); bit 1: killed
+                if (dead[i] & 4) { ++chunk_ct.d_skipped_2adic; continue; }  // bit 4: excluded by two_adic_ok
                 if (!dead[i] && cof[i] > 1) {
                     u64 q = cof[i];  // prime > P (all smaller primes removed)
                     bool killer = !c.dump_factors && !k_divisible(q) && q % 3 == 1 && pw(mod_signed(c.k, q), (q - 1) / 3, q) != 1;

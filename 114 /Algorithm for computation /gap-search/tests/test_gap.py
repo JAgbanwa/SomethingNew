@@ -89,6 +89,26 @@ class Records(unittest.TestCase):
             self.assertEqual(a, b)
             self.assertTrue(a)
 
+    def test_two_adic_skip_is_safe(self):
+        # k == 2 (mod 4) (like 114): even d with -sign(z) d != k (mod 8) are skipped. Over small d,
+        # wide |z|, the hits equal --no-filter's (which disables the skip), even-d hits obey the
+        # rule, and the counter shows the skip was active.
+        for k in (6, 42, 222, 438, 618):
+            args = ["--k", str(k), "--d-start", "1", "--d-stop", "300000", "--ratio-max", "1000"]
+            out = worker(*args).stdout
+            a = {(h["x"], h["y"], h["z"]) for h in hits(out)}
+            b = {(h["x"], h["y"], h["z"]) for h in hits(worker(*args, "--no-filter").stdout)}
+            self.assertEqual(a, b, k)
+            for x, y, z in a:
+                x, y, z = int(x), int(y), int(z)
+                d = abs(x + y)
+                if d % 2 == 0 and abs(z) ** 3 > k:
+                    self.assertEqual((x + y - k) % 8, 0)
+                    self.assertEqual(x + y, -d if z > 0 else d)
+            skipped = sum(json.loads(l)["counters"]["d_skipped_2adic"] for l in out.splitlines()
+                          if json.loads(l)["type"] == "chunk")
+            self.assertGreater(skipped, 0)
+
 
 @unittest.skipUnless(WORKER.exists(), "build first: make")
 class Arithmetic(unittest.TestCase):

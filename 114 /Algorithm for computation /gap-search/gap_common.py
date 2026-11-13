@@ -17,7 +17,7 @@ PAGE_SCHEMA = "ce114-gap-page-v1"
 STATUS_SCHEMA = "ce114-gap-status-v1"
 CHECKPOINT_SCHEMA = "ce114-gap-checkpoint-v1"
 METHOD = "booker-sutherland-gap-v1"
-COUNTERS = ("d_total", "d_skipped_mod3", "d_no_roots", "d_live", "roots", "candidates",
+COUNTERS = ("d_total", "d_skipped_mod3", "d_skipped_2adic", "d_no_roots", "d_live", "roots", "candidates",
             "pass_2adic", "pass_residue", "exact_checks", "hits")
 ALPHA = 2 ** (1 / 3) - 1
 

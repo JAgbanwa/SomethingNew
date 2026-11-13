@@ -18,8 +18,8 @@ integer solution of `a^3 + b^3 + c^3 = 114`. So the best algorithm for this
 problem is the best algorithm for 114 = sum of three cubes on 1,800 hours.
 That algorithm is the Booker–Sutherland method aimed at the part of the search
 space their 2020 run for 114 left out. Under their own heuristic, 1,800 hours
-give about a **1 in 190,000 – 200,000** chance of a solution at the
-development host's speed (0.29–0.31 µs per step). That is small, but it is
+give about a **1 in 150,000 – 170,000** chance of a solution
+(0.233–0.265 µs per step; it was 1 in 190,000 – 200,000 before the 2-adic rule of §3). That is small, but it is
 about 10^5 times the chance from the folder's earlier engines on the same
 hours. A completed run also produces a new, exact
 exclusion region. Every solution found is turned into its three rational `d`:
@@ -111,14 +111,14 @@ unsearched ones: from `185185185185185186` upward.
 
 | Use of 1,800 core-hours (k = 114) | Expected solutions |
 | --- | --- |
-| **This engine**: `δ` from 1.852e17, `|c| <= 64δ` (0.293 µs per `δ`, 2.2e13 `δ`) | **5.3e-6 (1 in 190,000)**; at 0.31 µs, 1 in 200,000 |
+| **This engine**: `δ` from 1.852e17, `|c| <= 64δ` (0.233 µs per `δ`, 2.78e13 `δ`) | **6.6e-6 (1 in 151,000)**; at 0.265 µs, 1 in 172,000 |
 | Algorithm D (`xroots`) spending the same 1,800 h in its planned box (`|X| < 10^6`, `|n|` 1.7e18 – 1.7e19); the whole box is 9.5e6 core-hours by its own cost model and worth ~5e-8 | ~1e-11; ~3–6e-11 if spent on its best slice |
 | `dsweep`, `dsmooth`, `xscan` | 0: they cannot reach the certificate size or `n` any solution needs (above) |
 | `xcurve` on every `|x| <= 5000`, solved completely | ~7e-9 in total |
 
 For scale: the chance grows linearly with hours. This code can reach at most
 about 0.9% (δ up to about 2.25×10^17, where `(R + 18)·δ` hits 2^64 at
-`R = 64`), in about 3.2×10^6 core-hours.
+`R = 64`), in about 2.6×10^6 core-hours.
 
 ## 3. The engine
 
@@ -129,6 +129,14 @@ For each `δ` it:
 
 * factors `δ` with a segmented sieve, with early rejection when 114 is not a
   cube modulo a prime `p ≡ 1 (mod 3)` of `δ`;
+* skips, before factoring, the even `δ` excluded by the 2-adic rule: for
+  `k ≡ 2 (mod 4)`, an even `δ` makes `a, b` odd and `c` even, so
+  `a + b = −sign(c)·δ ≡ k (mod 8)`. For 114 only `δ ≡ 10, 14 (mod 24)` survive among
+  the even `δ`. This is the 2-adic half of Result 1's `x ≡ 7 (mod 12)`. Its other
+  condition, `n ≡ 0 (mod 3)` (`z ≡ δ mod 9`), is already implied by the walk's classes.
+  The rule removes a quarter of all `δ` and makes the engine about 1.26× faster
+  (0.318 → 0.253 µs per `δ`, back to back on one host). Counter: `d_skipped_2adic`.
+  `--no-filter` turns it off;
 * finds every cube root of `±114` mod `δ` (AMM, Hensel, CRT);
 * walks `c` in the classes forced modulo `9δ` (or `18δ` for odd `δ`) over
   `3.847δ <= |c| <= 64δ`;
@@ -139,7 +147,7 @@ The filters are necessary conditions, so nothing in the region is lost. For
 `k = 114`, all three components are ≡ 2 (mod 3), `3 ∤ δ`, and
 `sign(c) = +1` exactly when `δ ≡ 2 (mod 3)`.
 
-## 4. Validation (`make test`, 18 tests)
+## 4. Validation (`make test`, 19 tests)
 
 * **Engine.**
   * Rediscovers the record solutions for k = 33, 42, 3, 165, 579, 795 and 906
@@ -149,6 +157,10 @@ The filters are necessary conditions, so nothing in the region is lost. For
     candidates for k = 114, 390, 627 and 33.
   * Cube-root sets and factorizations are checked at production size for
     k = 114 and 390, including `δ` divisible by 2^25, 5^14, 7^12 and 13^10.
+  * 2-adic rule: identical hits to the engine before the rule for all 55
+    `k < 1000` with `k ≡ 2 (mod 4)`, `k ≡ ±3 (mod 9)` (`1 ≤ δ < 3·10^6`,
+    `|c| ≤ 1000δ`, 143 representations); `make test` repeats this against
+    `--no-filter` for k = 6, 42, 222, 438, 618.
   * Resume, coverage-accounting and audit regressions pass.
 * **Converter.**
   * For the record solutions of 42 = 6·7 and 906 = 6·151, it gives one
@@ -182,8 +194,9 @@ python3 to_d.py gap-collected/hits.jsonl            # the rational d of results 
 
 * **Defaults:** `k = 114` and 1,800 core-hours. The planner sizes the `δ`
   range from the measured µs per `δ`, so calibrate on the grid's hardware.
-  At this host's 0.293 µs, the plan is 1,800 tasks of about one hour each
-  covering `δ` in [185185185185185186, 185207301226140817). Per-task set-up
+  At 0.233 µs (the development host's 0.293 µs divided by the 1.26 speed-up), the
+  plan is 1,800 tasks of about one hour each covering `δ` in
+  [185185185185185186, 185212996343983469). Per-task set-up
   (about 1–3 s) and a 2% audit (about 36 core-hours) come on top; keep them
   in the project's headroom.
 * **Robustness:** tasks checkpoint every 2^24 `δ` (fsynced) and resume in

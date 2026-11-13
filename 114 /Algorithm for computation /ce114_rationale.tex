@@ -49,8 +49,9 @@ campaign is sized for 1{,}800 core-hours.
 This note gives the reduction with proofs, what is already excluded, the heuristic that
 selects the region, the algorithm step by step, the operating procedure, the validation and
 review evidence, the status of the folder's earlier programs, and the limits of the method.
-Under the Booker--Sutherland heuristic, the run has about a $1$ in $190{,}000$--$200{,}000$
-chance of producing a solution.
+Under the Booker--Sutherland heuristic, the run has about a $1$ in $150{,}000$--$170{,}000$
+chance of producing a solution. (It was $1$ in $190{,}000$--$200{,}000$ before the 2-adic rule
+of Proposition~\ref{prop:twoadic}, which makes the engine about $1.26$ times faster.)
 \end{abstract}
 
 \tableofcontents
@@ -74,9 +75,13 @@ The code lives in
 This note describes the revision of 6 November 2026 (commits \texttt{d19a6a3} and
 \texttt{194e6ca}). The revision of 13 November 2026 adds Remark~\ref{rem:delta} (this $d$ is
 not Booker--Sutherland's $\delta$), Proposition~\ref{prop:only} (Results~1 and~2 are the only
-targets, and the only half-integral points that are representations of $114$), and the new
-cross-check \code{rational-d-search/} (Section~\ref{sec:older}). The search itself is
-unchanged: $k=114$ only.
+targets, and the only half-integral points that are representations of $114$), the new
+cross-check \code{rational-d-search/} (Section~\ref{sec:older}), and the local conditions
+$n\equiv0\pmod3$, $x\equiv7\pmod{12}$ of Result~1 (Proposition~\ref{prop:local}). The
+$2$-adic part of the latter gives a new rule, Proposition~\ref{prop:twoadic}. The engine now
+skips three quarters of the even $\delta$ before any root finding, which is about $1.26$
+times faster on the same host. The search is still $k=114$ only, and the region is
+unchanged.
 
 %====================================================================
 \section{The problem is exactly \texorpdfstring{$114=a^3+b^3+c^3$}{114 = a3 + b3 + c3}}\label{sec:reduction}
@@ -260,7 +265,7 @@ $|n|\ge9.8\cdot10^{15}$ and certificates $V=dX^2$ (resp.\ $U=2dx^2$) of at least
 \caption{The $(|c|,\delta)$ plane for $k=114$, log scales. Shaded: searched by
 Booker--Sutherland. Hatched: the strip searched by this campaign, just above
 $\delta=10^{19}/54$, with $3.847\,\delta\le|c|\le64\,\delta$. The strip's height is
-exaggerated: 1{,}800 core-hours cover a relative $\delta$-width of about $1.2\times10^{-4}$.}
+exaggerated: 1{,}800 core-hours cover a relative $\delta$-width of about $1.5\times10^{-4}$.}
 \label{fig:plane}
 \end{figure}
 
@@ -313,36 +318,44 @@ The alternatives are worse:
 \end{itemize}
 
 \subsection{Calibration and expected yield}
-Calibration at $\delta\approx1.85\times10^{17}$ for $k=114$ on the development host (one
-core per measurement) gave:
+Calibration at $\delta\approx1.85\times10^{17}$ for $k=114$, with the 2-adic rule, on the
+host of the 13 November revision (one core per measurement, \texttt{gap\_campaign.py
+--calibrate}) gave:
 
 \begin{center}
 \begin{tabular}{rrrr}
 \toprule
 $R$ & $\mu$s per $\delta$ & coverage $1-1/\sqrt{\alpha R}$ & relative yield per core-second\\
 \midrule
-24 & 0.270 & 0.600 & $2.23\times10^6$\\
-32 & 0.268 & 0.653 & $2.44\times10^6$\\
-40 & 0.282 & 0.690 & $2.45\times10^6$\\
-48 & 0.284 & 0.717 & $2.52\times10^6$\\
-\textbf{64} & \textbf{0.293} & \textbf{0.755} & $\mathbf{2.58\times10^6}$\\
-80 & 0.307 & 0.781 & $2.54\times10^6$\\
+24 & 0.237 & 0.600 & $2.53\times10^6$\\
+32 & 0.246 & 0.653 & $2.65\times10^6$\\
+40 & 0.253 & 0.690 & $2.73\times10^6$\\
+48 & 0.250 & 0.717 & $2.87\times10^6$\\
+\textbf{64} & \textbf{0.265} & \textbf{0.755} & $\mathbf{2.85\times10^6}$\\
+80 & 0.267 & 0.781 & $2.93\times10^6$\\
 \bottomrule
 \end{tabular}
 \end{center}
 
-The optimum is flat and $R=64$ is chosen. With $(R+18)\delta<2^{64}$ the hard ceiling is
-$R=81$ at this $\delta$. At $0.293\,\mu$s per $\delta$, 1{,}800 core-hours cover
-$2.212\times10^{13}$ values of $\delta$, namely
-$\delta\in[185185185185185186,\,185207301226140817)$, and \eqref{eq:yield} gives:
+The optimum is flat (within $3\%$ from $R=48$ to $80$) and $R=64$ is kept. With
+$(R+18)\delta<2^{64}$ the hard ceiling is $R=81$ at this $\delta$.
+
+Run back to back on the same host over two windows of $3\times10^7$ values of $\delta$ ($R=64$),
+the engine before the 2-adic rule took $0.315$--$0.323\,\mu$s per $\delta$ and the current one
+$0.249$--$0.260\,\mu$s. That is a factor of about $1.26$. The original development host measured
+$0.293\,\mu$s for the old engine, which corresponds to about $0.233\,\mu$s now. At that speed,
+1{,}800 core-hours cover $2.78\times10^{13}$ values of $\delta$, namely
+$\delta\in[185185185185185186,\,185212996343983469)$. (It was $2.21\times10^{13}$ before.)
+Equation~\eqref{eq:yield} then gives:
 
 \begin{center}
 \begin{tabularx}{\linewidth}{Yr}
 \toprule
 Use of 1,800 core-hours ($k=114$) & expected solutions\\
 \midrule
-This campaign ($0.293\,\mu$s per $\delta$) & $5.3\times10^{-6}$ (1 in 190{,}000)\\
-This campaign at the pilot's $0.31\,\mu$s per $\delta$ & 1 in 200{,}000\\
+This campaign, $0.233\,\mu$s per $\delta$ & $6.6\times10^{-6}$ (1 in 151{,}000)\\
+This campaign, $0.253$--$0.265\,\mu$s (this revision's host) & 1 in 164{,}000--172{,}000\\
+Before the 2-adic rule ($0.293\,\mu$s) & $5.3\times10^{-6}$ (1 in 190{,}000)\\
 \code{xroots} (Algorithm D), 1,800 h inside its planned box & $\sim10^{-11}$\\
 \code{xcurve} on every $|x|\le5000$, solved completely & $\sim7\times10^{-9}$ in total\\
 \code{dsweep}, \code{dsmooth}, \code{xscan} & 0 (Section~\ref{sec:older})\\
@@ -351,7 +364,7 @@ This campaign at the pilot's $0.31\,\mu$s per $\delta$ & 1 in 200{,}000\\
 \end{center}
 
 \noindent The chance grows linearly with hours. Even so, this code can reach at most about
-$0.9\%$ (about $3.2\times10^6$ core-hours) before $(R+18)\delta$ reaches $2^{64}$ at $R=64$.
+$0.9\%$ (about $2.6\times10^6$ core-hours at $0.233\,\mu$s per $\delta$) before $(R+18)\delta$ reaches $2^{64}$ at $R=64$.
 These are heuristic figures, resting on Heath-Brown's conjecture and the Booker--Sutherland
 model, not on theorems.
 
@@ -418,6 +431,52 @@ $\Delta=t^2\equiv1\pmod8$. Moreover $3\Delta\equiv4w-\delta^2\pmod8$ with
 $w\equiv(z^3-K)\delta^{-1}\equiv z-K\pmod2$.
 \end{proof}
 
+\begin{proposition}[local conditions of Result~1]\label{prop:local}
+Every point of Result~1 has $n\equiv0\pmod3$ and $x\equiv7\pmod{12}$. Every point of
+Result~2 has $n\equiv0\pmod3$ and $X\equiv5$ or $11\pmod{12}$.
+\end{proposition}
+\begin{proof}
+By Proposition~\ref{prop:charts}, $A,B,C\equiv2\pmod3$. Write each as $2+3u$; then
+$(2+3u)^3\equiv8+9u\pmod{27}$, so $114\equiv24+9(u_A+u_B+u_C)\pmod{27}$, i.e.\
+$u_A+u_B+u_C\equiv1\pmod3$. Hence $A+B+C=6+3\sum u\equiv0\pmod9$. It is also even, so
+$18\mid A+B+C=6n$ and $3\mid n$. Next, $A+B\equiv1\pmod3$, so $x=-(A+B)/2\equiv1\pmod3$,
+and in Result~2 $X=-(A+B)\equiv2\pmod3$ with $X$ odd. In Result~1, $A$ and $B$ are odd and
+$C$ is even, so $C^3\equiv0\pmod8$. Odd $t$ satisfy $t^3\equiv t\pmod8$, so
+$A+B\equiv A^3+B^3\equiv114\equiv2\pmod8$, and $x=-(A+B)/2\equiv3\pmod4$. Together these
+give $x\equiv7\pmod{12}$.
+\end{proof}
+
+\noindent In Booker--Sutherland coordinates ($a+b=-\sgn(c)\,\delta$), $3\mid n$ reads
+$z\equiv\delta\pmod9$. This is already enforced by the classes of
+Proposition~\ref{prop:classes}: every one of the $154{,}376$ candidates walked on $10^5$
+consecutive $\delta$ from $D_0$ satisfied it. The $2$-adic half of $x\equiv7\pmod{12}$, on
+the other hand, was not used before. It is the following rule.
+
+\begin{proposition}[2-adic rule for even $\delta$]\label{prop:twoadic}
+Let $k\equiv2\pmod4$ (for example $k=114$) and let $\delta$ be even with
+$\lfloor3.847\,\delta\rfloor^3>|k|$. Every solution with this $\delta$ in the walk satisfies
+\[
+  -\sgn(c)\,\delta\equiv k\pmod8 .
+\]
+For $k=114$, combined with Proposition~\ref{prop:sign}, the even $\delta$ that can occur are
+$\delta\equiv10$ or $14\pmod{24}$: two of the eight even classes prime to $3$.
+\end{proposition}
+\begin{proof}
+Since $k\equiv2\pmod4$, exactly one component is even (three even ones would give
+$8\mid k$). If $\delta=|a+b|$ is even, $a,b$ have the same parity, so they are the odd pair
+and $c$ is even. As in the previous proof, $a+b\equiv a^3+b^3=k-c^3\equiv k\pmod8$.
+Moreover $a+b$ has the sign of $a^3+b^3=k-c^3$, and that sign is $-\sgn(c)$ when
+$|c|^3>|k|$, which holds on the whole walk $|c|\ge\lfloor3.847\,\delta\rfloor$. So
+$a+b=-\sgn(c)\,\delta$. For $114$: if $c>0$ then $\delta\equiv2\pmod3$ and
+$-\delta\equiv2\pmod8$, so $\delta\equiv14\pmod{24}$. If $c<0$ then $\delta\equiv1\pmod3$
+and $\delta\equiv2\pmod8$, so $\delta\equiv10\pmod{24}$.
+\end{proof}
+
+\noindent For $k=114$ this is exactly $x\equiv3\pmod4$ for the Result-1 point whose $C$ is
+the smallest component. The worker marks the excluded $\delta$ when it sets up each sieve
+block, so it neither factors them nor looks for cube roots. It counts them as
+\texttt{d\_skipped\_2adic}. \texttt{--no-filter} switches the rule off, for validation.
+
 \subsection{Steps for each \texorpdfstring{$\delta$}{delta}}
 \begin{enumerate}[leftmargin=*]
 \item \textbf{Factor.} Primes up to $\sqrt{\delta_{\rm stop}}\approx4.3\times10^8$ are
@@ -430,7 +489,8 @@ bucket cycles. The cofactor left after sieving is $1$ or a prime.
 not a cube mod $p$ leaves no root. This is precomputed per prime, packed into the bucket
 entries, and applied before any division. Similarly $p\mid114$ with $v_p(114)=1$ and
 $p^2\mid\delta$ leaves no root. One third of all $\delta$ are skipped because $3\mid\delta$,
-and about $52\%$ have no root, so only about $15\%$ remain.
+and a quarter by the 2-adic rule (Proposition~\ref{prop:twoadic}). Of the rest, about
+$29\%$ of all $\delta$ have no root, so only about $12\%$ remain.
 \item \textbf{Cube roots of $K$ mod $\delta$.}
   \begin{itemize}
     \item $p\equiv2\pmod3$: $K^{(2p-1)/3}$.
@@ -456,7 +516,8 @@ Proposition~\ref{prop:delta}, and verify $a^3+b^3+c^3=114$. The hit is printed a
 line.
 \end{enumerate}
 
-Measured on 16 million $\delta$ starting at $D_0$ ($k=114$, $R=64$):
+Measured on 16 million $\delta$ starting at $D_0$ ($k=114$, $R=64$, with the 2-adic
+rule):
 
 \begin{center}
 \begin{tabular}{lrr}
@@ -464,11 +525,12 @@ Measured on 16 million $\delta$ starting at $D_0$ ($k=114$, $R=64$):
 counter & total & per $\delta$\\
 \midrule
 $\delta$ skipped, $3\mid\delta$ & 5{,}333{,}333 & 0.333\\
-$\delta$ with no cube root & 8{,}280{,}743 & 0.518\\
-$\delta$ processed further & 2{,}385{,}924 & 0.149\\
-cube roots & 5{,}540{,}816 & 0.346\\
-candidates $z$ & 24{,}686{,}835 & 1.54\\
-passed the residue filters (exact GMP checks) & 855 & $5.3\times10^{-5}$\\
+$\delta$ skipped by the 2-adic rule & 3{,}999{,}999 & 0.250\\
+$\delta$ with no cube root & 4{,}679{,}745 & 0.292\\
+$\delta$ processed further & 1{,}986{,}923 & 0.124\\
+cube roots & 4{,}618{,}747 & 0.289\\
+candidates $z$ & 18{,}524{,}758 & 1.16\\
+passed the residue filters (exact GMP checks) & 647 & $4.0\times10^{-5}$\\
 solutions & 0 & --\\
 \bottomrule
 \end{tabular}
@@ -503,14 +565,14 @@ Result-1 line and two Result-2 lines.
 \begingroup\sloppy
 
 \begin{enumerate}[leftmargin=*]
-\item \textbf{Build and test:} \texttt{make \&\& make test} (18 tests, about 100\,s). Or
+\item \textbf{Build and test:} \texttt{make \&\& make test} (19 tests, about 140\,s). Or
 \texttt{docker build .}, which compiles the worker and runs the test suite during the build.
 \item \textbf{Calibrate} on Charity Engine's CPU type: \texttt{python3 gap\_campaign.py
 --calibrate}. It prints the $\mu$s per $\delta$ for several $R$ and the best $R$.
 \item \textbf{Plan:} \texttt{python3 gap\_campaign.py --campaign-id ce114-gap}
 \texttt{--ratio-max 64} \texttt{--us-per-d <measured>} \texttt{--output-dir gap-tasks}. The defaults are $k=114$, 1{,}800 core-hours
 and $D_0=185185185185185186$. The range is split evenly into tasks of about one hour each
-(1{,}800 tasks at $0.293\,\mu$s), and \code{page.json} is written with the heuristic yield.
+(1{,}800 tasks; always pass the $\mu$s per $\delta$ measured on the grid), and \code{page.json} is written with the heuristic yield.
 Nothing is submitted.
 \item \textbf{Run} each task: \texttt{python3 run\_gap\_task.py --task <task.json>
 --output-dir <dir>}. In the container this is the default command, on
@@ -550,6 +612,11 @@ run that covered 114, and $k=3$ at $|c|/\delta\approx4.4\times10^6$. Excluding t
 loses the hit, and disabling every filter changes nothing.
 \item \textbf{Brute force.} For every $k\equiv\pm3\pmod9$ up to 100, the worker finds all
 solutions with coordinates up to $2000$ in the searched region, and nothing else.
+\item \textbf{2-adic rule.} The current engine and the engine before the rule return
+identical hits for all $55$ values $k<1000$ with $k\equiv2\pmod4$ and $k\equiv\pm3\pmod9$,
+over $1\le\delta<3\times10^6$ with $|c|\le1000\,\delta$ ($143$ representations). The test
+suite repeats this against \texttt{--no-filter} for $k=6,42,222,438,618$. It also checks the
+congruence on every even-$\delta$ hit, and that the skip was active.
 \item \textbf{Filter decisions.} On production-size candidates for $k=114,390,627,33$, every
 2-adic and residue decision agrees with exact integer arithmetic.
 \item \textbf{Factorizations and roots.} Factorizations near $D_0$ and near $2^{58}$ are
@@ -658,7 +725,7 @@ file (in \code{gap-search/}) & role\\
 \code{collect_gap.py} & coverage union, gap report, hit re-verification\\
 \code{audit_gap.py} & re-runs sampled chunks to detect faulty hosts\\
 \code{to_d.py} & representation $\to$ the three rational $d$, verified on \eqref{eq:E}\\
-\code{tests/} & \code{test_gap.py} (engine, 12 tests), \code{test_to_d.py} (converter, 6 tests)\\
+\code{tests/} & \code{test_gap.py} (engine, 13 tests), \code{test_to_d.py} (converter, 6 tests)\\
 \code{Dockerfile}, \code{container_entrypoint.sh} & Charity Engine image (tests run at build)\\
 \code{examples/pilot/}, \code{validation/pilot/} & pilot tasks and its collected summary\\
 \code{README.md} & short operating guide\\
