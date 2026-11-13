@@ -26,8 +26,8 @@ Co-authored-by: Aristotle (Harmonic) <aristotle-harmonic@harmonic.fun>
 > Booker–Sutherland method on the part of the search space their 2020 run for 114 left out
 > (`|a+b| > 10¹⁹/54`, `|c| <= 64|a+b|`). It is sized for **1,800 core-hours**, and `to_d.py`
 > turns any hit into the verified rational `d`. Under their heuristic the chance is about
-> 1 in 150,000 – 170,000 (since the 2-adic rule from Result 1's `x ≡ 7 (mod 12)` was added
-> to the engine). The certificate sweeps below (`dsweep`, `dsmooth`) and `xscan` cannot
+> 1 in 145,000 – 165,000 (since the 2-adic rule from Result 1's `x ≡ 7 (mod 12)` and a mod-24
+> wheel were added to the engine). The certificate sweeps below (`dsweep`, `dsmooth`) and `xscan` cannot
 > reach the ≥ 25-digit certificates or `|n| ≥ 9.8·10¹⁵` that any acceptable result needs (see
 > `HALF_INTEGER.md`). `xcurve` is unbounded in `n`, but small `|x|` holds almost nothing beyond
 > what Booker–Sutherland excluded (~7·10⁻⁹ for all `|x| ≤ 5000`). `xroots`
