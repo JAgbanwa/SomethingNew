@@ -26,23 +26,8 @@ components (c^3 + 2a^3 = 114 has no integer solution: PARI thue(thueinit(x^3+2,1
 so it gives exactly one point of result 1 and two of result 2. A representation with a
 repeated component (possible for other k) gives fewer distinct points.
 
-Result 3 (x an integer, s = Y/2 with Y odd).  Here A, B are half-integers and C an
-integer, so (2A)^3 + (2B)^3 + (2C)^3 = 8k: a representation of 8k (912 for k = 114) with
-two odd components a, b and an even one c, and conversely such a representation gives
-
-    x = -(a + b)/4,   s = (a - b)/4,   n = (a + b + c)/12,   d = (a + c)/(a + b),
-
-which is a point exactly when 12 | a + b + c (for 912 this means 4 | c; then a + b = 0
-(mod 16), so 4 || x).  The case x = X/2, s an integer is impossible (it would need
-X (4s^2 - (X+12n)^2) = 8(36n^3 - m) with the left side odd).  So with y = s restricted to
-integers and odd halves, the acceptable points are exactly: the representations of k
-(results 1, 2) and the representations of 8k with two odd components (result 3).
-Example: 912 = 55956937^3 + (-55648340)^3 + (-14232281)^3 gives the known solution
-n = -1160307, x = -10431164, s = 35094609/2, d = 308597/41724656.
-
-  python3 to_d.py collected/hits.jsonl            # worker hits (fields x, y, z), k or 8k
-  python3 to_d.py --triple A B C [--k 114]        # one representation of k
-  python3 to_d.py --triple a b c --k 912 --base-k 114   # one representation of 8k
+  python3 to_d.py collected/hits.jsonl            # worker hits (fields x, y, z)
+  python3 to_d.py --triple A B C [--k 114]        # one representation
 """
 from __future__ import annotations
 
@@ -60,7 +45,7 @@ def points(a: int, b: int, c: int, k: int = 114) -> list[dict]:
     if k % 6:
         raise ValueError("k must be 6m")
     m = k // 6
-    if (a + b + c) % 6:  # noqa
+    if (a + b + c) % 6:
         raise ValueError("a + b + c is not divisible by 6 (n would not be an integer)")
     out, seen = [], set()
     trip = (a, b, c)
@@ -97,45 +82,11 @@ def points(a: int, b: int, c: int, k: int = 114) -> list[dict]:
     return out
 
 
-def points_8k(a: int, b: int, c: int, k: int = 114) -> list[dict]:
-    """Result-3 points (x integer, s = Y/2, Y odd) from 8k = a^3 + b^3 + c^3 with a, b odd."""
-    if a ** 3 + b ** 3 + c ** 3 != 8 * k:
-        raise ValueError("not a representation of 8k")
-    if k % 6:
-        raise ValueError("k must be 6m")
-    m = k // 6
-    trip = (a, b, c)
-    odd = [t for t in trip if t % 2]
-    if len(odd) != 2:
-        return []                            # all even: a representation of k (results 1, 2)
-    even = [t for t in trip if t % 2 == 0][0]
-    hi, lo = sorted(odd, reverse=True)       # A >= B so that s >= 0
-    if (hi + lo + even) % 12 or hi + lo == 0:
-        return []                            # n would not be an integer (for 912: 4 does not divide c)
-    A, B, C = Fraction(hi, 2), Fraction(lo, 2), Fraction(even, 2)
-    n = int((A + B + C) / 6)
-    x = -(A + B) / 2
-    s = (A - B) / 2
-    d = (A + C) / (A + B)
-    N = 36 * n ** 3 - m
-    U = x + 6 * n
-    if x.denominator != 1 or s.denominator != 2 or (2 * s).numerator % 2 == 0:
-        raise AssertionError("not in result 3")
-    if s < 0 or s * s != U * U + N / x:
-        raise AssertionError("square-root condition fails")
-    if Fraction(N) != -2 * d * x * x * (-U + s):
-        raise AssertionError("equation (E) fails")
-    return [{"chart": "integer-x-half-sqrt", "result": 3, "d": f"{d.numerator}/{d.denominator}",
-             "n": str(n), "x": str(x), "sqrt": str(s), "X": None, "Y": str(2 * s),
-             "cubes": [str(hi), str(lo), str(even)]}]
-
-
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("hits", type=Path, nargs="*", help="hits.jsonl files from collect_gap.py or run_gap_task.py")
     ap.add_argument("--triple", type=int, nargs=3, metavar=("A", "B", "C"))
-    ap.add_argument("--k", type=int, default=114, help="k of the representations given (114, or 912 = 8*114)")
-    ap.add_argument("--base-k", type=int, default=114, help="the k of equation (E): 6m with m = 19")
+    ap.add_argument("--k", type=int, default=114)
     ap.add_argument("--json", type=Path, help="also write all points as JSON lines here")
     a = ap.parse_args()
     reps, seen = [], set()
@@ -162,10 +113,7 @@ def main() -> int:
         return 0
     allp = []
     for r in reps:
-        pts = points_8k(*r, k=a.base_k) if a.k == 8 * a.base_k else points(*r, k=a.k)
-        if not pts:
-            print(f"({r[0]})^3 + ({r[1]})^3 + ({r[2]})^3 = {a.k}: no point of (E) (parity / divisibility)")
-        for p in pts:
+        for p in points(*r, k=a.k):
             allp.append(p)
             extra = f"  X={p['X']}  Y={p['Y']}" if p["chart"] == "half" else ""
             print(f"result {p['result']} ({p['chart']} chart): d = {p['d']}   n = {p['n']}   x = {p['x']}   "
