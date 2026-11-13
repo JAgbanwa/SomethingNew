@@ -12,6 +12,15 @@ Co-authored-by: Aristotle (Harmonic) <aristotle-harmonic@harmonic.fun>
 
 # `36n³ - 19 = -2d·x²·(-(x+6n) + √((x+6n)² + (36n³-19)/x))`
 
+> **Correction (November 2026, later): a third acceptable class.** With `x` an integer and
+> `√(…) = Y/2` (`Y` odd), the equation is `912 = a³+b³+c³` with `a, b` odd and `4 | c`. This is
+> not a representation of 114, and the known solution `(n, x) = (−1160307, −10431164)`,
+> `d = 308597/41724656`, `√ = 35094609/2` is one of them. `gap-search/` now covers it
+> (`--k 912`, `to_d.py --k 912`); see `gap-search/README.md` §0 for how to split the
+> 1,800 hours. `rational-d-search/` is a new, validated engine for the general
+> rational-radical case in both charts. It found the new half-chart solution
+> `(n, x) = (309, 15125/2)`, `d = −41449/33275`.
+
 > **Update (November 2026): the recommended computation is [`gap-search/`](gap-search/README.md).**
 > Both acceptable results (an integral radical in the integer chart, or `x = X/2`, `√ = Y/2`
 > with `X, Y` odd) are exactly the integer solutions of `a³+b³+c³ = 114`. Each one gives one
