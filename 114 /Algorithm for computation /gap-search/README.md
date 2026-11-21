@@ -139,7 +139,44 @@ The filters are necessary conditions, so nothing in the region is lost. For
 `k = 114`, all three components are ≡ 2 (mod 3), `3 ∤ δ`, and
 `sign(c) = +1` exactly when `δ ≡ 2 (mod 3)`.
 
-## 4. Validation (`make test`, 18 tests)
+## 3a. Worker 1.1.0 (November 2026): wider z-range at lower cost per d
+
+Two changes, both exact (no solution in the region can be lost):
+
+* **128-bit z.** `z` is held in 128 bits, so `ratio_max` may be raised far past 64
+  (limit: `(ratio_max + 18)·d < 2^126`, `ratio_max <= 2^40`). Classes with more than 32
+  candidates are filtered bit-parallel: for each prime 5..29 the allowed steps form a
+  p-periodic pattern (one table lookup per `d`), and 64 steps are ANDed at a time; the
+  remaining eight primes and GMP run only on survivors. Wide walks cost about 1 ns per candidate.
+* **Cheaper per-d work.** The `9 | Δ` class test uses one product modulo `27d` per root instead
+  of three per class; `j` is stepped directly to the class `z ≡ d (mod 3)`; the residue test for
+  a large prime cofactor is merged into its cube-root computation (no separate exponentiation);
+  one Montgomery context per prime; 64-bit extended Euclid and a hardware `divq` mulmod.
+
+Validation: at `ratio_max = 64` the counters and hits are identical to 1.0.0 on every window
+compared (k = 3, 33, 42, 114, 165, 390, 795, 906; small and production `d`); `--dump-roots` and
+`--dump-factors` output is byte-identical; at large `ratio_max` it matches 1.0.0 wherever 1.0.0
+can run, and finds the records of 42, 3 and 906 through the bit-parallel path (k = 42 with
+`z` walked past 10^23). `make test` now runs 22 tests (four new: `WideRatio`).
+
+Measured on the development host (2 cores, median of 3 runs of 5·10^7 `d` from 1.852·10^17):
+
+| worker | ratio_max | ns per d | coverage | expected solutions per core-hour (relative) |
+| --- | --- | --- | --- | --- |
+| 1.0.0 | 64 | 346.6 | 0.755 | 1.00 |
+| 1.1.0 | 64 | 291.4 | 0.755 | 1.19 |
+| 1.1.0 | 512 | 347.4 | 0.913 | 1.21 |
+| 1.1.0 | **1024** | **289.7** | **0.939** | **1.49** |
+| 1.1.0 | 2048 | 312.0 | 0.957 | 1.41 |
+| 1.1.0 | 4096 | 346.0 | 0.969 | 1.29 |
+
+For 1,800 core-hours: 1.0.0 at R = 64 gives 4.45·10^-6 (1 in 224,000); 1.1.0 at R = 1024 gives
+**6.63·10^-6 (1 in 151,000)**, with δ in [185185185185185186, 185207553152047457). Calibrate on
+the grid's CPU (`--calibrate` now tries R = 64 … 4096). Enumerating only `d` with cube roots was
+profiled and not adopted: the whole sieve stage is ~29 ns of ~290 ns per `d`, and large prime
+cofactors still have to be found by sieving.
+
+## 4. Validation (`make test`, 22 tests)
 
 * **Engine.**
   * Rediscovers the record solutions for k = 33, 42, 3, 165, 579, 795 and 906
@@ -170,8 +207,8 @@ The filters are necessary conditions, so nothing in the region is lost. For
 ```sh
 make && make test
 python3 gap_campaign.py --calibrate                 # on Charity Engine's CPU type: prints R and us/d
-python3 gap_campaign.py --campaign-id ce114-gap --ratio-max 64 --us-per-d <measured> --plan-only
-python3 gap_campaign.py --campaign-id ce114-gap --ratio-max 64 --us-per-d <measured> --output-dir gap-tasks
+python3 gap_campaign.py --campaign-id ce114-gap --ratio-max 1024 --us-per-d <measured> --plan-only
+python3 gap_campaign.py --campaign-id ce114-gap --ratio-max 1024 --us-per-d <measured> --output-dir gap-tasks
 # each task (Charity Engine: the container's default command on /local/input/task.json)
 python3 run_gap_task.py --task gap-tasks/tasks/ce114-gap-0000.json --output-dir gap-results/ce114-gap-0000
 # afterwards

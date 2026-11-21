@@ -192,6 +192,64 @@ class Arithmetic(unittest.TestCase):
 
 
 @unittest.skipUnless(WORKER.exists(), "build first: make")
+class WideRatio(unittest.TestCase):
+    """Worker 1.1.0: z held in 128 bits (ratio_max * d may exceed 2^64) and the bit-parallel filter."""
+    PROD = 185185185185185186
+
+    def test_records_through_bit_parallel_filter(self):
+        # Each class then has thousands to billions of candidates: only the bit-parallel path runs,
+        # and for k = 42 the walk reaches z ~ 10^23 > 2^64.
+        for k, ratio in ((42, 10 ** 9), (3, 5 * 10 ** 6), (906, 10 ** 5)):
+            sol = RECORDS[k]
+            Z = min(sol, key=abs)
+            x, y = [v for v in sol if v != Z]
+            d = abs(x + y)
+            r = worker("--k", str(k), "--d-start", str(d - 20), "--d-stop", str(d + 20), "--ratio-max", str(ratio))
+            found = [h for h in hits(r.stdout) if {int(h["x"]), int(h["y"]), int(h["z"])} == set(sol)]
+            self.assertEqual(len(found), 1, f"k={k}")
+            verify_hit(found[0], k)
+
+    def test_filter_verdicts_above_2_64(self):
+        qr = {p: {x * x % p for x in range(p)} for p in (5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61)}
+        out = worker("--d-start", str(self.PROD), "--d-stop", str(self.PROD + 10 ** 6), "--ratio-max", "1000",
+                     "--dump-candidates", "6000").stdout
+        n_big = 0
+        for line in out.splitlines():
+            if line.startswith("{"):
+                continue
+            d, z, K, two, res = map(int, line.split())
+            self.assertEqual((z ** 3 - K) % d, 0)
+            self.assertTrue(3847 * d // 1000 <= z <= 1000 * d)
+            N = 4 * (z ** 3 - K) - d ** 3
+            self.assertEqual(N % (27 * d), 0)          # class test: Delta integral and 9 | Delta
+            delta = N // (3 * d)
+            self.assertEqual(two, int(d % 2 == 0 or delta % 8 == 1))
+            self.assertEqual(res, int(all(d % p == 0 or delta % p in qr[p] for p in qr)))
+            n_big += z >= 2 ** 64
+        self.assertGreater(n_big, 3000)
+
+    def test_bit_parallel_counts_equal_per_candidate_verdicts(self):
+        lo, hi = self.PROD + 5 * 10 ** 8, self.PROD + 5 * 10 ** 8 + 3000
+        run = worker("--d-start", str(lo), "--d-stop", str(hi), "--ratio-max", "1000").stdout
+        c = [json.loads(l) for l in run.splitlines() if '"chunk"' in l][0]["counters"]
+        dump = worker("--d-start", str(lo), "--d-stop", str(hi), "--ratio-max", "1000", "--dump-candidates", "10000000").stdout
+        rows = [list(map(int, l.split())) for l in dump.splitlines() if l and not l.startswith("{")]
+        self.assertEqual(len(rows), c["candidates"])
+        self.assertEqual(sum(1 for r in rows if r[3] and r[4]), c["pass_residue"])
+        self.assertEqual(c["pass_2adic"], c["candidates"])
+
+    def test_task_limits(self):
+        from gap_common import TASK_SCHEMA, validate_task
+        base = {"schema": TASK_SCHEMA, "campaign_id": "t", "task_id": "t-0", "k": 114,
+                "d_start": str(self.PROD), "d_stop": str(self.PROD + 10)}
+        self.assertEqual(validate_task({**base, "ratio_max": 1024})["ratio_max"], 1024)
+        with self.assertRaises(ValueError):
+            validate_task({**base, "ratio_max": 2 ** 41})
+        r = worker("--d-start", str(self.PROD), "--d-stop", str(self.PROD + 10), "--ratio-max", str(2 ** 41), check=False)
+        self.assertNotEqual(r.returncode, 0)
+
+
+@unittest.skipUnless(WORKER.exists(), "build first: make")
 class BruteForce(unittest.TestCase):
     """All solutions with max |coordinate| <= B must be found inside the searched (d, z) region."""
     B = 2000

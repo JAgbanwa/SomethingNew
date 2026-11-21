@@ -26,7 +26,7 @@ import sys
 import time
 
 from gap_common import (D_LIMIT, DEFAULT_D_START, METHOD, PAGE_SCHEMA, RHO, TASK_SCHEMA, atomic_json, check_k,
-                        coverage_fraction, expected_solutions)
+                        coverage_fraction, expected_solutions, ratio_ok)
 
 ROOT = Path(__file__).resolve().parent
 WORKER = ROOT / "bin" / "gap_worker"
@@ -45,14 +45,14 @@ def measure(k: int, d_start: int, count: int, ratio: int) -> float:
 
 
 def calibrate(k: int, d_start: int, count: int) -> int:
-    ratios = (16, 24, 32, 40, 48, 64, 80)
+    ratios = (64, 128, 256, 512, 1024, 2048, 4096)
     rows = []
     for r in ratios:
-        if (r + 18) * (d_start + count) >= 2 ** 64:
+        if not ratio_ok(r, d_start + count):
             continue
         per_d, setup, _ = measure(k, d_start, count, r)
         rows.append((r, per_d, setup))
-        print(f"ratio_max={r:3d}  {per_d * 1e6:7.3f} us per d   coverage={coverage_fraction(r):.3f}   "
+        print(f"ratio_max={r:5d}  {per_d * 1e6:7.3f} us per d   coverage={coverage_fraction(r):.3f}   "
               f"yield per core-second ~ {coverage_fraction(r) / per_d:.3e} (relative)")
     best = max(rows, key=lambda row: coverage_fraction(row[0]) / row[1])
     print(f"\nsieve set-up per task: {rows[0][2]:.1f} s")
@@ -71,8 +71,8 @@ def main() -> int:
     ap.add_argument("--d-start", type=int, default=DEFAULT_D_START)
     ap.add_argument("--d-stop", type=int, help="exclusive end of d (else derived from --core-hours)")
     ap.add_argument("--core-hours", type=float, help="search core-hours to plan (default 1800 unless --d-stop is given)")
-    ap.add_argument("--us-per-d", type=float, default=0.30, help="measured microseconds per d (use --calibrate)")
-    ap.add_argument("--ratio-max", type=int, default=64, help="|z| <= ratio_max * d (calibrate on the target CPU; 64 on the development host)")
+    ap.add_argument("--us-per-d", type=float, default=0.29, help="measured microseconds per d (use --calibrate)")
+    ap.add_argument("--ratio-max", type=int, default=1024, help="|z| <= ratio_max * d (calibrate on the target CPU; 1024 on the development host with worker 1.1.0)")
     ap.add_argument("--task-hours", type=float, default=1.0, help="estimated core-hours per task")
     ap.add_argument("--task-d-count", type=int, help="d values per task (overrides --task-hours)")
     ap.add_argument("--deadline-seconds", type=int, default=0, help="per-attempt deadline written into tasks")
@@ -93,8 +93,8 @@ def main() -> int:
     d_stop = a.d_stop if a.d_stop is not None else a.d_start + int(a.core_hours * 3600e6 / a.us_per_d)
     if not 1 <= a.d_start < d_stop <= D_LIMIT:
         ap.error("need 1 <= d_start < d_stop <= 2^63/27")
-    if a.ratio_max < 4 or a.ratio_max * d_stop + 18 * d_stop >= 2 ** 64:
-        ap.error("ratio_max * d must stay below 2^64")
+    if not ratio_ok(a.ratio_max, d_stop):
+        ap.error("ratio_max out of range: need 4 <= ratio_max <= 2^40 and (ratio_max + 18) * d < 2^126")
     per_task = a.task_d_count or max(1, int(a.task_hours * 3600e6 / a.us_per_d))
     n = d_stop - a.d_start
     if not a.task_d_count:                 # spread evenly: no near-empty final task
