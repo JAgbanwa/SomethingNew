@@ -18,8 +18,9 @@ integer solution of `a^3 + b^3 + c^3 = 114`. So the best algorithm for this
 problem is the best algorithm for 114 = sum of three cubes on 1,800 hours.
 That algorithm is the Booker–Sutherland method aimed at the part of the search
 space their 2020 run for 114 left out. Under their own heuristic, 1,800 hours
-give about a **1 in 190,000 – 200,000** chance of a solution at the
-development host's speed (0.29–0.31 µs per step). That is small, but it is
+give about a **1 in 151,000** chance of a solution with worker 1.1.0 at
+`|c| <= 1024δ` (0.29 µs per step on the development host; worker 1.0.0 at
+`|c| <= 64δ` gave 1 in 224,000 measured side by side, §3a). That is small, but it is
 about 10^5 times the chance from the folder's earlier engines on the same
 hours. A completed run also produces a new, exact
 exclusion region. Every solution found is turned into its three rational `d`:
@@ -111,14 +112,17 @@ unsearched ones: from `185185185185185186` upward.
 
 | Use of 1,800 core-hours (k = 114) | Expected solutions |
 | --- | --- |
-| **This engine**: `δ` from 1.852e17, `|c| <= 64δ` (0.293 µs per `δ`, 2.2e13 `δ`) | **5.3e-6 (1 in 190,000)**; at 0.31 µs, 1 in 200,000 |
+| **This engine (worker 1.1.0)**: `δ` from 1.852e17, `|c| <= 1024δ` (0.2897 µs per `δ`, 2.24e13 `δ`) | **6.6e-6 (1 in 151,000)** |
+| Worker 1.0.0, `|c| <= 64δ`, same host and session (0.3466 µs per `δ`) | 4.5e-6 (1 in 224,000); 5.3e-6 (1 in 190,000) at its first calibration, 0.293 µs |
 | Algorithm D (`xroots`) spending the same 1,800 h in its planned box (`|X| < 10^6`, `|n|` 1.7e18 – 1.7e19); the whole box is 9.5e6 core-hours by its own cost model and worth ~5e-8 | ~1e-11; ~3–6e-11 if spent on its best slice |
 | `dsweep`, `dsmooth`, `xscan` | 0: they cannot reach the certificate size or `n` any solution needs (above) |
 | `xcurve` on every `|x| <= 5000`, solved completely | ~7e-9 in total |
 
-For scale: the chance grows linearly with hours. This code can reach at most
-about 0.9% (δ up to about 2.25×10^17, where `(R + 18)·δ` hits 2^64 at
-`R = 64`), in about 3.2×10^6 core-hours.
+For scale: the chance grows linearly with hours. Worker 1.1.0 can reach δ up
+to 2^63/27 ≈ 3.42×10^17 (where `27δ` must still fit in 63 bits), which at
+`R = 1024` holds about 3.4% expected solutions, in about 1.26×10^7 core-hours.
+Worker 1.0.0 stopped at about 0.9% (δ ≈ 2.25×10^17, where `(R + 18)·δ` hit
+2^64 at `R = 64`).
 
 ## 3. The engine
 
@@ -131,8 +135,8 @@ For each `δ` it:
   cube modulo a prime `p ≡ 1 (mod 3)` of `δ`;
 * finds every cube root of `±114` mod `δ` (AMM, Hensel, CRT);
 * walks `c` in the classes forced modulo `9δ` (or `18δ` for odd `δ`) over
-  `3.847δ <= |c| <= 64δ`;
-* applies 16 exact quadratic-residue filters;
+  `3.847δ <= |c| <= Rδ` (`R = 1024` by default, `z` in 128 bits);
+* applies 16 exact quadratic-residue filters (bit-parallel for long classes, §3a);
 * decides the survivors exactly with GMP and verifies `a^3 + b^3 + c^3 = 114`.
 
 The filters are necessary conditions, so nothing in the region is lost. For
@@ -234,7 +238,7 @@ python3 to_d.py gap-collected/hits.jsonl            # the rational d of results 
 
 A completed, audited run proves that **(E) has no point of result 1 or 2
 coming from a representation with `δ = |a+b|` in the covered range and
-`3.847δ <= |c| <= 64δ`**. In particular it rules out every rational `d`
+`3.847δ <= |c| <= Rδ`** (`R = 1024` as planned). In particular it rules out every rational `d`
 those points would give. It does not cover other representations. The odds
 in §2 are heuristic: they rest on Heath-Brown's conjecture and
 Booker–Sutherland's model.
