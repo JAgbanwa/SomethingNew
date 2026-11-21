@@ -1,0 +1,45 @@
+\\ search_m_y.gp
+\\ Search for integer x and rational m = M/2, y = Y/2 (M, Y odd) with
+\\    y^2 = (6x + 3 + m)^2 + (36x^3 + 54x^2 + 27x - 4)/m
+\\
+\\ Reduction: put C(x) = 36x^3 + 54x^2 + 27x - 4. Multiplying by 4 gives
+\\    Y^2 = (12x + 6 + M)^2 + 8*C(x)/M.
+\\ M is odd, so M must divide the odd part of C(x). This makes the
+\\ search exhaustive in m and y for each x. No bounds on m or y are
+\\ needed: M runs over all +/- odd divisors of C(x), and Y is then fixed.
+\\ Y is automatically odd: (odd)^2 + 8*(integer) = 1 mod 8.
+\\
+\\ x runs 0, 1, -1, 2, -2, ... without end. Stop with Ctrl-C.
+\\ Resume from |x| = N by setting START = N before reading the file:
+\\    gp -q -e "START=5000" search_m_y.gp
+
+C(x) = 36*x^3 + 54*x^2 + 27*x - 4;
+
+LOGFILE = "sols_m_y.txt";
+nsol = 0;
+
+check(x) =
+{
+  my(c = C(x), co, M, T, Y);
+  if (c == 0, return(0));                \\ C has no integer roots, kept as a guard
+  co = abs(c) / 2^valuation(c, 2);       \\ odd part of |C(x)|
+  foreach(divisors(co), d,
+    forstep(s = -1, 1, 2,
+      M = s*d;
+      T = (12*x + 6 + M)^2 + 8*c/M;
+      if (T > 0 && issquare(T, &Y),
+        nsol++;
+        printf("x = %d   m = %d/2   y = +-%d/2\n", x, M, Y);
+        write(LOGFILE, Str("x=", x, " m=", M, "/2 y=", Y, "/2"));
+      )));
+}
+
+{
+  if (type(START) != "t_INT", START = 0);
+  if (START == 0, check(0); START = 1);
+  for (n = START, oo,
+    check(n);
+    check(-n);
+    if (n % 10000 == 0,
+      printf("[progress] |x| <= %d done, %d solutions so far\n", n, nsol)));
+}
