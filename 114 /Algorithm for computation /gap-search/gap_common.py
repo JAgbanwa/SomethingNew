@@ -106,6 +106,15 @@ def verify_hit(record: dict, k: int | None = None) -> tuple[int, int, int]:
     return x, y, z
 
 
+Z_LIMIT = 2 ** 126          # the worker holds z in 128 bits: (ratio_max + 18) * d_stop < 2^126
+RATIO_LIMIT = 2 ** 40
+
+
+def ratio_ok(ratio: int, d_stop: int) -> bool:
+    """ratio_max accepted by worker 1.1.0 for d < d_stop."""
+    return 4 <= ratio <= RATIO_LIMIT and (ratio + 18) * d_stop < Z_LIMIT
+
+
 def coverage_fraction(ratio_max: float) -> float:
     """Heuristic share of the solutions attached to a given d with |z| <= ratio_max * d.
 
@@ -135,7 +144,7 @@ def validate_task(task: dict) -> dict:
     d_start, d_stop, ratio = int(task["d_start"]), int(task["d_stop"]), int(task["ratio_max"])
     if not 1 <= d_start < d_stop <= D_LIMIT:
         raise ValueError("need 1 <= d_start < d_stop <= 2^63/27")
-    if ratio < 4 or ratio * d_stop + 18 * d_stop >= 2 ** 64:
+    if not ratio_ok(ratio, d_stop):
         raise ValueError("ratio_max out of range")
     deadline = int(task.get("deadline_seconds", 0))
     if deadline < 0:

@@ -18,8 +18,9 @@ integer solution of `a^3 + b^3 + c^3 = 114`. So the best algorithm for this
 problem is the best algorithm for 114 = sum of three cubes on 1,800 hours.
 That algorithm is the Booker–Sutherland method aimed at the part of the search
 space their 2020 run for 114 left out. Under their own heuristic, 1,800 hours
-give about a **1 in 190,000 – 200,000** chance of a solution at the
-development host's speed (0.29–0.31 µs per step). That is small, but it is
+give about a **1 in 151,000** chance of a solution with worker 1.1.0 at
+`|c| <= 1024δ` (0.29 µs per step on the development host; worker 1.0.0 at
+`|c| <= 64δ` gave 1 in 224,000 measured side by side, §3a). That is small, but it is
 about 10^5 times the chance from the folder's earlier engines on the same
 hours. A completed run also produces a new, exact
 exclusion region. Every solution found is turned into its three rational `d`:
@@ -111,14 +112,17 @@ unsearched ones: from `185185185185185186` upward.
 
 | Use of 1,800 core-hours (k = 114) | Expected solutions |
 | --- | --- |
-| **This engine**: `δ` from 1.852e17, `|c| <= 64δ` (0.293 µs per `δ`, 2.2e13 `δ`) | **5.3e-6 (1 in 190,000)**; at 0.31 µs, 1 in 200,000 |
+| **This engine (worker 1.1.0)**: `δ` from 1.852e17, `|c| <= 1024δ` (0.2897 µs per `δ`, 2.24e13 `δ`) | **6.6e-6 (1 in 151,000)** |
+| Worker 1.0.0, `|c| <= 64δ`, same host and session (0.3466 µs per `δ`) | 4.5e-6 (1 in 224,000); 5.3e-6 (1 in 190,000) at its first calibration, 0.293 µs |
 | Algorithm D (`xroots`) spending the same 1,800 h in its planned box (`|X| < 10^6`, `|n|` 1.7e18 – 1.7e19); the whole box is 9.5e6 core-hours by its own cost model and worth ~5e-8 | ~1e-11; ~3–6e-11 if spent on its best slice |
 | `dsweep`, `dsmooth`, `xscan` | 0: they cannot reach the certificate size or `n` any solution needs (above) |
 | `xcurve` on every `|x| <= 5000`, solved completely | ~7e-9 in total |
 
-For scale: the chance grows linearly with hours. This code can reach at most
-about 0.9% (δ up to about 2.25×10^17, where `(R + 18)·δ` hits 2^64 at
-`R = 64`), in about 3.2×10^6 core-hours.
+For scale: the chance grows linearly with hours. Worker 1.1.0 can reach δ up
+to 2^63/27 ≈ 3.42×10^17 (where `27δ` must still fit in 63 bits), which at
+`R = 1024` holds about 3.4% expected solutions, in about 1.26×10^7 core-hours.
+Worker 1.0.0 stopped at about 0.9% (δ ≈ 2.25×10^17, where `(R + 18)·δ` hit
+2^64 at `R = 64`).
 
 ## 3. The engine
 
@@ -131,15 +135,52 @@ For each `δ` it:
   cube modulo a prime `p ≡ 1 (mod 3)` of `δ`;
 * finds every cube root of `±114` mod `δ` (AMM, Hensel, CRT);
 * walks `c` in the classes forced modulo `9δ` (or `18δ` for odd `δ`) over
-  `3.847δ <= |c| <= 64δ`;
-* applies 16 exact quadratic-residue filters;
+  `3.847δ <= |c| <= Rδ` (`R = 1024` by default, `z` in 128 bits);
+* applies 16 exact quadratic-residue filters (bit-parallel for long classes, §3a);
 * decides the survivors exactly with GMP and verifies `a^3 + b^3 + c^3 = 114`.
 
 The filters are necessary conditions, so nothing in the region is lost. For
 `k = 114`, all three components are ≡ 2 (mod 3), `3 ∤ δ`, and
 `sign(c) = +1` exactly when `δ ≡ 2 (mod 3)`.
 
-## 4. Validation (`make test`, 18 tests)
+## 3a. Worker 1.1.0 (November 2026): wider z-range at lower cost per d
+
+Two changes, both exact (no solution in the region can be lost):
+
+* **128-bit z.** `z` is held in 128 bits, so `ratio_max` may be raised far past 64
+  (limit: `(ratio_max + 18)·d < 2^126`, `ratio_max <= 2^40`). Classes with more than 32
+  candidates are filtered bit-parallel: for each prime 5..29 the allowed steps form a
+  p-periodic pattern (one table lookup per `d`), and 64 steps are ANDed at a time; the
+  remaining eight primes and GMP run only on survivors. Wide walks cost about 1 ns per candidate.
+* **Cheaper per-d work.** The `9 | Δ` class test uses one product modulo `27d` per root instead
+  of three per class; `j` is stepped directly to the class `z ≡ d (mod 3)`; the residue test for
+  a large prime cofactor is merged into its cube-root computation (no separate exponentiation);
+  one Montgomery context per prime; 64-bit extended Euclid and a hardware `divq` mulmod.
+
+Validation: at `ratio_max = 64` the counters and hits are identical to 1.0.0 on every window
+compared (k = 3, 33, 42, 114, 165, 390, 795, 906; small and production `d`); `--dump-roots` and
+`--dump-factors` output is byte-identical; at large `ratio_max` it matches 1.0.0 wherever 1.0.0
+can run, and finds the records of 42, 3 and 906 through the bit-parallel path (k = 42 with
+`z` walked past 10^23). `make test` now runs 22 tests (four new: `WideRatio`).
+
+Measured on the development host (2 cores, median of 3 runs of 5·10^7 `d` from 1.852·10^17):
+
+| worker | ratio_max | ns per d | coverage | expected solutions per core-hour (relative) |
+| --- | --- | --- | --- | --- |
+| 1.0.0 | 64 | 346.6 | 0.755 | 1.00 |
+| 1.1.0 | 64 | 291.4 | 0.755 | 1.19 |
+| 1.1.0 | 512 | 347.4 | 0.913 | 1.21 |
+| 1.1.0 | **1024** | **289.7** | **0.939** | **1.49** |
+| 1.1.0 | 2048 | 312.0 | 0.957 | 1.41 |
+| 1.1.0 | 4096 | 346.0 | 0.969 | 1.29 |
+
+For 1,800 core-hours: 1.0.0 at R = 64 gives 4.45·10^-6 (1 in 224,000); 1.1.0 at R = 1024 gives
+**6.63·10^-6 (1 in 151,000)**, with δ in [185185185185185186, 185207553152047457). Calibrate on
+the grid's CPU (`--calibrate` now tries R = 64 … 4096). Enumerating only `d` with cube roots was
+profiled and not adopted: the whole sieve stage is ~29 ns of ~290 ns per `d`, and large prime
+cofactors still have to be found by sieving.
+
+## 4. Validation (`make test`, 22 tests)
 
 * **Engine.**
   * Rediscovers the record solutions for k = 33, 42, 3, 165, 579, 795 and 906
@@ -170,8 +211,8 @@ The filters are necessary conditions, so nothing in the region is lost. For
 ```sh
 make && make test
 python3 gap_campaign.py --calibrate                 # on Charity Engine's CPU type: prints R and us/d
-python3 gap_campaign.py --campaign-id ce114-gap --ratio-max 64 --us-per-d <measured> --plan-only
-python3 gap_campaign.py --campaign-id ce114-gap --ratio-max 64 --us-per-d <measured> --output-dir gap-tasks
+python3 gap_campaign.py --campaign-id ce114-gap --ratio-max 1024 --us-per-d <measured> --plan-only
+python3 gap_campaign.py --campaign-id ce114-gap --ratio-max 1024 --us-per-d <measured> --output-dir gap-tasks
 # each task (Charity Engine: the container's default command on /local/input/task.json)
 python3 run_gap_task.py --task gap-tasks/tasks/ce114-gap-0000.json --output-dir gap-results/ce114-gap-0000
 # afterwards
@@ -197,7 +238,7 @@ python3 to_d.py gap-collected/hits.jsonl            # the rational d of results 
 
 A completed, audited run proves that **(E) has no point of result 1 or 2
 coming from a representation with `δ = |a+b|` in the covered range and
-`3.847δ <= |c| <= 64δ`**. In particular it rules out every rational `d`
+`3.847δ <= |c| <= Rδ`** (`R = 1024` as planned). In particular it rules out every rational `d`
 those points would give. It does not cover other representations. The odds
 in §2 are heuristic: they rest on Heath-Brown's conjecture and
 Booker–Sutherland's model.

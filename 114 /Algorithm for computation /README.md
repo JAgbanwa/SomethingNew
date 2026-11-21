@@ -24,9 +24,9 @@ Co-authored-by: Aristotle (Harmonic) <aristotle-harmonic@harmonic.fun>
 > result-1 and two result-2 values of `d`, via `d = (A+C)/(A+B)`. Following Dr. Grechuk's advice
 > to use the best known algorithm and aim it beyond what has been checked, `gap-search/` runs the
 > Booker–Sutherland method on the part of the search space their 2020 run for 114 left out
-> (`|a+b| > 10¹⁹/54`, `|c| <= 64|a+b|`). It is sized for **1,800 core-hours**, and `to_d.py`
+> (`|a+b| > 10¹⁹/54`, `|c| <= 1024|a+b|` with worker 1.1.0). It is sized for **1,800 core-hours**, and `to_d.py`
 > turns any hit into the verified rational `d`. Under their heuristic the chance is about
-> 1 in 190,000 – 200,000. The certificate sweeps below (`dsweep`, `dsmooth`) and `xscan` cannot
+> 1 in 151,000 (worker 1.0.0 at `|c| <= 64|a+b|`: 1 in 224,000 on the same host). The certificate sweeps below (`dsweep`, `dsmooth`) and `xscan` cannot
 > reach the ≥ 25-digit certificates or `|n| ≥ 9.8·10¹⁵` that any acceptable result needs (see
 > `HALF_INTEGER.md`). `xcurve` is unbounded in `n`, but small `|x|` holds almost nothing beyond
 > what Booker–Sutherland excluded (~7·10⁻⁹ for all `|x| ≤ 5000`). `xroots`

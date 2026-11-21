@@ -26,7 +26,7 @@
 via the Booker--Sutherland gap search\\[2pt]
 \large rationale and modus operandi of the current scripts}
 \author{Jamal Agbanwa}
-\date{12 November 2026; revised 13 November 2026}
+\date{12 November 2026; revised 13 November 2026 and 21 November 2026 (worker 1.1.0)}
 
 \begin{document}
 \maketitle
@@ -42,15 +42,18 @@ solution gives one rational $d$ of the first kind and two of the second.
 Following Dr.\ Grechuk's advice to use the best available algorithm and to aim it beyond the
 range already checked, the production computation is the Booker--Sutherland method. It is
 restricted to the part of the search space that their 2020 search for $k=114$ left out:
-$\delta=|a+b|>10^{19}/54$, with $3.847\,\delta\le|c|\le64\,\delta$. A converter then turns
+$\delta=|a+b|>10^{19}/54$, with $3.847\,\delta\le|c|\le1024\,\delta$. A converter then turns
 any solution found into its three values of $d$, verified on the original equation. The
-campaign is sized for 1{,}800 core-hours.
+campaign is sized for 1{,}800 core-hours and uses worker 1.1.0 (November 2026), which holds
+$|c|$ in 128 bits and widens the band from $64\,\delta$ to $1024\,\delta$ at a lower cost per
+$\delta$ than worker 1.0.0.
 
 This note gives the reduction with proofs, what is already excluded, the heuristic that
 selects the region, the algorithm step by step, the operating procedure, the validation and
 review evidence, the status of the folder's earlier programs, and the limits of the method.
-Under the Booker--Sutherland heuristic, the run has about a $1$ in $190{,}000$--$200{,}000$
-chance of producing a solution.
+Under the Booker--Sutherland heuristic, the run has about a $1$ in $151{,}000$ chance of
+producing a solution, $1.49$ times the $1$ in $224{,}000$ of worker 1.0.0 on the same hours and
+host.
 \end{abstract}
 
 \tableofcontents
@@ -249,7 +252,7 @@ $|n|\ge9.8\cdot10^{15}$ and certificates $V=dX^2$ (resp.\ $U=2dx^2$) of at least
   % 2020: c<=1e19 (x<=8), delta <= 1.852e17 (y=1.2*(17.2676-14)=3.92)
   \fill[gray!25] (4,0) -- (8,0) -- (8,3.92) -- (4,3.92) -- cycle;
   \draw[dashed] (0,3.92) -- (9.2,3.92) node[right]{\small $\delta=10^{19}/54$};
-  % gap region searched: delta from 1.852e17 slightly up, c in [3.847 delta, 64 delta]
+  % gap region searched: delta from 1.852e17 slightly up, c in [3.847 delta, 1024 delta]
   \fill[pattern=north east lines] ({2*(17.2676+0.585-15)},3.92) -- ({2*(17.2676+1.806-15)},3.92) -- ({2*(17.3676+1.806-15)},{1.2*(17.3676-14)}) -- ({2*(17.3676+0.585-15)},{1.2*(17.3676-14)}) -- cycle;
   \draw[-{Stealth}] (5.6,5.0) node[above]{\small CE114 gap search} -- (6.75,4.12);
   \node[align=center,font=\small] at (2.0,0.9) {2019:\\complete};
@@ -259,7 +262,7 @@ $|n|\ge9.8\cdot10^{15}$ and certificates $V=dX^2$ (resp.\ $U=2dx^2$) of at least
 \end{tikzpicture}
 \caption{The $(|c|,\delta)$ plane for $k=114$, log scales. Shaded: searched by
 Booker--Sutherland. Hatched: the strip searched by this campaign, just above
-$\delta=10^{19}/54$, with $3.847\,\delta\le|c|\le64\,\delta$. The strip's height is
+$\delta=10^{19}/54$, with $3.847\,\delta\le|c|\le1024\,\delta$. The strip's height is
 exaggerated: 1{,}800 core-hours cover a relative $\delta$-width of about $1.2\times10^{-4}$.}
 \label{fig:plane}
 \end{figure}
@@ -296,8 +299,9 @@ with $\rho_{114}=0.058459$ from their Table~1. Two consequences follow.
 
 \subsection{Cost model and choice of region}
 In the engine (Section~\ref{sec:engine}) most of the cost is fixed per $\delta$: sieving,
-early rejection and cube roots. At $R=64$ the walk over $c$ adds only about $1.5$ candidates
-per $\delta$. The figure that matters is therefore the \emph{yield per $\delta$},
+early rejection and cube roots. In worker 1.1.0 the walk over $c$ is filtered 64 candidates
+at a time (Section~\ref{sec:engine}); at $R=1024$ it adds about $26$ candidates per $\delta$
+for roughly $1$\,ns each, so the cost per $\delta$ is the same as at $R=64$. The figure that matters is therefore the \emph{yield per $\delta$},
 $\rho(1-1/\sqrt{\alpha R})/\delta$. It is largest at the smallest unsearched $\delta$, which
 is $D_0=10^{19}/54+1=185185185185185186$.
 
@@ -313,8 +317,60 @@ The alternatives are worse:
 \end{itemize}
 
 \subsection{Calibration and expected yield}
-Calibration at $\delta\approx1.85\times10^{17}$ for $k=114$ on the development host (one
-core per measurement) gave:
+\paragraph{Worker 1.1.0 (current).} Measured at $\delta\approx1.85\times10^{17}$ for $k=114$ on
+the development host (one core per measurement, median of three runs of $5\times10^7$
+values of $\delta$; the original worker re-measured in the same session for comparison):
+
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+worker & $R$ & $\mu$s per $\delta$ & coverage $1-1/\sqrt{\alpha R}$ & yield per core-hour (relative)\\
+\midrule
+1.0.0 & 64 & 0.3466 & 0.755 & 1.00\\
+1.1.0 & 64 & 0.2914 & 0.755 & 1.19\\
+1.1.0 & 128 & 0.3116 & 0.827 & 1.22\\
+1.1.0 & 256 & 0.3434 & 0.877 & 1.17\\
+1.1.0 & 512 & 0.3474 & 0.913 & 1.21\\
+1.1.0 & \textbf{1024} & \textbf{0.2897} & \textbf{0.939} & \textbf{1.49}\\
+1.1.0 & 2048 & 0.3120 & 0.957 & 1.41\\
+1.1.0 & 4096 & 0.3460 & 0.969 & 1.29\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Up to $R=256$ every class of $z$ has at most $32$ candidates and is tested candidate
+by candidate, so the cost grows with $R$; at $R=512$ the classes of even $\delta$ switch to the
+bit-parallel filter and those of odd $\delta$ do not; from $R\approx600$ on every class is
+bit-parallel and the cost drops back. This is why the yield is not monotone in $R$. $R=1024$ is chosen. The limits are now $(R+18)\delta<2^{126}$, $R\le2^{40}$ and
+$27\delta<2^{63}$; none binds at $R=1024$. At $0.2897\,\mu$s per $\delta$, 1{,}800 core-hours
+cover $2.237\times10^{13}$ values of $\delta$, namely
+$\delta\in[185185185185185186,\,185207553152047457)$, and \eqref{eq:yield} gives:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{Yr}
+\toprule
+Use of 1,800 core-hours ($k=114$) & expected solutions\\
+\midrule
+This campaign, worker 1.1.0, $R=1024$ ($0.2897\,\mu$s per $\delta$) & $6.6\times10^{-6}$ (1 in 151{,}000)\\
+Worker 1.0.0, $R=64$, same host and session ($0.3466\,\mu$s) & $4.5\times10^{-6}$ (1 in 224{,}000)\\
+Worker 1.0.0 as first calibrated ($0.293\,\mu$s) & $5.3\times10^{-6}$ (1 in 190{,}000)\\
+\code{xroots} (Algorithm D), 1,800 h inside its planned box & $\sim10^{-11}$\\
+\code{xcurve} on every $|x|\le5000$, solved completely & $\sim7\times10^{-9}$ in total\\
+\code{dsweep}, \code{dsmooth}, \code{xscan} & 0 (Section~\ref{sec:older})\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\noindent Speeds vary between hosts and runs (the original worker measured $0.293\,\mu$s when
+first calibrated and $0.3466\,\mu$s in the later session), so the comparison that matters is the
+ratio $1.49$ measured side by side; calibrate on Charity Engine's CPU before planning. The
+chance grows linearly with hours. The code can now reach up to $\delta<2^{63}/27\approx3.42\times10^{17}$,
+which at $R=1024$ holds about $3.4\%$ expected solutions in about $1.26\times10^7$
+core-hours (worker 1.0.0 stopped at about $0.9\%$, where $(R+18)\delta$ reached $2^{64}$).
+These are heuristic figures, resting on Heath-Brown's conjecture and the Booker--Sutherland
+model, not on theorems.
+
+\paragraph{Worker 1.0.0 (first calibration, 6 November 2026).} Kept for the record:
 
 \begin{center}
 \begin{tabular}{rrrr}
@@ -331,29 +387,7 @@ $R$ & $\mu$s per $\delta$ & coverage $1-1/\sqrt{\alpha R}$ & relative yield per 
 \end{tabular}
 \end{center}
 
-The optimum is flat and $R=64$ is chosen. With $(R+18)\delta<2^{64}$ the hard ceiling is
-$R=81$ at this $\delta$. At $0.293\,\mu$s per $\delta$, 1{,}800 core-hours cover
-$2.212\times10^{13}$ values of $\delta$, namely
-$\delta\in[185185185185185186,\,185207301226140817)$, and \eqref{eq:yield} gives:
-
-\begin{center}
-\begin{tabularx}{\linewidth}{Yr}
-\toprule
-Use of 1,800 core-hours ($k=114$) & expected solutions\\
-\midrule
-This campaign ($0.293\,\mu$s per $\delta$) & $5.3\times10^{-6}$ (1 in 190{,}000)\\
-This campaign at the pilot's $0.31\,\mu$s per $\delta$ & 1 in 200{,}000\\
-\code{xroots} (Algorithm D), 1,800 h inside its planned box & $\sim10^{-11}$\\
-\code{xcurve} on every $|x|\le5000$, solved completely & $\sim7\times10^{-9}$ in total\\
-\code{dsweep}, \code{dsmooth}, \code{xscan} & 0 (Section~\ref{sec:older})\\
-\bottomrule
-\end{tabularx}
-\end{center}
-
-\noindent The chance grows linearly with hours. Even so, this code can reach at most about
-$0.9\%$ (about $3.2\times10^6$ core-hours) before $(R+18)\delta$ reaches $2^{64}$ at $R=64$.
-These are heuristic figures, resting on Heath-Brown's conjecture and the Booker--Sutherland
-model, not on theorems.
+\noindent With $z$ in 64 bits, $(R+18)\delta<2^{64}$ capped $R$ at $81$ at this $\delta$.
 
 %====================================================================
 \section{The engine: modus operandi}\label{sec:engine}
@@ -365,7 +399,7 @@ model, not on theorems.
   \node[box,right=of s] (r) {early rejection: $114$ not a cube mod $p$};
   \node[box,right=of r] (c) {all cube roots of $\pm114$ mod $\delta$};
   \node[box,below=of c] (z) {classes of $z$ mod $9\delta$ / $18\delta$};
-  \node[box,left=of z] (f) {16 exact residue filters on $\Delta$};
+  \node[box,left=of z] (f) {16 exact residue filters on $\Delta$ (8 bit-parallel)};
   \node[box,left=of f] (g) {exact GMP test; verify $a^3+b^3+c^3=114$};
   \draw[->] (s)--(r); \draw[->] (r)--(c); \draw[->] (c)--(z); \draw[->] (z)--(f); \draw[->] (f)--(g);
 \end{tikzpicture}
@@ -374,10 +408,10 @@ the second box.}
 \label{fig:pipe}
 \end{figure}
 
-The worker is \code{src/gap_worker.cpp} (C++17 with the GMP C API). It is invoked as
-\texttt{gap\_worker --k 114 --d-start A --d-stop B --ratio-max 64} and processes every
-$\delta\in[A,B)$. It is the engine written and reviewed for the 390 campaign, with $k=114$ as
-its default.
+The worker is \code{src/gap_worker.cpp} (C++17 with the GMP C API), version 1.1.0. It is
+invoked as \texttt{gap\_worker --k 114 --d-start A --d-stop B --ratio-max 1024} and processes
+every $\delta\in[A,B)$. It is the engine written and reviewed for the 390 campaign, with
+$k=114$ as its default; Section~\ref{sec:v11} lists what changed in 1.1.0.
 
 \subsection{Sign and residue rules}
 \begin{proposition}\label{prop:sign}
@@ -425,12 +459,16 @@ generated once per task in about 1--3\,s. Primes below $2^{16}$ are applied dire
 block of $2^{16}$ consecutive $\delta$. Larger primes live in buckets: linked lists of
 fixed-size pages drawn from a shared free pool, each prime filed under the block of its next
 multiple. This keeps peak memory at about $0.24$\,GB, measured across more than two full
-bucket cycles. The cofactor left after sieving is $1$ or a prime.
+bucket cycles. The cofactor left after sieving is $1$ or a prime. The whole sieve stage costs
+about $29$\,ns per $\delta$ in worker 1.1.0.
 \item \textbf{Reject early.} A prime $p\equiv1\pmod3$ dividing $\delta$ for which $114$ is
 not a cube mod $p$ leaves no root. This is precomputed per prime, packed into the bucket
 entries, and applied before any division. Similarly $p\mid114$ with $v_p(114)=1$ and
 $p^2\mid\delta$ leaves no root. One third of all $\delta$ are skipped because $3\mid\delta$,
-and about $52\%$ have no root, so only about $15\%$ remain.
+and about $52\%$ have no root, so only about $15\%$ remain. For a large prime cofactor
+$q\equiv1\pmod3$ the cube-residue test is part of the root computation in the next step (for
+$q\equiv4,7\pmod9$ the candidate root $r=K^u$, $3u\equiv1\pmod{(q-1)/3}$, satisfies $r^3\equiv K$
+exactly when $K$ is a cube), so it costs no separate exponentiation.
 \item \textbf{Cube roots of $K$ mod $\delta$.}
   \begin{itemize}
     \item $p\equiv2\pmod3$: $K^{(2p-1)/3}$.
@@ -440,43 +478,75 @@ and about $52\%$ have no root, so only about $15\%$ remain.
     factors.
   \end{itemize}
   Roots of $-114$ are the negatives of roots of $114$. Exponentiations use 64-bit
-  Montgomery arithmetic.
+  Montgomery arithmetic, with one Montgomery context per prime.
 \item \textbf{Walk.} For each root, keep the classes modulo $9\delta$ (or $18\delta$ for odd
-$\delta$) allowed by Propositions~\ref{prop:sign} and~\ref{prop:classes}. Walk them over
+$\delta$) allowed by Propositions~\ref{prop:sign} and~\ref{prop:classes}. With
+$w=(z^3-K)/\delta$, $3\delta\Delta=\delta(4w-\delta^2)$, so the condition ``$\Delta$ integral and
+$9\mid\Delta$'' is exactly $4w\equiv\delta^2\pmod{27}$. For $z=r+j\delta$,
+$w=w_0+3r^2j+3rj^2\delta+j^3\delta^2$ with $w_0=(r^3-K)/\delta$, so one exact product modulo
+$27\delta$ per root decides every class, and $j$ is stepped directly through the residue
+class mod $3$ fixed by $z\equiv\delta\pmod3$. Walk the classes over
 $\lfloor3847\delta/1000\rfloor\le z\le R\delta$. Since $3.847<1/\alpha=3.84732\ldots$, no
 admissible $z$ is skipped; the $k$-correction to Lemma~\ref{lem:bs} is about $10^{-30}$
 relative.
 \item \textbf{Filter.} For each of the $16$ primes $5\le p\le61$ not dividing $\delta$, test
 that $\Delta\equiv A_pz^3+B_p\pmod p$ is a square (zero included), with $A_p=4/(3\delta)$ and
-$B_p=-4K/(3\delta)-\delta^2/3$. Each test is a necessary condition, compiled with a constant
-modulus.
+$B_p=-4K/(3\delta)-\delta^2/3$. Each test is a necessary condition. The allowed residues of $z$
+modulo each $p$ are read from a table indexed by $(A_p,B_p)$, and along a class
+$z=z_0+tM$ the residue is $z_0+t\,(M\bmod p)$, so no division by $p$ is needed per candidate.
+Classes with more than 32 candidates are filtered \emph{bit-parallel}: for $p\le29$ the allowed
+steps $t$ form a $p$-periodic bit pattern, one per $\delta$ and prime (with $z_0\equiv u\,M\pmod
+p$, step $t$ is allowed iff residue $(u+t)M$ is), and 64 consecutive steps are ANDed across the
+eight primes at once; the other eight primes are tested only on the survivors.
 \item \textbf{Decide and verify.} For survivors, compute $\Delta$ exactly with GMP, test
 whether it is a perfect square with $t\equiv\delta\pmod2$, rebuild $(a,b,c)$ by
 Proposition~\ref{prop:delta}, and verify $a^3+b^3+c^3=114$. The hit is printed as a JSON
 line.
 \end{enumerate}
 
-Measured on 16 million $\delta$ starting at $D_0$ ($k=114$, $R=64$):
+Measured on the first $2^{24}=16{,}777{,}216$ values of $\delta$ from $D_0$ ($k=114$). The
+two workers give identical counters at $R=64$:
 
 \begin{center}
-\begin{tabular}{lrr}
+\begin{tabular}{lrrrr}
 \toprule
-counter & total & per $\delta$\\
+& \multicolumn{2}{c}{$R=64$} & \multicolumn{2}{c}{$R=1024$}\\
+counter & total & per $\delta$ & total & per $\delta$\\
 \midrule
-$\delta$ skipped, $3\mid\delta$ & 5{,}333{,}333 & 0.333\\
-$\delta$ with no cube root & 8{,}280{,}743 & 0.518\\
-$\delta$ processed further & 2{,}385{,}924 & 0.149\\
-cube roots & 5{,}540{,}816 & 0.346\\
-candidates $z$ & 24{,}686{,}835 & 1.54\\
-passed the residue filters (exact GMP checks) & 855 & $5.3\times10^{-5}$\\
-solutions & 0 & --\\
+$\delta$ skipped, $3\mid\delta$ & 5{,}592{,}405 & 0.333 & 5{,}592{,}405 & 0.333\\
+$\delta$ with no cube root & 8{,}682{,}777 & 0.518 & 8{,}682{,}777 & 0.518\\
+$\delta$ processed further & 2{,}502{,}034 & 0.149 & 2{,}502{,}034 & 0.149\\
+cube roots & 5{,}810{,}784 & 0.346 & 5{,}810{,}784 & 0.346\\
+candidates $z$ & 25{,}891{,}240 & 1.54 & 439{,}108{,}021 & 26.2\\
+exact GMP checks & 895 & $5.3\times10^{-5}$ & 16{,}165 & $9.6\times10^{-4}$\\
+solutions & 0 & -- & 0 & --\\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\paragraph{Overflow guards.} The worker refuses to start unless $27\delta_{\rm stop}<2^{63}$
-and $(R+18)\delta_{\rm stop}<2^{64}$. The 2-adic residue of $\Delta$ is computed exactly mod
-$2^{64}$ using $\delta^{-1}$ and $3^{-1}$. All other modular products stay within 128 bits.
+\paragraph{Overflow guards.} The worker refuses to start unless $27\delta_{\rm stop}<2^{63}$,
+$R\le2^{40}$ and $(R+18)\delta_{\rm stop}<2^{126}$. Class starts $z_0<\lfloor3.847\delta\rfloor+M$
+stay below $2^{61}$; only the walk $z_0+tM$ uses 128 bits, and GMP receives $z$ in two 64-bit
+halves. The 2-adic residue of $\Delta$ depends only on $z\bmod2^{64}$ and is computed exactly
+mod $2^{64}$ using $\delta^{-1}$ and $3^{-1}$. All other modular products stay within 128 bits.
+
+\subsection{What changed in worker 1.1.0}\label{sec:v11}
+Profiling worker 1.0.0 at $D_0$ ($R=64$) split the cost per $\delta$ into about $68$\,ns of
+sieving, $130$\,ns of cube roots and $165$\,ns of class selection and filtering; the walk itself
+was nearly free. Version 1.1.0 changes:
+\begin{itemize}[leftmargin=*]
+  \item $z$ in 128 bits and the table-driven and bit-parallel filters above, so $R$ can be raised
+  far past 64 at almost no cost per candidate;
+  \item the mod-$27\delta$ class test with one product per root, and direct stepping of $j$;
+  \item the residue test for the large cofactor folded into its cube root, one Montgomery
+  context per prime, a 64-bit extended Euclid (and a closed form for $3^{-1}\bmod t$), and a
+  hardware \texttt{divq} for $64\times64\to$ mod products.
+\end{itemize}
+Enumerating only the $\delta$ that admit cube roots, multiplicatively from their prime factors,
+was profiled and not adopted: the whole sieve stage is about $29$\,ns of about $290$\,ns per
+$\delta$, and the large prime cofactor of a typical $\delta$ still has to be found by sieving.
+None of the changes alters which $(\delta,z)$ are searched or decided: at $R=64$ the counters
+and hits of the two versions agree exactly (Section~\ref{sec:validation}).
 
 %====================================================================
 \section{From a solution to the rational \texorpdfstring{$d$}{d}: \texttt{to\_d.py}}
@@ -503,14 +573,15 @@ Result-1 line and two Result-2 lines.
 \begingroup\sloppy
 
 \begin{enumerate}[leftmargin=*]
-\item \textbf{Build and test:} \texttt{make \&\& make test} (18 tests, about 100\,s). Or
+\item \textbf{Build and test:} \texttt{make \&\& make test} (22 tests, about 120\,s). Or
 \texttt{docker build .}, which compiles the worker and runs the test suite during the build.
 \item \textbf{Calibrate} on Charity Engine's CPU type: \texttt{python3 gap\_campaign.py
---calibrate}. It prints the $\mu$s per $\delta$ for several $R$ and the best $R$.
+--calibrate}. It prints the $\mu$s per $\delta$ for $R=64,128,\dots,4096$ and the best $R$.
 \item \textbf{Plan:} \texttt{python3 gap\_campaign.py --campaign-id ce114-gap}
-\texttt{--ratio-max 64} \texttt{--us-per-d <measured>} \texttt{--output-dir gap-tasks}. The defaults are $k=114$, 1{,}800 core-hours
-and $D_0=185185185185185186$. The range is split evenly into tasks of about one hour each
-(1{,}800 tasks at $0.293\,\mu$s), and \code{page.json} is written with the heuristic yield.
+\texttt{--ratio-max 1024} \texttt{--us-per-d <measured>} \texttt{--output-dir gap-tasks}. The defaults are $k=114$, 1{,}800 core-hours,
+$R=1024$, $0.29\,\mu$s per $\delta$ and $D_0=185185185185185186$. The range is split evenly into
+tasks of about one hour each (1{,}800 tasks at $0.2897\,\mu$s), and \code{page.json} is written
+with the heuristic yield.
 Nothing is submitted.
 \item \textbf{Run} each task: \texttt{python3 run\_gap\_task.py --task <task.json>
 --output-dir <dir>}. In the container this is the default command, on
@@ -540,7 +611,7 @@ single-threaded. Set-up and the 2\% audit (about 36 core-hours) come on top of t
 hours and should be kept within the project's headroom.
 
 %====================================================================
-\section{Validation and review}
+\section{Validation and review}\label{sec:validation}
 
 \subsection{Tests (\texttt{make test})}
 \begin{itemize}[leftmargin=*]
@@ -569,10 +640,24 @@ divisible by $2^{25}$, $5^{14}$, $7^{12}$ and $13^{10}$.
 \item \textbf{Lifecycle.} Plan, run, SIGTERM, resume and collect work end to end. Re-running
 an original task where its continuation ran is refused, a same-directory continuation leaves
 no false gap, and the audit detects a counter altered by one.
+\item \textbf{Wide ratio (worker 1.1.0, four tests).} The records of $42$, $3$ and $906$ are found
+through the bit-parallel filter alone ($R=10^9$, $5\times10^6$, $10^5$; for $42$ the walk passes
+$|c|\approx10^{23}>2^{64}$). Filter verdicts for candidates with $z\ge2^{64}$ at production
+$\delta$ agree with exact arithmetic, and every such candidate satisfies $27\delta\mid N$. The
+bit-parallel pass count equals the number of candidates passing the per-candidate filters on
+the same window, and the task validator and worker accept $R=1024$ and reject $R>2^{40}$.
 \end{itemize}
 
+\subsection{Equivalence of workers 1.0.0 and 1.1.0}
+Beyond \texttt{make test}, the two workers were run side by side. At $R=64$ their counters and
+hits are identical on windows for $k=3,33,42,114,165,390,795,906$, at small $\delta$ and at
+production $\delta$ ($10^7$ values from $D_0$); their \texttt{--dump-roots} and
+\texttt{--dump-factors} outputs are byte-identical. At $R=300$ to $10^5$ (where 1.0.0 can still
+run, $R\delta<2^{64}$) the counters are again identical, covering both the per-candidate and the
+bit-parallel paths.
+
 \subsection{Pilot}
-A pilot over $\delta\in[D_0,D_0+2\times10^9)$ ($R=64$) ran through the full pipeline. It used
+A pilot over $\delta\in[D_0,D_0+2\times10^9)$ (worker 1.0.0, $R=64$) ran through the full pipeline. It used
 0.173 core-hours (0.31\,$\mu$s per $\delta$ on a shared host), returned no solutions, left
 no gaps, and 6 of 6 audited chunks agreed. The record is in \code{gap-search/validation/pilot/}.
 
@@ -630,7 +715,7 @@ not Results~1 or 2.
 
 A completed and audited campaign proves that \eqref{eq:E} has \emph{no} point of Result~1
 or~2 arising from a representation with $\delta=|a+b|$ in the covered range and
-$3.847\,\delta\le|c|\le64\,\delta$. Equivalently, it proves that $114$ has no representation
+$3.847\,\delta\le|c|\le1024\,\delta$. Equivalently, it proves that $114$ has no representation
 in that region. This is a new, exact exclusion region that does not depend on any heuristic.
 
 It does not cover other $\delta$, or $|c|$ outside the band. The probability figures of
@@ -638,7 +723,8 @@ Section~\ref{sec:rationale} are heuristic. Three things would raise the odds:
 \begin{itemize}
   \item more core-hours, since the gain is linear;
   \item Booker and Sutherland's own implementation, which a rough comparison with their
-  $k=33$ benchmark suggests may be about three times faster per $\delta$;
+  $k=33$ benchmark suggested may have been about three times faster per $\delta$ than worker
+  1.0.0 (worker 1.1.0 closes part of that gap);
   \item confirming with them, or with Charity Engine, that the region has not been searched
   since 2020.
 \end{itemize}
@@ -658,7 +744,7 @@ file (in \code{gap-search/}) & role\\
 \code{collect_gap.py} & coverage union, gap report, hit re-verification\\
 \code{audit_gap.py} & re-runs sampled chunks to detect faulty hosts\\
 \code{to_d.py} & representation $\to$ the three rational $d$, verified on \eqref{eq:E}\\
-\code{tests/} & \code{test_gap.py} (engine, 12 tests), \code{test_to_d.py} (converter, 6 tests)\\
+\code{tests/} & \code{test_gap.py} (engine, 16 tests), \code{test_to_d.py} (converter, 6 tests)\\
 \code{Dockerfile}, \code{container_entrypoint.sh} & Charity Engine image (tests run at build)\\
 \code{examples/pilot/}, \code{validation/pilot/} & pilot tasks and its collected summary\\
 \code{README.md} & short operating guide\\
