@@ -1,0 +1,54 @@
+k = 114
+   sigma_2: 0.750000, 0.750000, 0.750000, 0.750000, 0.750000, 0.750000, 0.750000, 0.750000, 0.750000, 0.750000, 0.750000, 0.750000
+   sigma_3: 0.888889, 0.333333, 0.333333, 0.333333, 0.333333, 0.333333, 0.333333
+   sigma_19: 1.346260, 1.346260, 1.346260
+   prod_(p=1 mod 3, p<= 1e+05) sigma_p = 0.294515   all local = 0.099123
+   prod_(p=1 mod 3, p<= 1e+06) sigma_p = 0.295136   all local = 0.099332
+   prod_(p=1 mod 3, p<= 1e+07) sigma_p = 0.294975   all local = 0.099278
+   prod_(p=1 mod 3, p<= 1e+08) sigma_p = 0.294986   all local = 0.099282
+k = 390
+   sigma_2: 0.750000, 0.750000, 0.750000, 0.750000, 0.750000, 0.750000, 0.750000, 0.750000, 0.750000, 0.750000, 0.750000, 0.750000
+   sigma_3: 0.888889, 0.333333, 0.333333, 0.333333, 0.333333, 0.333333, 0.333333
+   sigma_5: 0.960000, 0.960000, 0.960000, 0.960000, 0.960000, 0.960000
+   sigma_13: 0.639053, 0.639053, 0.639053
+   prod_(p=1 mod 3, p<= 1e+05) sigma_p = 0.364026   all local = 0.055832
+   prod_(p=1 mod 3, p<= 1e+06) sigma_p = 0.364576   all local = 0.055916
+   prod_(p=1 mod 3, p<= 1e+07) sigma_p = 0.364660   all local = 0.055929
+   prod_(p=1 mod 3, p<= 1e+08) sigma_p = 0.364663   all local = 0.055929
+k = 627
+   sigma_3: 0.888889, 0.333333, 0.333333, 0.333333, 0.333333, 0.333333, 0.333333
+   sigma_11: 0.991736, 0.991736, 0.991736
+   sigma_19: 1.346260, 1.346260, 1.346260
+   prod_(p=1 mod 3, p<= 1e+05) sigma_p = 0.494696   all local = 0.220162
+   prod_(p=1 mod 3, p<= 1e+06) sigma_p = 0.494582   all local = 0.220111
+   prod_(p=1 mod 3, p<= 1e+07) sigma_p = 0.494499   all local = 0.220074
+   prod_(p=1 mod 3, p<= 1e+08) sigma_p = 0.494376   all local = 0.220020
+k = 375
+   sigma_3: 0.888889, 0.333333, 0.333333, 0.333333, 0.333333, 0.333333, 0.333333
+   sigma_5: 0.960000, 0.960000, 0.960000, 0.960000, 0.960000, 0.960000
+   prod_(p=1 mod 3, p<= 1e+05) sigma_p = 0.311263   all local = 0.099604
+   prod_(p=1 mod 3, p<= 1e+06) sigma_p = 0.311103   all local = 0.099553
+   prod_(p=1 mod 3, p<= 1e+07) sigma_p = 0.311063   all local = 0.099540
+   prod_(p=1 mod 3, p<= 1e+08) sigma_p = 0.311030   all local = 0.099530
+
+calibration at P = 1e+08:  C = rho_BS / prod sigma_p
+   k = 114: prod = 0.099282, rho_BS = 0.058459, C = 0.588818
+   k = 390: prod = 0.055929, rho_BS = 0.032935, C = 0.588868
+   k = 627: prod = 0.220020, rho_BS = 0.129565, C = 0.588879
+   C = 0.588855  (spread 0.01 %)
+   rho_114 (primitive) at P = 1e+05: 0.058369
+   rho_114 (primitive) at P = 1e+06: 0.058492
+   rho_114 (primitive) at P = 1e+07: 0.058461
+   rho_114 (primitive) at P = 1e+08: 0.058463
+   rho_390 (primitive) at P = 1e+05: 0.032877
+   rho_390 (primitive) at P = 1e+06: 0.032926
+   rho_390 (primitive) at P = 1e+07: 0.032934
+   rho_390 (primitive) at P = 1e+08: 0.032934
+   rho_627 (primitive) at P = 1e+05: 0.129643
+   rho_627 (primitive) at P = 1e+06: 0.129614
+   rho_627 (primitive) at P = 1e+07: 0.129592
+   rho_627 (primitive) at P = 1e+08: 0.129560
+   rho_375 (primitive) at P = 1e+05: 0.058652
+   rho_375 (primitive) at P = 1e+06: 0.058622
+   rho_375 (primitive) at P = 1e+07: 0.058615
+   rho_375 (primitive) at P = 1e+08: 0.058609

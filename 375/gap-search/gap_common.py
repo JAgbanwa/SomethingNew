@@ -21,10 +21,11 @@ COUNTERS = ("d_total", "d_skipped_mod3", "d_skipped_prim", "d_no_roots", "d_live
             "pass_2adic", "pass_residue", "exact_checks", "hits", "hits_primitive")
 ALPHA = 2 ** (1 / 3) - 1
 
-# Heath-Brown density rho for primitive solutions. Booker-Sutherland's Table 1 covers cube-free
-# k only; the constant for primitive solutions of 375 = 3*5^3 has not been computed here, so
-# the planner reports E/rho unless --rho is given.
-RHO: dict[int, float] = {}
+# Heath-Brown density rho for primitive solutions, in Booker-Sutherland's normalisation
+# (e(B) = rho log B). For 375 it is computed by tools/rho.py from local densities, with the
+# archimedean constant calibrated on Booker-Sutherland's Table 1 (114, 390, 627 agree to 0.01 %);
+# Euler product truncated at 10^8 (convergence +-0.0001). Cube-free values are theirs.
+RHO: dict[int, float] = {375: 0.0586, 114: 0.058459, 390: 0.032935, 627: 0.129565}
 
 # Frontier: every primitive solution with max(|x|, |y|, |z|) <= FRONTIER is assumed already
 # excluded. Default 10^14: Elsenhans-Jahnel's Elkies-type search of all k < 1000 (Sutherland,

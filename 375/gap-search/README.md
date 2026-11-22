@@ -24,7 +24,11 @@ height about `M/g`, with `g = gcd(A+B, A+C)`, so it is reached only if `g ≥ M/
 solutions are expected instead, `δ = |a+b|` and the cube roots of 375 modulo `δ`
 (Booker–Sutherland), restricted to `δ` that can carry a primitive solution, and starts at the
 frontier of what has already been searched. Measured plans give `E/ρ ≈ 0.4–2.7` on the same
-1,800 hours (section 4), about **10⁸ times** the d-first figure.
+1,800 hours (section 4), about **10⁸ times** the d-first figure. With `ρ = 0.0586` (computed in
+section 3) that is a **2–14 % chance** of a primitive solution, depending on the frontier.
+
+The full rationale, with proofs, is [`ce375_rationale.pdf`](ce375_rationale.pdf) (source
+[`ce375_rationale.tex`](ce375_rationale.tex)).
 
 That engine stays useful for exact statements about points whose slope has small height; it is not
 the tool for finding a representation.
@@ -71,9 +75,20 @@ curve gives the expected number of primitive solutions `E` in a campaign, as a m
 The frontier moves the best region to *small* `δ` with a *large* ratio `R`, where each `δ` is cheap
 and carries a lot of heuristic weight.
 
-`ρ` (Heath-Brown's constant for primitive solutions of 375) is **not** computed here: Booker and
-Sutherland tabulate it only for cube-free `k`, and the local factor at 5 changes. All yields below
-are therefore stated as `E/ρ`; for scale, `ρ₁₁₄ = 0.058`.
+**`ρ` for primitive solutions of 375 is `0.0586`** (`tools/rho.py`, record in
+`validation/rho-P1e8.txt`). Booker and Sutherland tabulate `ρ` only for cube-free `k`, so it is
+computed from local densities, `ρ = C ∏_p σ_p`:
+
+* `p ≡ 2 (mod 3)`, `p ∤ 3k`: `σ_p = 1`.
+* `p ≡ 1 (mod 3)`, `p ∤ 3k`: `σ_p = N_p/p²` with `N_p = p² + 6p − L` if `k` is a cube mod `p` and
+  `p² − 3p − L` otherwise, `4p = L² + 27M²`, `L ≡ 1 (mod 3)` (Jacobi sums; checked by brute force).
+* `p | 3k`: exact counts of solutions mod `p^e` *not all divisible by p*. For 375: `σ₃ = 1/3` and
+  `σ₅ = 24/25` (primitive; the same value as for 390, where `5 ∥ k`).
+* `C` does not depend on `k`. Calibrated on Booker–Sutherland's `ρ` for 114, 390 and 627, the three
+  values of `C` agree to **0.01 %** (`C = 0.58886`), which checks the whole computation.
+
+The Euler product over `p ≡ 1 (mod 3)` converges conditionally; truncated at `10⁵, 10⁶, 10⁷, 10⁸`
+it gives `ρ₃₇₅ = 0.05865, 0.05862, 0.05862, 0.05861`. For comparison `ρ₁₁₄ = 0.05846`.
 
 ## 4. Measured plans for 1,800 core-hours
 
@@ -92,26 +107,21 @@ Calibration (`gap_campaign.py --calibrate`, k = 375, `--primitive`, development 
 Best plans (`gap_campaign.py --optimize`, 1,800 core-hours), against the d-first engine on the same
 hours and the same model:
 
-| frontier N | best plan | **E/ρ, this engine** | E/ρ, d-first (H ≈ 1.5·10⁶) |
-| --- | --- | ---: | ---: |
-| 10¹⁴ | δ from 5.6·10⁸ to 2.4·10¹³, R = 4096 | **2.66** | ~5·10⁻⁸ |
-| 10¹⁵ | δ from 5.6·10⁹ to 2.4·10¹³, R = 4096 | **1.07** | ~5·10⁻⁹ |
-| 10¹⁶ | δ from 5.6·10⁹ to 1.4·10¹³, R = 16384 | **0.39** | ~5·10⁻¹⁰ |
+| frontier N | best plan | E/ρ | **E (ρ = 0.0586)** | **P(≥ 1 solution)** | E, d-first (H ≈ 1.5·10⁶) |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 10¹⁴ | δ from 5.6·10⁸ to 2.4·10¹³, R = 4096 | 2.66 | 0.156 | **14.4 %** | ~3·10⁻⁹ |
+| 10¹⁵ | δ from 5.6·10⁹ to 2.4·10¹³, R = 4096 | 1.07 | 0.063 | **6.1 %** | ~3·10⁻¹⁰ |
+| 10¹⁶ | δ from 5.6·10⁹ to 1.4·10¹³, R = 16384 | 0.39 | 0.023 | **2.3 %** | ~3·10⁻¹¹ |
 
-If `ρ` for primitive 375 is near `ρ₁₁₄`, the 10¹⁵ row is about a 1 in 16 chance; compare 1 in
-151,000 for 114 on the same hours. **Two things must be confirmed before launch**, because the
-estimate rests on them:
-
-1. **The frontier.** Ask Booker or Sutherland (or Charity Engine) whether any search beyond the
-   Elkies-type bounds has covered primitive solutions of 375. A higher frontier lowers `E/ρ` as in
-   the table; a search that already covered this `(δ, z)` region would make the campaign redundant.
-2. **`ρ` for primitive 375**, from Heath-Brown's local densities with the factor at 5 for primitive
-   solutions.
+Compare 1 in 151,000 for 114 on the same hours. **One thing must be confirmed before launch:
+the frontier.** Ask Booker or Sutherland (or Charity Engine) whether any search beyond the
+Elkies-type bounds has covered primitive solutions of 375. A higher frontier lowers the odds as in
+the table; a search that already covered this `(δ, z)` region would make the campaign redundant.
 
 ## 5. Running
 
 ```sh
-make && make test                                    # 31 tests, about 2.5 minutes
+make && make test                                    # 34 tests, about 2.5 minutes
 python3 gap_campaign.py --calibrate --calibration-d 1e10 --save-calibration calib.json   # on the grid's CPU
 python3 gap_campaign.py --optimize calib.json --core-hours 1800 --frontier <confirmed N>
 python3 gap_campaign.py --campaign-id ce375-gap --core-hours 1800 --d-start <D0> --ratio-max <R> \
@@ -127,13 +137,13 @@ python3 to_points375.py collected/hits.jsonl              # points and d in both
 Tasks are primitive by default (`"primitive": true`); the runner, collector and auditor all check
 it. Checkpointing, continuations, coverage gaps and the 2 % audit are those of the 114 pipeline.
 
-## 6. Validation (`make test`, 31 tests)
+## 6. Validation (`make test`, 34 tests)
 
 * **Inherited engine tests (16):** the record solutions of 33, 42, 3, 165, 579, 795, 906; a brute
   force for every `k ≡ ±3 (mod 9)` up to 100; filter verdicts against exact arithmetic (including
   `z ≥ 2⁶⁴`); factorizations and roots at production size; plan / run / interrupt / resume /
   collect; coverage accounting and the audit.
-* **Cube-factor and primitive tests (15):**
+* **Cube-factor, primitive and ρ tests (18):**
   * roots modulo every `δ < 2500` against brute force for `k = 24, 375, 1875, 3000, 7125, −375`, and
     root counts at `δ ≈ 10¹³` divisible by `5^e`, `e` up to 17;
   * the lemma checked on every primitive solution with coordinates up to 600 for those `k`;
@@ -146,6 +156,9 @@ it. Checkpointing, continuations, coverage gaps and the 2 % audit are those of t
   * counters are identical however a range is split (the audit's precondition);
   * the converter agrees with the d-first folder's `common375.py` on points, `d` and flags;
   * the yield model reduces to the closed form without a frontier and places the frontier exactly;
+  * `ρ`: the point-count formula against brute force for eight primes, the exact local factors
+    (`σ₃ = 1/3`, `σ₅ = 24/25`), and the calibration constant equal for 114, 390, 627 to 0.5 % at
+    `P = 10⁶`, with `ρ₃₇₅` in `[0.0580, 0.0592]` (3 tests);
   * an end-to-end campaign at `k = 7125 = 57·5³` finds its primitive solution `(−67)³ + (−46)³ + 74³`,
     collects it as PRIMITIVE, audits cleanly and converts it to two desired half-chart points.
 
@@ -173,4 +186,5 @@ range is split.
 
 That 375 has no primitive representation with `δ = |a+b|` in the covered range and
 `3.847 δ ≤ |c| ≤ R δ`, and hence no accepted point `(n, x, ±y)` of either chart arising from one. The odds in
-section 4 are heuristic, and conditional on the frontier and on `ρ`.
+section 4 are heuristic (Heath-Brown's conjecture and the Booker–Sutherland model) and conditional
+on the frontier.
