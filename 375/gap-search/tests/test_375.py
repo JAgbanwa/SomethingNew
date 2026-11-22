@@ -17,7 +17,7 @@ D375 = ROOT.parent / "Scripts for large-scale computations"
 
 from gap_common import (coverage_fraction, cube_primes, expected_solutions, is_prime, primitive_d_ok,  # noqa: E402
                         verify_hit, z_frontier)
-import to_d375  # noqa: E402
+import to_points375  # noqa: E402
 
 # k = 3 m^3 (or with several cube primes), all cube primes == 2 (mod 3), k == +-3 (mod 9).
 CUBE_KS = (24, 375, 1875, 3000, 7125)
@@ -239,21 +239,21 @@ class Primitive(unittest.TestCase):
 
 class Converter(unittest.TestCase):
     def test_flags_and_points(self):
-        p = to_d375.points(5, 5, 5, 375)
+        p = to_points375.points(5, 5, 5, 375)
         self.assertEqual(len(p), 1)
         self.assertFalse(p[0]["desired"])
-        pts = to_d375.points(-67, -46, 74, 7125)
+        pts = to_points375.points(-67, -46, 74, 7125)
         self.assertEqual(sorted(q["chart"] for q in pts), ["half", "half", "integer"])
         self.assertEqual(sum(q["desired"] for q in pts), 2)
         with self.assertRaises(ValueError):
-            to_d375.points(1, 2, 3, 375)
+            to_points375.points(1, 2, 3, 375)
 
     @unittest.skipUnless((D375 / "common375.py").exists(), "375 d-first folder not present")
     def test_agrees_with_dfirst_folder(self):
         sys.path.insert(0, str(D375))
         import common375
         for t, k in (((-67, -46, 74), 7125), ((5, 5, 5), 375), ((20, 20, -25), 375), ((-29, -29, 37), 1875)):
-            mine = {(q["chart"], q["d"], q["n"], q["x"], q["y"], q["desired"]) for q in to_d375.points(*t, k)}
+            mine = {(q["chart"], q["d"], q["n"], q["x"], q["y"], q["desired"]) for q in to_points375.points(*t, k)}
             theirs = {(q["chart"], q["d"], q["n"], q["x"], q["s"],
                        common375.primitivity(q["chart"], q["n"], q["x"], q["s"], t)["desired"])
                       for q in common375.d_values_from_cubes(*t, k)}
@@ -265,7 +265,7 @@ class Converter(unittest.TestCase):
             for sol in solutions(k, 300):
                 if sum(sol) % 6 != 3 % 6 or (sum(sol) - 3) % 6:
                     continue
-                pts = to_d375.points(*sol, k)
+                pts = to_points375.points(*sol, k)
                 prim = gcd(gcd(sol[0], sol[1]), sol[2]) == 1
                 if not prim:
                     self.assertFalse(any(q["desired"] for q in pts))
@@ -311,7 +311,7 @@ class Pipeline(unittest.TestCase):
             self.assertIn("PRIMITIVE", out)
             self.assertTrue(summary["primitive"])
             run(ROOT / "audit_gap.py", "--page", tmp / "camp" / "page.json", "--results", tmp / "res", "--fraction", "1")
-            conv = run(ROOT / "to_d375.py", tmp / "col" / "hits.jsonl").stdout
+            conv = run(ROOT / "to_points375.py", tmp / "col" / "hits.jsonl").stdout
             self.assertIn("DESIRED", conv)
             self.assertIn("-46^3", conv.replace("+ -", "+ -"))
 

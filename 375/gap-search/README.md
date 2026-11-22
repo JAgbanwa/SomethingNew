@@ -1,20 +1,23 @@
 # CE375 primitive gap search: finding primitive representations of 375
 
-**Goal.** Find a *primitive* representation `375 = a³ + b³ + c³`, `gcd(a, b, c) = 1`. Each one
-gives the desired points of the CE375 equation
+**Goal.** Rational `x, y` with `n` an integer on
 
 ```text
 y² = (x + 6n + 3)² + (36n³ + 54n² + 27n − 58)/x,     36n³ + 54n² + 27n − 58 = ((6n+3)³ − 375)/6,
 ```
 
-in both charts (integer, and `x = X/2`, `y = Y/2` with `X, Y` odd), with their rational `d`.
-`to_d375.py` performs that conversion with the same flags as the d-first folder
-(`primitive_point`, `primitive_cubes`, `desired`) and checks every point exactly on the equation.
+accepting primitive integers `(n, x)` with `y` an integer, or `x = X/2`, `y = Y/2` with `X, Y` odd
+and `gcd(X, Y) = 1`. With `A = −x + y`, `B = −x − y`, `C = 2x + 6n + 3`, the equation is exactly
+`A³ + B³ + C³ = 375`, so the accepted points are the points of *primitive* representations
+`375 = a³ + b³ + c³`, `gcd(a, b, c) = 1` (one representation gives up to three points, in either
+chart). This folder searches for those representations; `to_points375.py` turns each one into its
+points `(n, x, ±y)` with the same flags as the d-first folder (`primitive_point`,
+`primitive_cubes`, `desired`) and checks every point exactly on the equation.
 
 ## 1. Why this folder exists
 
-The d-first engine in [`../Scripts for large-scale computations/`](../Scripts%20for%20large-scale%20computations/)
-enumerates slopes `d = (A+C)/(A+B)` by height `H`. A representation of size `M` only appears at
+The engine in [`../Scripts for large-scale computations/`](../Scripts%20for%20large-scale%20computations/)
+reaches each point through the slope `(A+C)/(A+B)` of its representation, enumerated by height `H`. A representation of size `M` only appears at
 height about `M/g`, with `g = gcd(A+B, A+C)`, so it is reached only if `g ≥ M/H`. Nothing forces
 `g` to be large, and under the Booker–Sutherland model the d-first yield on 1,800 core-hours
 (`H ≈ 1.5·10⁶`) is `E/ρ ≈ 5·10⁻⁹` for a frontier of `10¹⁵`. The search here enumerates where
@@ -23,8 +26,8 @@ solutions are expected instead, `δ = |a+b|` and the cube roots of 375 modulo `�
 frontier of what has already been searched. Measured plans give `E/ρ ≈ 0.4–2.7` on the same
 1,800 hours (section 4), about **10⁸ times** the d-first figure.
 
-The d-first engine stays useful for exact statements about small-height `d`; it is not the tool
-for finding a representation.
+That engine stays useful for exact statements about points whose slope has small height; it is not
+the tool for finding a representation.
 
 ## 2. Mathematics
 
@@ -118,7 +121,7 @@ python3 run_gap_task.py --task ce375-gap-tasks/tasks/ce375-gap-0000.json --outpu
 # afterwards
 python3 collect_gap.py --page ce375-gap-tasks/page.json --results results --output-dir collected --require-complete
 python3 audit_gap.py   --page ce375-gap-tasks/page.json --results results --fraction 0.02
-python3 to_d375.py collected/hits.jsonl              # points and d in both charts, DESIRED flagged
+python3 to_points375.py collected/hits.jsonl              # points and d in both charts, DESIRED flagged
 ```
 
 Tasks are primitive by default (`"primitive": true`); the runner, collector and auditor all check
@@ -146,8 +149,28 @@ it. Checkpointing, continuations, coverage gaps and the 2 % audit are those of t
   * an end-to-end campaign at `k = 7125 = 57·5³` finds its primitive solution `(−67)³ + (−46)³ + 74³`,
     collects it as PRIMITIVE, audits cleanly and converts it to two desired half-chart points.
 
+**Pilot at k = 375** (worker 1.2.0, 22 Nov 2026, through plan / run / collect / audit):
+`δ ∈ [5623413252, 7623413252)`, `R = 4096`, `--primitive`, two tasks in parallel on the two-core
+development host.
+
+| Quantity | Value |
+| --- | --- |
+| `δ` values | 2,000,000,000 (gaps: none) |
+| skipped: `3 \| δ` / primitivity lemma / no cube root | 666,666,667 / 256,000,000 / 700,605,724 |
+| `δ` processed, cube roots | 376,727,609, 953,402,561 |
+| candidates `z` | 325,122,046,498 (163 per `δ`) |
+| exact GMP checks | 9,953,920 |
+| worker time | 0.154 core-hours (0.28 µs per `δ`) |
+| audit (5 %) | 6 / 6 chunks reproduce exactly |
+| representations of 375 | 0 |
+
+Heuristic weight of the pilot region: `E/ρ = 1.06·10⁻⁴` (frontier `10¹⁵`). The first audit of an
+earlier build caught a split-dependent accounting difference (the primitivity skip was read from
+sieve factor lists); it was fixed, and a regression test now requires identical counters however a
+range is split.
+
 ## 7. What a completed run proves
 
 That 375 has no primitive representation with `δ = |a+b|` in the covered range and
-`3.847 δ ≤ |c| ≤ R δ`, and hence no desired point of either chart arising from one. The odds in
+`3.847 δ ≤ |c| ≤ R δ`, and hence no accepted point `(n, x, ±y)` of either chart arising from one. The odds in
 section 4 are heuristic, and conditional on the frontier and on `ρ`.

@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
-"""Turn representations k = a^3 + b^3 + c^3 into the points and rational d of the CE375 equation
+"""Turn representations k = a^3 + b^3 + c^3 into the points (n, x, +-y) of the CE375 equation
 
     y^2 = (x + 6n + 3)^2 + N(n)/x,   N(n) = 36n^3 + 54n^2 + 27n - 58 = ((6n+3)^3 - 375)/6,
-    d = -(x + 6n + 3 + y)/(2x)  (principal, y >= 0),   d' = -(x + 6n + 3 - y)/(2x)  (conjugate),
 
-in the two accepted charts of ../Scripts for large-scale computations/README.md:
+with n an integer, in the two accepted charts of ../Scripts for large-scale computations/README.md:
   integer chart  n, x, y integers;
   half chart     x = X/2, y = Y/2, X, Y odd.
 Each point carries the same flags as that folder's worker: primitive_point (gcd(n, x) = 1, resp.
 gcd(X, Y) = 1), primitive_cubes (gcd(a, b, c) = 1) and desired (both). Every point is checked exactly
 on the equation before it is printed.
 
-  python3 to_d375.py collected/hits.jsonl          # worker hits (raw output lines are accepted too)
-  python3 to_d375.py --triple a b c [--k 375]
+  python3 to_points375.py collected/hits.jsonl     # worker hits (raw output lines are accepted too)
+  python3 to_points375.py --triple a b c [--k 375]
+
+(Each point also determines d = -(x + 6n + 3 + y)/(2x); it is kept in the returned records for
+cross-checks with the d-first folder but not printed.)
 """
 from __future__ import annotations
 
@@ -64,8 +66,8 @@ def points(a: int, b: int, c: int, k: int) -> list[dict]:
 
 def show(p: dict) -> str:
     tag = "DESIRED" if p["desired"] else "non-primitive"
-    return (f"{tag:13s} chart={p['chart']:7s} d = {p['d']}  (conjugate {p['d_conjugate']})  n = {p['n']}  "
-            f"x = {p['x']}  y = +-{p['y']}  cubes = {p['cubes']}  gcd(point) = {p['point_gcd']}  gcd(cubes) = {p['cube_gcd']}")
+    return (f"{tag:13s} chart={p['chart']:7s} n = {p['n']}  x = {p['x']}  y = +-{p['y']}  "
+            f"cubes = {p['cubes']}  gcd(point) = {p['point_gcd']}  gcd(cubes) = {p['cube_gcd']}")
 
 
 def main() -> int:

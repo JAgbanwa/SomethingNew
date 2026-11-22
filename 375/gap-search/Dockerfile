@@ -17,7 +17,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /build/bin/ /app/bin/
-COPY gap_common.py gap_campaign.py run_gap_task.py collect_gap.py audit_gap.py to_d375.py container_entrypoint.sh /app/
+COPY gap_common.py gap_campaign.py run_gap_task.py collect_gap.py audit_gap.py to_points375.py container_entrypoint.sh /app/
 RUN chmod 0755 /app/container_entrypoint.sh /app/bin/gap_worker && mkdir -p /local/input /local/output
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
