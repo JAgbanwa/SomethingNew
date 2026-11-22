@@ -1,0 +1,3 @@
+non-primitive  form=integer  n=2  x=-20  y=+-0  cubes=20,20,-25  point_gcd=2  cube_gcd=5
+non-primitive  form=integer  n=2  x=-5  y=+-0  cubes=5,5,5  point_gcd=1  cube_gcd=5
+non-primitive  form=half     n=2  x=5/2  y=+-45/2  cubes=20,-25,20  point_gcd=5  cube_gcd=5

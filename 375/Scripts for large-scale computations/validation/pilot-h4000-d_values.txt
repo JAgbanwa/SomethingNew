@@ -1,3 +1,0 @@
-non-primitive  d = 1/1  chart=integer  n=2  x=-5  s=0  cubes=5,5,5  gcd_point=1  gcd_cubes=5
-non-primitive  d = -8/1  chart=half  n=2  x=5/2  s=45/2  cubes=20,-25,20  gcd_point=5  gcd_cubes=5
-non-primitive  d = -1/8  chart=integer  n=2  x=-20  s=0  cubes=20,20,-25  gcd_point=2  gcd_cubes=5

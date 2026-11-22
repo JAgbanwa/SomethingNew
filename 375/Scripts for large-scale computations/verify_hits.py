@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Independently re-verify every hit in one or more hits.jsonl files.
+"""Independently re-verify every point in one or more hits.jsonl files.
 
-Checks, in exact rational arithmetic, the ORIGINAL equation
-  36n^3+54n^2+27n-58 = -2*d*x^2*(-(x+6n+3) + s),  s = sqrt((x+6n+3)^2 + N/x) >= 0,
-the chart (x, s integers; or x = X/2, s = Y/2 with X, Y odd), the cube identity,
-and the primitivity flags (gcd(n,x) / gcd(X,Y), and gcd of the cube components).
+Checks, in exact rational arithmetic,
+  y^2 = (x + 6n+3)^2 + (36n^3 + 54n^2 + 27n - 58)/x
+with n an integer, the form (x, y integers; or x = X/2, y = Y/2 with X, Y odd),
+and the primitivity flags.
 Usage: python3 verify_hits.py hits.jsonl [...] [--k 375]
 """
 from __future__ import annotations
@@ -31,7 +31,7 @@ def main() -> int:
                 v = verify_hit(json.loads(line), args.k)
                 good += 1
                 tag = "DESIRED" if v["desired"] else "non-primitive"
-                print(f"OK  d={v['d']} chart={v['chart']} n={v['n']} x={v['x']} s={v['s']} [{tag}]")
+                print(f"OK  [{tag}] form={v['form']} n={v['n']} x={v['x']} y=+-{v['y']}")
             except Exception as exc:  # noqa: BLE001
                 bad += 1
                 print(f"BAD {path}:{i}: {exc}")

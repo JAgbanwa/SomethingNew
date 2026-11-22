@@ -1,11 +1,10 @@
 {
   "campaign_id": "ce375-local-pilot",
   "deadline_seconds": 0,
-  "g_max_digits": 100,
-  "h_start": 3163,
-  "h_stop": 4000,
   "k": 375,
-  "parameterization": "ce375-dfirst-thue-both-charts-v1",
-  "schema": "ce375-dfirst-task-v1",
+  "method": "ce375-nfirst-divisors-v1",
+  "n_start": 800000,
+  "n_stop": 10000000,
+  "schema": "ce375-xy-task-v1",
   "task_id": "ce375-local-pilot-1"
 }
