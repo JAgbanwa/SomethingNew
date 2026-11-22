@@ -1,0 +1,2 @@
+2026-11-22T13:40:47.656673+00:00 start /workspace/scratch/99d273e218e6/primitive375-dev/bin/gap_worker --k 375 --d-start 1000050000000 --d-stop 1000100000000 --ratio-max 32768 --deadline-seconds 120 --chunk 16777216 --height-min 10000000000000000 --primitive-only
+2026-11-22T13:41:23.762896+00:00 worker exit 0, d_next=1000100000000

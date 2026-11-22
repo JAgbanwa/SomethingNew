@@ -1,0 +1,42 @@
+{
+  "campaign_id": "ce375-local-pilot",
+  "cores_per_instance": 2,
+  "groups": [
+    [
+      {
+        "campaign_id": "ce375-local-pilot",
+        "d_start": "1000000000000",
+        "d_stop": "1000050000000",
+        "deadline_seconds": 120,
+        "height_min": "10000000000000000",
+        "k": 375,
+        "method": "booker-sutherland-primitive-v1",
+        "primitive_only": true,
+        "ratio_max": 32768,
+        "schema": "ce375-primitive-task-v1",
+        "task_id": "ce375-local-pilot-0"
+      },
+      {
+        "campaign_id": "ce375-local-pilot",
+        "d_start": "1000050000000",
+        "d_stop": "1000100000000",
+        "deadline_seconds": 120,
+        "height_min": "10000000000000000",
+        "k": 375,
+        "method": "booker-sutherland-primitive-v1",
+        "primitive_only": true,
+        "ratio_max": 32768,
+        "schema": "ce375-primitive-task-v1",
+        "task_id": "ce375-local-pilot-1"
+      }
+    ]
+  ],
+  "max_instance_hours": 1,
+  "schema": "ce375-bundle-v1",
+  "source_manifest_sha256": "ed9741bb14cf38157d66db266f4506235a3df4d25f38344998e58f094291ffaa",
+  "task_campaign_ids": [
+    "ce375-local-pilot"
+  ],
+  "total_reserved_core_hours": 2.0,
+  "worker_source_sha256": "e23a9658870abb0004bd3bb09c1d5db81fdb80dd247e7be8ef65700ebc6900cc"
+}

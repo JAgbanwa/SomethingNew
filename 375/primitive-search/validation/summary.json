@@ -1,0 +1,62 @@
+{
+  "ce_core_hours_spent": 0,
+  "ce_jobs_submitted": 0,
+  "container_validation": "pending_GitHub_Actions",
+  "date": "2026-11-22",
+  "local_pilot": {
+    "audit_passed": true,
+    "audited_chunk_d_values": 16777216,
+    "audited_chunks": 1,
+    "candidate_progression_entries": 112221288971,
+    "d_values": 100000000,
+    "exact_checks": 3215147,
+    "gaps": [],
+    "hits": 0,
+    "worker_seconds_sum": 71.899
+  },
+  "primitive_375_found": false,
+  "production_model": {
+    "bands": 74,
+    "d_start": "1000000",
+    "d_stop": "12089131427541",
+    "heuristic_expected_solutions": 0.024004366592334635,
+    "modeled_productive_core_hours": 1231.7999999999463,
+    "poisson_model_hit_probability": 0.02371855327447986,
+    "tasks": 1799
+  },
+  "schema": "ce375-development-evidence-v1",
+  "validation": {
+    "band_planner": {
+      "passed": 7,
+      "tests": 7
+    },
+    "campaign_collector": {
+      "passed": 8,
+      "tests": 8
+    },
+    "ce_launcher_runtime": {
+      "passed": 17,
+      "tests": 17
+    },
+    "docker_command_guards": {
+      "passed": 3,
+      "tests": 3
+    },
+    "inherited_full_suite_before_lifecycle_hardening": {
+      "passed": 16,
+      "tests": 16
+    },
+    "invalid_returned_coverage": {
+      "passed": 3,
+      "tests": 3
+    },
+    "lifecycle_after_hardening": {
+      "passed": 4,
+      "tests": 4
+    },
+    "native_primitive_tests": {
+      "passed": 13,
+      "tests": 13
+    }
+  }
+}

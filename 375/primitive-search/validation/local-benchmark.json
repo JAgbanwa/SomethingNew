@@ -1,0 +1,1352 @@
+{
+  "created": "2026-11-22T13:34:49.005269+00:00",
+  "elapsed_wall_seconds": 48.07855758500045,
+  "fit_usable": true,
+  "fitted_cost_model": {
+    "base_ns": 254.72466517474004,
+    "distinct_samples": 12,
+    "max_absolute_relative_error": 0.07653376635907383,
+    "median_absolute_relative_error": 0.021883263905451526,
+    "r_squared": 0.9998718595478325,
+    "ratio_ns": 0.01387157025179951
+  },
+  "height_min": "10000000000000000",
+  "hits": [],
+  "host": {
+    "cpu_count": 9,
+    "machine": "x86_64",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41"
+  },
+  "k": 375,
+  "measurement_environment": "local",
+  "primitive_only": true,
+  "quick": false,
+  "rows": [
+    {
+      "completed_d": 944513,
+      "d_start": "10000000000",
+      "mean_scan_ratio": 116649.96315516451,
+      "ns_per_d": 1812.0449374439527,
+      "ratio_max": 131072,
+      "repeat": 0,
+      "requested_d": 944513,
+      "returncode": 0,
+      "search_seconds": 1.7115,
+      "setup_seconds": 0.00243508,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 1.7384248359994672,
+      "worker_records": [
+        {
+          "d_start": "10000000000",
+          "d_stop": "10000944513",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "131072",
+          "setup_seconds": 0.00243508,
+          "sieve_limit": "100004",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 3839300585,
+            "d_live": 176717,
+            "d_no_roots": 332062,
+            "d_skipped_mod3": 314837,
+            "d_skipped_primitive": 120897,
+            "d_total": 944513,
+            "exact_checks": 110267,
+            "hits": 0,
+            "pass_2adic": 3839300585,
+            "pass_residue": 110267,
+            "roots": 394633
+          },
+          "d_start": "10000000000",
+          "d_stop": "10000944513",
+          "seconds": 1.7115,
+          "type": "chunk"
+        },
+        {
+          "d_next": "10000944513",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 230651,
+      "d_start": "10000000000",
+      "mean_scan_ratio": 509865.61998845736,
+      "ns_per_d": 7238.902064157537,
+      "ratio_max": 524288,
+      "repeat": 0,
+      "requested_d": 230651,
+      "returncode": 0,
+      "search_seconds": 1.66966,
+      "setup_seconds": 0.001397,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 1.6855383980000624,
+      "worker_records": [
+        {
+          "d_start": "10000000000",
+          "d_stop": "10000230651",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "524288",
+          "setup_seconds": 0.001397,
+          "sieve_limit": "100001",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 4131611267,
+            "d_live": 43128,
+            "d_no_roots": 81117,
+            "d_skipped_mod3": 76883,
+            "d_skipped_primitive": 29523,
+            "d_total": 230651,
+            "exact_checks": 117297,
+            "hits": 0,
+            "pass_2adic": 4131611267,
+            "pass_residue": 117297,
+            "roots": 97097
+          },
+          "d_start": "10000000000",
+          "d_stop": "10000230651",
+          "seconds": 1.66966,
+          "type": "chunk"
+        },
+        {
+          "d_next": "10000230651",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 114881,
+      "d_start": "10000000000",
+      "mean_scan_ratio": 1034153.5643331056,
+      "ns_per_d": 14907.164805320288,
+      "ratio_max": 1048576,
+      "repeat": 0,
+      "requested_d": 114881,
+      "returncode": 0,
+      "search_seconds": 1.71255,
+      "setup_seconds": 0.00201016,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 1.7305985109996982,
+      "worker_records": [
+        {
+          "d_start": "10000000000",
+          "d_stop": "10000114881",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "1048576",
+          "setup_seconds": 0.00201016,
+          "sieve_limit": "100000",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 4189471126,
+            "d_live": 21562,
+            "d_no_roots": 40321,
+            "d_skipped_mod3": 38293,
+            "d_skipped_primitive": 14705,
+            "d_total": 114881,
+            "exact_checks": 120590,
+            "hits": 0,
+            "pass_2adic": 4189471126,
+            "pass_residue": 120590,
+            "roots": 48509
+          },
+          "d_start": "10000000000",
+          "d_stop": "10000114881",
+          "seconds": 1.71255,
+          "type": "chunk"
+        },
+        {
+          "d_next": "10000114881",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 2995448,
+      "d_start": "100000000000",
+      "mean_scan_ratio": 29660.80887620123,
+      "ns_per_d": 656.3392187078528,
+      "ratio_max": 32768,
+      "repeat": 0,
+      "requested_d": 2995448,
+      "returncode": 0,
+      "search_seconds": 1.96603,
+      "setup_seconds": 0.00274029,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 1.9868601779999153,
+      "worker_records": [
+        {
+          "d_start": "100000000000",
+          "d_stop": "100002995448",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "32768",
+          "setup_seconds": 0.00274029,
+          "sieve_limit": "316232",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 3107863477,
+            "d_live": 544383,
+            "d_no_roots": 1069166,
+            "d_skipped_mod3": 998482,
+            "d_skipped_primitive": 383417,
+            "d_total": 2995448,
+            "exact_checks": 89664,
+            "hits": 0,
+            "pass_2adic": 3107863477,
+            "pass_residue": 89664,
+            "roots": 1257808
+          },
+          "d_start": "100000000000",
+          "d_stop": "100002995448",
+          "seconds": 1.96603,
+          "type": "chunk"
+        },
+        {
+          "d_next": "100002995448",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 867272,
+      "d_start": "100000000000",
+      "mean_scan_ratio": 127964.78683417871,
+      "ns_per_d": 2113.8927579813485,
+      "ratio_max": 131072,
+      "repeat": 0,
+      "requested_d": 867272,
+      "returncode": 0,
+      "search_seconds": 1.83332,
+      "setup_seconds": 0.00344449,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 1.856521743000485,
+      "worker_records": [
+        {
+          "d_start": "100000000000",
+          "d_stop": "100000867272",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "131072",
+          "setup_seconds": 0.00344449,
+          "sieve_limit": "316229",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 3894629654,
+            "d_live": 157704,
+            "d_no_roots": 309467,
+            "d_skipped_mod3": 289090,
+            "d_skipped_primitive": 111011,
+            "d_total": 867272,
+            "exact_checks": 112680,
+            "hits": 0,
+            "pass_2adic": 3894629654,
+            "pass_residue": 112680,
+            "roots": 365310
+          },
+          "d_start": "100000000000",
+          "d_stop": "100000867272",
+          "seconds": 1.83332,
+          "type": "chunk"
+        },
+        {
+          "d_next": "100000867272",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 445373,
+      "d_start": "100000000000",
+      "mean_scan_ratio": 259036.78246440899,
+      "ns_per_d": 4063.492847568218,
+      "ratio_max": 262144,
+      "repeat": 0,
+      "requested_d": 445373,
+      "returncode": 0,
+      "search_seconds": 1.80977,
+      "setup_seconds": 0.00279721,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 1.829576766000173,
+      "worker_records": [
+        {
+          "d_start": "100000000000",
+          "d_stop": "100000445373",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "262144",
+          "setup_seconds": 0.00279721,
+          "sieve_limit": "316228",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 4037505409,
+            "d_live": 80906,
+            "d_no_roots": 159002,
+            "d_skipped_mod3": 148457,
+            "d_skipped_primitive": 57008,
+            "d_total": 445373,
+            "exact_checks": 116947,
+            "hits": 0,
+            "pass_2adic": 4037505409,
+            "pass_residue": 116947,
+            "roots": 187071
+          },
+          "d_start": "100000000000",
+          "d_stop": "100000445373",
+          "seconds": 1.80977,
+          "type": "chunk"
+        },
+        {
+          "d_next": "100000445373",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 6695461,
+      "d_start": "1000000000000",
+      "mean_scan_ratio": 7522.590858422905,
+      "ns_per_d": 371.5995059936874,
+      "ratio_max": 8192,
+      "repeat": 0,
+      "requested_d": 6695461,
+      "returncode": 0,
+      "search_seconds": 2.48803,
+      "setup_seconds": 0.00675059,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 2.5091296269984014,
+      "worker_records": [
+        {
+          "d_start": "1000000000000",
+          "d_stop": "1000006695461",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "8192",
+          "setup_seconds": 0.00675059,
+          "sieve_limit": "1000003",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 1761564820,
+            "d_live": 1182338,
+            "d_no_roots": 2424283,
+            "d_skipped_mod3": 2231820,
+            "d_skipped_primitive": 857020,
+            "d_total": 6695461,
+            "exact_checks": 50971,
+            "hits": 0,
+            "pass_2adic": 1761564820,
+            "pass_residue": 50971,
+            "roots": 2811384
+          },
+          "d_start": "1000000000000",
+          "d_stop": "1000006695461",
+          "seconds": 2.48803,
+          "type": "chunk"
+        },
+        {
+          "d_next": "1000006695461",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 2823623,
+      "d_start": "1000000000000",
+      "mean_scan_ratio": 32098.589994434427,
+      "ns_per_d": 691.1227171616041,
+      "ratio_max": 32768,
+      "repeat": 0,
+      "requested_d": 2823623,
+      "returncode": 0,
+      "search_seconds": 1.95147,
+      "setup_seconds": 0.00674997,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 1.9749571350002952,
+      "worker_records": [
+        {
+          "d_start": "1000000000000",
+          "d_stop": "1000002823623",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "32768",
+          "setup_seconds": 0.00674997,
+          "sieve_limit": "1000001",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 3171142605,
+            "d_live": 498248,
+            "d_no_roots": 1022744,
+            "d_skipped_mod3": 941207,
+            "d_skipped_primitive": 361424,
+            "d_total": 2823623,
+            "exact_checks": 91368,
+            "hits": 0,
+            "pass_2adic": 3171142605,
+            "pass_residue": 91368,
+            "roots": 1185768
+          },
+          "d_start": "1000000000000",
+          "d_stop": "1000002823623",
+          "seconds": 1.95147,
+          "type": "chunk"
+        },
+        {
+          "d_next": "1000002823623",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 1594332,
+      "d_start": "1000000000000",
+      "mean_scan_ratio": 64866.58972012123,
+      "ns_per_d": 1141.5815526502636,
+      "ratio_max": 65536,
+      "repeat": 0,
+      "requested_d": 1594332,
+      "returncode": 0,
+      "search_seconds": 1.82006,
+      "setup_seconds": 0.00668319,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 1.843305065000095,
+      "worker_records": [
+        {
+          "d_start": "1000000000000",
+          "d_stop": "1000001594332",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "65536",
+          "setup_seconds": 0.00668319,
+          "sieve_limit": "1000000",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 3610294424,
+            "d_live": 281081,
+            "d_no_roots": 577732,
+            "d_skipped_mod3": 531444,
+            "d_skipped_primitive": 204075,
+            "d_total": 1594332,
+            "exact_checks": 103740,
+            "hits": 0,
+            "pass_2adic": 3610294424,
+            "pass_residue": 103740,
+            "roots": 668189
+          },
+          "d_start": "1000000000000",
+          "d_stop": "1000001594332",
+          "seconds": 1.82006,
+          "type": "chunk"
+        },
+        {
+          "d_next": "1000001594332",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 9753066,
+      "d_start": "10000000000000",
+      "mean_scan_ratio": 1903.8231648487942,
+      "ns_per_d": 280.45129603347294,
+      "ratio_max": 2048,
+      "repeat": 0,
+      "requested_d": 9753066,
+      "returncode": 0,
+      "search_seconds": 2.73526,
+      "setup_seconds": 0.0219729,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 2.7814202770005068,
+      "worker_records": [
+        {
+          "d_start": "10000000000000",
+          "d_stop": "10000009753066",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "2048",
+          "setup_seconds": 0.0219729,
+          "sieve_limit": "3162279",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 649443376,
+            "d_live": 1679808,
+            "d_no_roots": 3573844,
+            "d_skipped_mod3": 3251022,
+            "d_skipped_primitive": 1248392,
+            "d_total": 9753066,
+            "exact_checks": 18513,
+            "hits": 0,
+            "pass_2adic": 649443376,
+            "pass_residue": 18513,
+            "roots": 4092323
+          },
+          "d_start": "10000000000000",
+          "d_stop": "10000009753066",
+          "seconds": 2.73526,
+          "type": "chunk"
+        },
+        {
+          "d_next": "10000009753066",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 6504832,
+      "d_start": "10000000000000",
+      "mean_scan_ratio": 8047.823149230327,
+      "ns_per_d": 345.82906983608495,
+      "ratio_max": 8192,
+      "repeat": 0,
+      "requested_d": 6504832,
+      "returncode": 0,
+      "search_seconds": 2.24956,
+      "setup_seconds": 0.0202913,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 2.2890754270010802,
+      "worker_records": [
+        {
+          "d_start": "10000000000000",
+          "d_stop": "10000006504832",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "8192",
+          "setup_seconds": 0.0202913,
+          "sieve_limit": "3162278",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 1829265243,
+            "d_live": 1120146,
+            "d_no_roots": 2383791,
+            "d_skipped_mod3": 2168277,
+            "d_skipped_primitive": 832618,
+            "d_total": 6504832,
+            "exact_checks": 52701,
+            "hits": 0,
+            "pass_2adic": 1829265243,
+            "pass_residue": 52701,
+            "roots": 2727395
+          },
+          "d_start": "10000000000000",
+          "d_stop": "10000006504832",
+          "seconds": 2.24956,
+          "type": "chunk"
+        },
+        {
+          "d_next": "10000006504832",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 4504534,
+      "d_start": "10000000000000",
+      "mean_scan_ratio": 16239.8231396123,
+      "ns_per_d": 501.86989375593566,
+      "ratio_max": 16384,
+      "repeat": 0,
+      "requested_d": 4504534,
+      "returncode": 0,
+      "search_seconds": 2.26069,
+      "setup_seconds": 0.02084,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 2.297022370999912,
+      "worker_records": [
+        {
+          "d_start": "10000000000000",
+          "d_stop": "10000004504534",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "16384",
+          "setup_seconds": 0.02084,
+          "sieve_limit": "3162278",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 2560191281,
+            "d_live": 775668,
+            "d_no_roots": 1650775,
+            "d_skipped_mod3": 1501511,
+            "d_skipped_primitive": 576580,
+            "d_total": 4504534,
+            "exact_checks": 73613,
+            "hits": 0,
+            "pass_2adic": 2560191281,
+            "pass_residue": 73613,
+            "roots": 1891147
+          },
+          "d_start": "10000000000000",
+          "d_stop": "10000004504534",
+          "seconds": 2.26069,
+          "type": "chunk"
+        },
+        {
+          "d_next": "10000004504534",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 944513,
+      "d_start": "10000000000",
+      "mean_scan_ratio": 116649.96315516451,
+      "ns_per_d": 1802.8020789549746,
+      "ratio_max": 131072,
+      "repeat": 1,
+      "requested_d": 944513,
+      "returncode": 0,
+      "search_seconds": 1.70277,
+      "setup_seconds": 0.00154261,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 1.7195249189990136,
+      "worker_records": [
+        {
+          "d_start": "10000000000",
+          "d_stop": "10000944513",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "131072",
+          "setup_seconds": 0.00154261,
+          "sieve_limit": "100004",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 3839300585,
+            "d_live": 176717,
+            "d_no_roots": 332062,
+            "d_skipped_mod3": 314837,
+            "d_skipped_primitive": 120897,
+            "d_total": 944513,
+            "exact_checks": 110267,
+            "hits": 0,
+            "pass_2adic": 3839300585,
+            "pass_residue": 110267,
+            "roots": 394633
+          },
+          "d_start": "10000000000",
+          "d_stop": "10000944513",
+          "seconds": 1.70277,
+          "type": "chunk"
+        },
+        {
+          "d_next": "10000944513",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 230651,
+      "d_start": "10000000000",
+      "mean_scan_ratio": 509865.61998845736,
+      "ns_per_d": 7506.795981808013,
+      "ratio_max": 524288,
+      "repeat": 1,
+      "requested_d": 230651,
+      "returncode": 0,
+      "search_seconds": 1.73145,
+      "setup_seconds": 0.00136094,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 1.7484304669997073,
+      "worker_records": [
+        {
+          "d_start": "10000000000",
+          "d_stop": "10000230651",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "524288",
+          "setup_seconds": 0.00136094,
+          "sieve_limit": "100001",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 4131611267,
+            "d_live": 43128,
+            "d_no_roots": 81117,
+            "d_skipped_mod3": 76883,
+            "d_skipped_primitive": 29523,
+            "d_total": 230651,
+            "exact_checks": 117297,
+            "hits": 0,
+            "pass_2adic": 4131611267,
+            "pass_residue": 117297,
+            "roots": 97097
+          },
+          "d_start": "10000000000",
+          "d_stop": "10000230651",
+          "seconds": 1.73145,
+          "type": "chunk"
+        },
+        {
+          "d_next": "10000230651",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 114881,
+      "d_start": "10000000000",
+      "mean_scan_ratio": 1034153.5643331056,
+      "ns_per_d": 14198.431420339308,
+      "ratio_max": 1048576,
+      "repeat": 1,
+      "requested_d": 114881,
+      "returncode": 0,
+      "search_seconds": 1.63113,
+      "setup_seconds": 0.00137223,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 1.656902328999422,
+      "worker_records": [
+        {
+          "d_start": "10000000000",
+          "d_stop": "10000114881",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "1048576",
+          "setup_seconds": 0.00137223,
+          "sieve_limit": "100000",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 4189471126,
+            "d_live": 21562,
+            "d_no_roots": 40321,
+            "d_skipped_mod3": 38293,
+            "d_skipped_primitive": 14705,
+            "d_total": 114881,
+            "exact_checks": 120590,
+            "hits": 0,
+            "pass_2adic": 4189471126,
+            "pass_residue": 120590,
+            "roots": 48509
+          },
+          "d_start": "10000000000",
+          "d_stop": "10000114881",
+          "seconds": 1.63113,
+          "type": "chunk"
+        },
+        {
+          "d_next": "10000114881",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 2995448,
+      "d_start": "100000000000",
+      "mean_scan_ratio": 29660.80887620123,
+      "ns_per_d": 656.7031041767375,
+      "ratio_max": 32768,
+      "repeat": 1,
+      "requested_d": 2995448,
+      "returncode": 0,
+      "search_seconds": 1.96712,
+      "setup_seconds": 0.0026197,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 1.9841782769999554,
+      "worker_records": [
+        {
+          "d_start": "100000000000",
+          "d_stop": "100002995448",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "32768",
+          "setup_seconds": 0.0026197,
+          "sieve_limit": "316232",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 3107863477,
+            "d_live": 544383,
+            "d_no_roots": 1069166,
+            "d_skipped_mod3": 998482,
+            "d_skipped_primitive": 383417,
+            "d_total": 2995448,
+            "exact_checks": 89664,
+            "hits": 0,
+            "pass_2adic": 3107863477,
+            "pass_residue": 89664,
+            "roots": 1257808
+          },
+          "d_start": "100000000000",
+          "d_stop": "100002995448",
+          "seconds": 1.96712,
+          "type": "chunk"
+        },
+        {
+          "d_next": "100002995448",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 867272,
+      "d_start": "100000000000",
+      "mean_scan_ratio": 127964.78683417871,
+      "ns_per_d": 2011.5834478687193,
+      "ratio_max": 131072,
+      "repeat": 1,
+      "requested_d": 867272,
+      "returncode": 0,
+      "search_seconds": 1.74459,
+      "setup_seconds": 0.00252372,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 1.76235775799978,
+      "worker_records": [
+        {
+          "d_start": "100000000000",
+          "d_stop": "100000867272",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "131072",
+          "setup_seconds": 0.00252372,
+          "sieve_limit": "316229",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 3894629654,
+            "d_live": 157704,
+            "d_no_roots": 309467,
+            "d_skipped_mod3": 289090,
+            "d_skipped_primitive": 111011,
+            "d_total": 867272,
+            "exact_checks": 112680,
+            "hits": 0,
+            "pass_2adic": 3894629654,
+            "pass_residue": 112680,
+            "roots": 365310
+          },
+          "d_start": "100000000000",
+          "d_stop": "100000867272",
+          "seconds": 1.74459,
+          "type": "chunk"
+        },
+        {
+          "d_next": "100000867272",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 445373,
+      "d_start": "100000000000",
+      "mean_scan_ratio": 259036.78246440899,
+      "ns_per_d": 3870.3289153136807,
+      "ratio_max": 262144,
+      "repeat": 1,
+      "requested_d": 445373,
+      "returncode": 0,
+      "search_seconds": 1.72374,
+      "setup_seconds": 0.00268815,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 1.7413872289998835,
+      "worker_records": [
+        {
+          "d_start": "100000000000",
+          "d_stop": "100000445373",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "262144",
+          "setup_seconds": 0.00268815,
+          "sieve_limit": "316228",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 4037505409,
+            "d_live": 80906,
+            "d_no_roots": 159002,
+            "d_skipped_mod3": 148457,
+            "d_skipped_primitive": 57008,
+            "d_total": 445373,
+            "exact_checks": 116947,
+            "hits": 0,
+            "pass_2adic": 4037505409,
+            "pass_residue": 116947,
+            "roots": 187071
+          },
+          "d_start": "100000000000",
+          "d_stop": "100000445373",
+          "seconds": 1.72374,
+          "type": "chunk"
+        },
+        {
+          "d_next": "100000445373",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 6695461,
+      "d_start": "1000000000000",
+      "mean_scan_ratio": 7522.590858422905,
+      "ns_per_d": 327.1275868831138,
+      "ratio_max": 8192,
+      "repeat": 1,
+      "requested_d": 6695461,
+      "returncode": 0,
+      "search_seconds": 2.19027,
+      "setup_seconds": 0.00971305,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 2.216750374000185,
+      "worker_records": [
+        {
+          "d_start": "1000000000000",
+          "d_stop": "1000006695461",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "8192",
+          "setup_seconds": 0.00971305,
+          "sieve_limit": "1000003",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 1761564820,
+            "d_live": 1182338,
+            "d_no_roots": 2424283,
+            "d_skipped_mod3": 2231820,
+            "d_skipped_primitive": 857020,
+            "d_total": 6695461,
+            "exact_checks": 50971,
+            "hits": 0,
+            "pass_2adic": 1761564820,
+            "pass_residue": 50971,
+            "roots": 2811384
+          },
+          "d_start": "1000000000000",
+          "d_stop": "1000006695461",
+          "seconds": 2.19027,
+          "type": "chunk"
+        },
+        {
+          "d_next": "1000006695461",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 2823623,
+      "d_start": "1000000000000",
+      "mean_scan_ratio": 32098.589994434427,
+      "ns_per_d": 667.8936954402199,
+      "ratio_max": 32768,
+      "repeat": 1,
+      "requested_d": 2823623,
+      "returncode": 0,
+      "search_seconds": 1.88588,
+      "setup_seconds": 0.00601862,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 1.9058118869997998,
+      "worker_records": [
+        {
+          "d_start": "1000000000000",
+          "d_stop": "1000002823623",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "32768",
+          "setup_seconds": 0.00601862,
+          "sieve_limit": "1000001",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 3171142605,
+            "d_live": 498248,
+            "d_no_roots": 1022744,
+            "d_skipped_mod3": 941207,
+            "d_skipped_primitive": 361424,
+            "d_total": 2823623,
+            "exact_checks": 91368,
+            "hits": 0,
+            "pass_2adic": 3171142605,
+            "pass_residue": 91368,
+            "roots": 1185768
+          },
+          "d_start": "1000000000000",
+          "d_stop": "1000002823623",
+          "seconds": 1.88588,
+          "type": "chunk"
+        },
+        {
+          "d_next": "1000002823623",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 1594332,
+      "d_start": "1000000000000",
+      "mean_scan_ratio": 64866.58972012123,
+      "ns_per_d": 1150.2246708966513,
+      "ratio_max": 65536,
+      "repeat": 1,
+      "requested_d": 1594332,
+      "returncode": 0,
+      "search_seconds": 1.83384,
+      "setup_seconds": 0.00606352,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 1.8550697889986623,
+      "worker_records": [
+        {
+          "d_start": "1000000000000",
+          "d_stop": "1000001594332",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "65536",
+          "setup_seconds": 0.00606352,
+          "sieve_limit": "1000000",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 3610294424,
+            "d_live": 281081,
+            "d_no_roots": 577732,
+            "d_skipped_mod3": 531444,
+            "d_skipped_primitive": 204075,
+            "d_total": 1594332,
+            "exact_checks": 103740,
+            "hits": 0,
+            "pass_2adic": 3610294424,
+            "pass_residue": 103740,
+            "roots": 668189
+          },
+          "d_start": "1000000000000",
+          "d_stop": "1000001594332",
+          "seconds": 1.83384,
+          "type": "chunk"
+        },
+        {
+          "d_next": "1000001594332",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 9753066,
+      "d_start": "10000000000000",
+      "mean_scan_ratio": 1903.8231648487942,
+      "ns_per_d": 241.8429240610081,
+      "ratio_max": 2048,
+      "repeat": 1,
+      "requested_d": 9753066,
+      "returncode": 0,
+      "search_seconds": 2.35871,
+      "setup_seconds": 0.0190396,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 2.397628018999967,
+      "worker_records": [
+        {
+          "d_start": "10000000000000",
+          "d_stop": "10000009753066",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "2048",
+          "setup_seconds": 0.0190396,
+          "sieve_limit": "3162279",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 649443376,
+            "d_live": 1679808,
+            "d_no_roots": 3573844,
+            "d_skipped_mod3": 3251022,
+            "d_skipped_primitive": 1248392,
+            "d_total": 9753066,
+            "exact_checks": 18513,
+            "hits": 0,
+            "pass_2adic": 649443376,
+            "pass_residue": 18513,
+            "roots": 4092323
+          },
+          "d_start": "10000000000000",
+          "d_stop": "10000009753066",
+          "seconds": 2.35871,
+          "type": "chunk"
+        },
+        {
+          "d_next": "10000009753066",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 6504832,
+      "d_start": "10000000000000",
+      "mean_scan_ratio": 8047.823149230327,
+      "ns_per_d": 346.42554949920304,
+      "ratio_max": 8192,
+      "repeat": 1,
+      "requested_d": 6504832,
+      "returncode": 0,
+      "search_seconds": 2.25344,
+      "setup_seconds": 0.0204377,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 2.2911555070004397,
+      "worker_records": [
+        {
+          "d_start": "10000000000000",
+          "d_stop": "10000006504832",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "8192",
+          "setup_seconds": 0.0204377,
+          "sieve_limit": "3162278",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 1829265243,
+            "d_live": 1120146,
+            "d_no_roots": 2383791,
+            "d_skipped_mod3": 2168277,
+            "d_skipped_primitive": 832618,
+            "d_total": 6504832,
+            "exact_checks": 52701,
+            "hits": 0,
+            "pass_2adic": 1829265243,
+            "pass_residue": 52701,
+            "roots": 2727395
+          },
+          "d_start": "10000000000000",
+          "d_stop": "10000006504832",
+          "seconds": 2.25344,
+          "type": "chunk"
+        },
+        {
+          "d_next": "10000006504832",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "completed_d": 4504534,
+      "d_start": "10000000000000",
+      "mean_scan_ratio": 16239.8231396123,
+      "ns_per_d": 466.0948280110662,
+      "ratio_max": 16384,
+      "repeat": 1,
+      "requested_d": 4504534,
+      "returncode": 0,
+      "search_seconds": 2.09954,
+      "setup_seconds": 0.018099,
+      "stderr": "",
+      "timed_out": false,
+      "wall_seconds": 2.1316679650008155,
+      "worker_records": [
+        {
+          "d_start": "10000000000000",
+          "d_stop": "10000004504534",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "16384",
+          "setup_seconds": 0.018099,
+          "sieve_limit": "3162278",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 2560191281,
+            "d_live": 775668,
+            "d_no_roots": 1650775,
+            "d_skipped_mod3": 1501511,
+            "d_skipped_primitive": 576580,
+            "d_total": 4504534,
+            "exact_checks": 73613,
+            "hits": 0,
+            "pass_2adic": 2560191281,
+            "pass_residue": 73613,
+            "roots": 1891147
+          },
+          "d_start": "10000000000000",
+          "d_stop": "10000004504534",
+          "seconds": 2.09954,
+          "type": "chunk"
+        },
+        {
+          "d_next": "10000004504534",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    }
+  ],
+  "schema": "ce375-benchmark-v1",
+  "warnings": [
+    "Measured on a local host, not Charity Engine hardware."
+  ],
+  "worker_sha256": "8126231ebef5c67c8ce5098af6c73945a10ec775e65e17aff5649c88ba476f34",
+  "worker_source_sha256": "e23a9658870abb0004bd3bb09c1d5db81fdb80dd247e7be8ef65700ebc6900cc"
+}

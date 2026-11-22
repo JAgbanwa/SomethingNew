@@ -1,0 +1,101 @@
+name: CE375 primitive search
+
+on:
+  pull_request:
+    paths:
+      - '375/primitive-search/**'
+      - '.github/workflows/ce375-primitive.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ce375-primitive-${{ github.head_ref || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  container:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+        working-directory: '375/primitive-search'
+    env:
+      CE375_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      CE375_IMAGE: ce375:${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out the exact proposed source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Build the Linux amd64 image and run all regression tests
+        run: |
+          mkdir -p "$RUNNER_TEMP/ce375-evidence" "$RUNNER_TEMP/ce375-image"
+          docker version > "$RUNNER_TEMP/ce375-evidence/docker-version.txt"
+          docker build --pull --platform linux/amd64 --progress plain \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$CE375_SOURCE_SHA" \
+            --iidfile "$RUNNER_TEMP/ce375-evidence/image-id.txt" \
+            --tag "$CE375_IMAGE" . 2>&1 | tee "$RUNNER_TEMP/ce375-evidence/build.log"
+
+      - name: Exercise the real container and verify returned coverage
+        run: |
+          python3 container_check.py --image "$CE375_IMAGE" \
+            --output-dir "$RUNNER_TEMP/ce375-evidence/container" \
+            2>&1 | tee "$RUNNER_TEMP/ce375-evidence/container-console.log"
+
+      - name: Export and reload the tested image
+        run: |
+          docker image inspect "$CE375_IMAGE" > "$RUNNER_TEMP/ce375-evidence/image-inspect.json"
+          docker save --output "$RUNNER_TEMP/ce375-image/primitive375-linux-amd64.tar" "$CE375_IMAGE"
+          docker image rm "$CE375_IMAGE"
+          docker load --input "$RUNNER_TEMP/ce375-image/primitive375-linux-amd64.tar" \
+            > "$RUNNER_TEMP/ce375-evidence/reload.txt"
+          test "$(docker image inspect --format '{{.Id}}' "$CE375_IMAGE")" = \
+            "$(cat "$RUNNER_TEMP/ce375-evidence/image-id.txt")"
+          docker run --rm --network none "$CE375_IMAGE" /app/bin/gap_worker --version \
+            > "$RUNNER_TEMP/ce375-evidence/reloaded-version.txt"
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib
+          root = pathlib.Path(os.environ['RUNNER_TEMP'])
+          archive = root / 'ce375-image/primitive375-linux-amd64.tar'
+          digest = hashlib.file_digest(archive.open('rb'), 'sha256').hexdigest()
+          (archive.parent / 'SHA256SUMS').write_text(digest + '  ' + archive.name + '\n')
+          result = {
+              'source_commit': os.environ['CE375_SOURCE_SHA'],
+              'image_name': os.environ['CE375_IMAGE'],
+              'image_id': (root / 'ce375-evidence/image-id.txt').read_text().strip(),
+              'platform': 'linux/amd64',
+              'archive_sha256': digest,
+              'ce_jobs_submitted': 0,
+              'public_ce_image_url': None,
+              'workflow_run': 'https://github.com/' + os.environ['GITHUB_REPOSITORY'] + '/actions/runs/' + os.environ['GITHUB_RUN_ID'],
+          }
+          (root / 'ce375-evidence/deployment.json').write_text(json.dumps(result, indent=2) + '\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as handle:
+              handle.write('Built and tested primitive-375 image `' + result['image_name'] + '`.\n\n')
+              handle.write('Full regression suite, offline container integration and image archive reload passed. ')
+              handle.write('The image archive is attached as a workflow artifact. No Charity Engine job was submitted.\n')
+          PY
+
+      - name: Preserve validation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ce375-evidence-${{ env.CE375_SOURCE_SHA }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ce375-evidence/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Preserve the tested image archive
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ce375-image-${{ env.CE375_SOURCE_SHA }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ce375-image/
+          if-no-files-found: error
+          compression-level: 1
+          retention-days: 90

@@ -1,0 +1,137 @@
+{
+  "cost_model": {
+    "base_ns": 254.72466517474004,
+    "ratio_ns": 0.01387157025179951
+  },
+  "height_min": "10000000000000000",
+  "hits": [],
+  "measurement_environment": "local",
+  "modeled_budget_below_d": [
+    {
+      "core_hours": 5.995624497762922,
+      "d_boundary": "100000000",
+      "fraction": 0.004867368483327799
+    },
+    {
+      "core_hours": 14.892591814810427,
+      "d_boundary": "1000000000",
+      "fraction": 0.012090105386272995
+    },
+    {
+      "core_hours": 34.509954520192856,
+      "d_boundary": "10000000000",
+      "fraction": 0.028015874752552655
+    }
+  ],
+  "primitive_only": true,
+  "production_model_hours": 1231.7999999999463,
+  "rows": [
+    {
+      "actual_over_model": 1.0385821843836633,
+      "completed_d": 2000,
+      "d_start": "1000000",
+      "d_stop": "1002000",
+      "model_ns_per_d": 1988191.2390259183,
+      "ns_per_d": 2064900.0000000002,
+      "ratio_max": 150000000,
+      "search_seconds": 4.1298,
+      "stderr": "",
+      "wall_seconds": 4.1522823790000984,
+      "worker_records": [
+        {
+          "d_start": "1000000",
+          "d_stop": "1002000",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "150000000",
+          "setup_seconds": 0.000126601,
+          "sieve_limit": "1000",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 10350308479,
+            "d_live": 448,
+            "d_no_roots": 630,
+            "d_skipped_mod3": 666,
+            "d_skipped_primitive": 256,
+            "d_total": 2000,
+            "exact_checks": 320230,
+            "hits": 0,
+            "pass_2adic": 10350308479,
+            "pass_residue": 320230,
+            "roots": 874
+          },
+          "d_start": "1000000",
+          "d_stop": "1002000",
+          "seconds": 4.1298,
+          "type": "chunk"
+        },
+        {
+          "d_next": "1002000",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    },
+    {
+      "actual_over_model": 1.0422933254682019,
+      "completed_d": 20000,
+      "d_start": "100000000",
+      "d_stop": "100020000",
+      "model_ns_per_d": 93045.78435867446,
+      "ns_per_d": 96981.0,
+      "ratio_max": 7000000,
+      "search_seconds": 1.93962,
+      "stderr": "",
+      "wall_seconds": 1.9600988760012115,
+      "worker_records": [
+        {
+          "d_start": "100000000",
+          "d_stop": "100020000",
+          "height_min": "10000000000000000",
+          "k": "375",
+          "method": "booker-sutherland-primitive-v1",
+          "primitive_only": true,
+          "ratio_max": "7000000",
+          "setup_seconds": 0.000372132,
+          "sieve_limit": "10000",
+          "type": "start",
+          "version": "1.2.0",
+          "z_lo": "max(floor(3847*d/1000), block_height_lower)"
+        },
+        {
+          "counters": {
+            "candidates": 4644609536,
+            "d_live": 3973,
+            "d_no_roots": 6801,
+            "d_skipped_mod3": 6666,
+            "d_skipped_primitive": 2560,
+            "d_total": 20000,
+            "exact_checks": 128623,
+            "hits": 0,
+            "pass_2adic": 4644609536,
+            "pass_residue": 128623,
+            "roots": 8314
+          },
+          "d_start": "100000000",
+          "d_stop": "100020000",
+          "seconds": 1.93962,
+          "type": "chunk"
+        },
+        {
+          "d_next": "100020000",
+          "state": "complete",
+          "type": "end"
+        }
+      ]
+    }
+  ],
+  "schema": "ce375-extreme-benchmark-v1",
+  "worker_sha256": "8126231ebef5c67c8ce5098af6c73945a10ec775e65e17aff5649c88ba476f34",
+  "worker_source_sha256": "e23a9658870abb0004bd3bb09c1d5db81fdb80dd247e7be8ef65700ebc6900cc"
+}

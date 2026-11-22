@@ -1,0 +1,8 @@
+.git
+bin
+**/__pycache__
+campaigns
+results
+ce-state
+*.token
+.env

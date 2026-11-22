@@ -1,0 +1,28 @@
+{
+  "campaign_id": "ce375-local-pilot",
+  "counters": {
+    "candidates": 56126937452,
+    "d_live": 8836097,
+    "d_no_roots": 18097236,
+    "d_skipped_mod3": 16666667,
+    "d_skipped_primitive": 6400000,
+    "d_total": 50000000,
+    "exact_checks": 1607525,
+    "hits": 0,
+    "pass_2adic": 56126937452,
+    "pass_residue": 1607525,
+    "roots": 20984995
+  },
+  "covered_start": "1000050000000",
+  "d_next": "1000100000000",
+  "d_stop": "1000100000000",
+  "height_min": "10000000000000000",
+  "k": 375,
+  "primitive_only": true,
+  "ratio_max": 32768,
+  "schema": "ce375-primitive-checkpoint-v1",
+  "task_id": "ce375-local-pilot-1",
+  "updated": "2026-11-22T13:41:23.761089+00:00",
+  "worker_seconds": 36.103,
+  "worker_sha256": "8126231ebef5c67c8ce5098af6c73945a10ec775e65e17aff5649c88ba476f34"
+}
