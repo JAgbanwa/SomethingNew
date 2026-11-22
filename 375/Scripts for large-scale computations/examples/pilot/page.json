@@ -1,30 +1,29 @@
 {
   "campaign_id": "ce375-local-pilot",
-  "created": "2026-11-22T13:55:02.244888+00:00",
-  "estimated_core_hours": 0.08,
-  "g_max_digits": 100,
-  "h_start": 1,
-  "h_stop": 4000,
+  "created": "2026-11-22T15:46:59.182239+00:00",
+  "estimated_core_hours": 0.222,
   "k": 375,
-  "parameterization": "ce375-dfirst-thue-both-charts-v1",
-  "schema": "ce375-dfirst-page-v1",
+  "method": "ce375-nfirst-divisors-v1",
+  "n_start": -10000000,
+  "n_stop": 10000000,
+  "schema": "ce375-xy-page-v1",
   "tasks": [
     {
-      "estimated_core_hours": 0.049999,
+      "estimated_core_hours": 0.12,
       "file": "tasks/ce375-local-pilot-0.json",
-      "h_start": 1,
-      "h_stop": 3163,
-      "pairs": 19999650,
+      "n_start": -10000000,
+      "n_stop": 800000,
+      "processed_n": 3600000,
       "task_id": "ce375-local-pilot-0"
     },
     {
-      "estimated_core_hours": 0.029971,
+      "estimated_core_hours": 0.102222,
       "file": "tasks/ce375-local-pilot-1.json",
-      "h_start": 3163,
-      "h_stop": 4000,
-      "pairs": 11988351,
+      "n_start": 800000,
+      "n_stop": 10000000,
+      "processed_n": 3066667,
       "task_id": "ce375-local-pilot-1"
     }
   ],
-  "us_per_pair": 9.0
+  "us_per_n": 120.0
 }

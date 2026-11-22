@@ -1,18 +1,18 @@
 CXX ?= c++
-CPPFLAGS ?=
-CXXFLAGS ?= -O3 -std=c++17 -Wall -Wextra -Wpedantic
+CPPFLAGS ?= -I/usr/include/$(shell $(CXX) -dumpmachine)
+CXXFLAGS ?= -O3 -std=gnu++17 -Wall -Wextra
 LDFLAGS ?=
-LDLIBS ?= -lgmpxx -lgmp
+LDLIBS ?= -lpari -lgmpxx -lgmp
 
 .PHONY: all clean test
-all: bin/thue375_worker
+all: bin/xy375_worker
 
-bin/thue375_worker: src/thue375_worker.cpp
+bin/xy375_worker: src/xy375_worker.cpp src/fac128.h
 	mkdir -p bin
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $< $(LDFLAGS) $(LDLIBS) -o $@
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -Isrc $< $(LDFLAGS) $(LDLIBS) -o $@
 
 clean:
-	rm -f bin/thue375_worker
+	rm -f bin/xy375_worker
 
 test: all
 	python3 -m unittest discover -s tests -v

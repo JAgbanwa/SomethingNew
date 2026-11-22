@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Merge returned CE375 task outputs: coverage, gaps, and verified hits.
+"""Merge returned CE375 task outputs: coverage, gaps, verified hits.
 
 Point --results at one or more directories. Every subdirectory (any depth)
 holding a status.json or checkpoint.json is read as one task output. Covered
-heights per task are [h_start, next_h). Every hit is re-verified exactly.
+n per directory is [first block start, next_n). Every hit is re-verified.
 
 Writes to --output-dir:
-  hits.jsonl             verified, de-duplicated hits (both charts, all primitivity)
-  desired_hits.jsonl     only the desired (primitive) hits
-  desired_d_values.txt   THE RESULT: d with a primitive point, with chart and (n, x, s)
-  d_values.txt           every d found, each line tagged DESIRED or non-primitive
-  summary.json           coverage, gaps against page.json, counters
+  hits.jsonl          verified, de-duplicated points (both forms, all primitivity)
+  desired_points.txt  THE RESULT: primitive points, one per line (n, x, y)
+  points.txt          every point, tagged DESIRED or non-primitive
+  incomplete.txt      n whose N(n) could not be factored (not covered; rerun them)
+  summary.json        coverage, gaps against page.json, counters
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ import json
 from pathlib import Path
 import sys
 
-from common375 import COUNTERS, hit_key, load_json, verify_hit, atomic_json
+from common375 import COUNTERS, atomic_json, hit_key, load_json, verify_hit
 
 
 def merge(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
@@ -30,6 +30,11 @@ def merge(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
         else:
             out.append([a, b])
     return [(a, b) for a, b in out]
+
+
+def line(v: dict) -> str:
+    return (f"form={v['form']:<7}  n={v['n']}  x={v['x']}  y=+-{v['y']}  "
+            f"cubes={','.join(v['cubes'])}  point_gcd={v['point_gcd']}  cube_gcd={v['cube_gcd']}")
 
 
 def main() -> int:
@@ -44,7 +49,8 @@ def main() -> int:
     covered: list[tuple[int, int]] = []
     counters = {c: 0 for c in COUNTERS}
     hits: dict[str, dict] = {}
-    errors, digits = [], set()
+    incomplete: dict[str, dict] = {}
+    errors = []
     dirs = set()
     for root in args.results:
         for marker in list(root.rglob("status.json")) + list(root.rglob("checkpoint.json")):
@@ -57,31 +63,34 @@ def main() -> int:
             k = k if k is not None else int(task["k"])
             if int(task["k"]) != k:
                 raise ValueError("mixed k values")
-            digits.add(int(task["g_max_digits"]))
-            start = int(task["h_start"])
-            nxt = int(load_json(d / "checkpoint.json")["next_h"]) if (d / "checkpoint.json").exists() \
-                else int(load_json(d / "status.json").get("next_h", start))
             cp = d / "checkpoint.json"
             if cp.exists():
-                for c, v in load_json(cp)["counters"].items():
+                cpd = load_json(cp)
+                nxt = int(cpd["next_n"])
+                for c, v in cpd["counters"].items():
                     if c in counters:
                         counters[c] += int(v)
-            # coverage of this directory: from the first shell it ran to next_h
-            first = start
-            shells = d / "shells.jsonl"
-            if shells.exists():
-                hs = [json.loads(line)["h"] for line in shells.read_text().splitlines() if line.strip()]
-                if hs:
-                    first = min(hs)
+            else:
+                nxt = int(task["n_start"])
+            first = int(task["n_start"])
+            blocks = d / "blocks.jsonl"
+            if blocks.exists():
+                starts = [int(json.loads(l)["n_start"]) for l in blocks.read_text().splitlines() if l.strip()]
+                if starts:
+                    first = min(starts)
             if nxt > first:
                 covered.append((first, nxt))
-            hp = d / "hits.jsonl"
-            if hp.exists():
-                for line in hp.read_text(encoding="utf-8").splitlines():
-                    if line.strip():
-                        rec = json.loads(line)
-                        verify_hit(rec, k)
-                        hits[hit_key(rec)] = rec
+            for name, store in (("hits.jsonl", hits), ("incomplete.jsonl", incomplete)):
+                path = d / name
+                if path.exists():
+                    for l in path.read_text(encoding="utf-8").splitlines():
+                        if l.strip():
+                            rec = json.loads(l)
+                            if name == "hits.jsonl":
+                                verify_hit(rec, k)
+                                store[hit_key(rec)] = rec
+                            else:
+                                store[rec["n"]] = rec
             status = load_json(d / "status.json") if (d / "status.json").exists() else {}
             if status.get("state") == "error":
                 errors.append({"dir": str(d), "error": status.get("error")})
@@ -91,50 +100,39 @@ def main() -> int:
     cov = merge(covered)
     gaps = []
     if page:
-        cursor = page["h_start"]
+        cursor = page["n_start"]
         for a, b in cov:
             if a > cursor:
-                gaps.append([cursor, min(a, page["h_stop"])])
+                gaps.append([cursor, min(a, page["n_stop"])])
             cursor = max(cursor, b)
-        if cursor < page["h_stop"]:
-            gaps.append([cursor, page["h_stop"]])
+        if cursor < page["n_stop"]:
+            gaps.append([cursor, page["n_stop"]])
         gaps = [g for g in gaps if g[0] < g[1]]
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    ordered = sorted(hits.values(), key=lambda r: (max(abs(int(r["d_num"])), int(r["d_den"])), r["d_den"], r["d_num"]))
+    ordered = sorted(hits.values(), key=lambda r: (abs(int(r["n"])), int(r["n"]), int(r["X"])))
+    verified = [verify_hit(r, k) for r in ordered]
     with (args.output_dir / "hits.jsonl").open("w", encoding="utf-8") as f:
         for rec in ordered:
             f.write(json.dumps(rec, sort_keys=True) + "\n")
-    desired = [rec for rec in ordered if verify_hit(rec, k)["desired"]]
-    with (args.output_dir / "desired_hits.jsonl").open("w", encoding="utf-8") as f:
-        for rec in desired:
-            f.write(json.dumps(rec, sort_keys=True) + "\n")
-
-    def line(v: dict) -> str:
-        if v.get("mode") in ("xy", "xy-half"):
-            if v["chart"] == "integer":
-                return (f"d = {v['d']}  chart=integer  n={v['n']}  x={int(v['X']) // 2}  y=+-{int(v['Y']) // 2}  "
-                        f"cubes={','.join(v['cubes'])}  gcd(n,x)={v['point_gcd']}  gcd_cubes={v['cube_gcd']}")
-            return (f"d = {v['d']}  chart=half  n={v['n']}  x={v['X']}/2  y=+-{v['Y']}/2  "
-                    f"cubes={','.join(v['cubes'])}  gcd(X,Y)={v['point_gcd']}  gcd_cubes={v['cube_gcd']}")
-        return (f"d = {v['d']}  chart={v['chart']}  n={v['n']}  x={v['x']}  s={v['s']}  "
-                f"cubes={','.join(v['cubes'])}  gcd_point={v['point_gcd']}  gcd_cubes={v['cube_gcd']}")
-    with (args.output_dir / "d_values.txt").open("w", encoding="utf-8") as f:
-        for rec in ordered:
-            v = verify_hit(rec, k)
+    with (args.output_dir / "points.txt").open("w", encoding="utf-8") as f:
+        for v in verified:
             f.write(("DESIRED        " if v["desired"] else "non-primitive  ") + line(v) + "\n")
-    with (args.output_dir / "desired_d_values.txt").open("w", encoding="utf-8") as f:
-        for rec in desired:
-            f.write(line(verify_hit(rec, k)) + "\n")
-    summary = {"k": k, "covered_heights": [list(c) for c in cov], "gaps": gaps,
-               "g_max_digits": sorted(digits), "counters": counters,
-               "hits": len(ordered), "desired_hits": len(desired),
-               "desired_d_values": sorted({f"{r['d_num']}/{r['d_den']}" for r in desired}),
-               "integer_chart_hits": sum(r["chart"] == "integer" for r in ordered),
-               "half_chart_hits": sum(r["chart"] == "half" for r in ordered),
-               "task_dirs": len(dirs), "errors": errors}
+    desired = [v for v in verified if v["desired"]]
+    with (args.output_dir / "desired_points.txt").open("w", encoding="utf-8") as f:
+        for v in desired:
+            f.write(line(v) + "\n")
+    with (args.output_dir / "incomplete.txt").open("w", encoding="utf-8") as f:
+        for n in sorted(incomplete, key=int):
+            f.write(f"n={n}  N={incomplete[n]['N']}\n")
+    summary = {"k": k, "covered_n": [list(c) for c in cov], "gaps": gaps, "counters": counters,
+               "points": len(verified), "desired_points": len(desired),
+               "integer_form_points": sum(v["form"] == "integer" for v in verified),
+               "half_form_points": sum(v["form"] == "half" for v in verified),
+               "incomplete_n": sorted((int(n) for n in incomplete)), "task_dirs": len(dirs), "errors": errors}
     atomic_json(args.output_dir / "summary.json", summary)
-    print(json.dumps({k2: summary[k2] for k2 in ("k", "covered_heights", "gaps", "hits", "desired_hits", "errors")}, indent=1))
+    print(json.dumps({key: summary[key] for key in ("k", "covered_n", "gaps", "points", "desired_points",
+                                                    "incomplete_n", "errors")}))
     return 1 if errors else 0
 
 

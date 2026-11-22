@@ -1,0 +1,26 @@
+{
+  "counters": {
+    "candidates": 645796700,
+    "divisors": 214306182,
+    "exact_checks": 11964703,
+    "hits": 3,
+    "incomplete": 0,
+    "ns": 6666667,
+    "rho_calls": 4280075
+  },
+  "covered_n": [
+    [
+      -10000000,
+      10000000
+    ]
+  ],
+  "desired_points": 0,
+  "errors": [],
+  "gaps": [],
+  "half_form_points": 1,
+  "incomplete_n": [],
+  "integer_form_points": 2,
+  "k": 375,
+  "points": 3,
+  "task_dirs": 2
+}
