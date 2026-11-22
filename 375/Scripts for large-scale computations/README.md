@@ -1,5 +1,12 @@
 # CE375: rational-d search on y² = (x+6n+3)² + (36n³+54n²+27n−58)/x
 
+> **For finding a primitive representation, use [`../gap-search/`](../gap-search/README.md).**
+> This engine enumerates `d = (A+C)/(A+B)` by height, so a representation of size `M` is reached
+> only if its pair sums share a factor `g ≥ M/H`. On 1,800 core-hours (`H ≈ 1.5·10⁶`) its
+> heuristic yield is about `5·10⁻⁹·ρ` for a frontier of `10¹⁵`; the gap search, which enumerates
+> `δ = |a+b|` with a primitivity filter from the frontier on, gives about `1.07·ρ` on the same hours.
+> This engine remains the tool for exact statements about `d` of small height.
+
 **Target.** Find rational `d` coming from points of
 
 ```text
