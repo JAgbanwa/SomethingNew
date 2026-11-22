@@ -83,7 +83,8 @@ def optimize(a) -> int:
     print(f"frontier {a.frontier:.3g}, {a.core_hours:g} core-hours, calibrated at d = {cal['calibration_d']:.3g}")
     print(f"best: --d-start {d0} --ratio-max {r} --us-per-d {us:.4f}   (d up to {d1:.4e})")
     rho = a.rho if a.rho is not None else RHO.get(a.k)
-    print(f"heuristic E/rho = {v:.4g}" + (f",  E = {rho * v:.3g} (rho = {rho})" if rho else "  (rho for primitive 375 not set)"))
+    print(f"heuristic E/rho = {v:.4g}" + (f",  E = {rho * v:.3g} (rho = {rho}),  P(>= 1 solution) = {1 - exp(-rho * v):.1%}"
+                                         if rho else "  (rho not set)"))
     return 0
 
 
@@ -144,7 +145,7 @@ def main() -> int:
           f"|z| in [3.847 d, {a.ratio_max} d]  frontier {a.frontier:.3g}")
     print(f"tasks={ntasks}  estimated core-hours={est_hours:.1f} at {a.us_per_d} us/d")
     print(f"heuristic E/rho in region: {e_over_rho:.4g}"
-          + (f"  ->  E = {rho * e_over_rho:.3g} (rho={rho})" if rho else "  (rho not set)"))
+          + (f"  ->  E = {rho * e_over_rho:.3g} (rho={rho}), P(>= 1) = {1 - exp(-rho * e_over_rho):.2%}" if rho else "  (rho not set)"))
     if a.plan_only:
         return 0
     tdir = a.output_dir / "tasks"
