@@ -1,0 +1,12 @@
+{
+  "campaign_id": "ce375-xy-both-pilot",
+  "deadline_seconds": 0,
+  "g_max_digits": 100,
+  "h_start": 4000,
+  "h_stop": 14422,
+  "k": 375,
+  "mode": "xy",
+  "parameterization": "ce375-dfirst-thue-both-charts-v1",
+  "schema": "ce375-dfirst-task-v1",
+  "task_id": "ce375-xy-both-pilot-0"
+}
