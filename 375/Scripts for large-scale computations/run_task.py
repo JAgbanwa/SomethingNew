@@ -113,7 +113,7 @@ def run(args: argparse.Namespace) -> int:
         atomic_json(out / "status.json", {
             "schema": STATUS_SCHEMA, "state": state, "error": error,
             "campaign_id": task["campaign_id"], "task_id": task["task_id"],
-            "k": t["k"], "h_start": t["h_start"], "h_stop": t["h_stop"],
+            "k": t["k"], "mode": t["mode"], "h_start": t["h_start"], "h_stop": t["h_stop"],
             "covered_h_start": t["h_start"], "next_h": cursor,
             "g_max_digits": t["g_max_digits"], "parameterization": PARAMETERIZATION,
             "worker_sha256": sha256_file(worker), "counters": counters,
@@ -127,7 +127,7 @@ def run(args: argparse.Namespace) -> int:
     deadline = t["deadline_seconds"]
     if args.deadline_seconds is not None:
         deadline = args.deadline_seconds
-    cmd = [str(worker), "--k", str(t["k"]), "--h-start", str(cursor), "--h-stop", str(t["h_stop"]),
+    cmd = [str(worker), "--k", str(t["k"]), "--mode", t["mode"], "--h-start", str(cursor), "--h-stop", str(t["h_stop"]),
            "--g-max-digits", str(t["g_max_digits"]), "--deadline-seconds", str(deadline)]
     say("start " + " ".join(cmd))
     status("running")

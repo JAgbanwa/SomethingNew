@@ -59,6 +59,8 @@ def main() -> int:
     ap.add_argument("--campaign-id", required=True)
     ap.add_argument("--output-dir", type=Path, required=True)
     ap.add_argument("--k", type=int, default=PRODUCTION_K)
+    ap.add_argument("--mode", choices=("both", "xy-half"), default="both",
+                    help="both charts (default), or xy-half: only x = X/2, y = Y/2, X, Y odd, gcd(X,Y) = 1")
     ap.add_argument("--h-start", type=int, default=1)
     ap.add_argument("--h-stop", type=int, help="exclusive upper height (else derived from --core-hours)")
     ap.add_argument("--core-hours", type=float, help="estimated search core-hours to plan")
@@ -84,7 +86,7 @@ def main() -> int:
     ranges = split(args.h_start, h_stop, task_pairs)
     est = lambda a, b: pairs_in(a, b) * args.us_per_pair / 3600e6  # noqa: E731
     total = sum(est(a, b) for a, b in ranges)
-    print(f"k={args.k}  heights [{args.h_start}, {h_stop})  tasks={len(ranges)}  "
+    print(f"k={args.k}  mode={args.mode}  heights [{args.h_start}, {h_stop})  tasks={len(ranges)}  "
           f"pairs={pairs_in(args.h_start, h_stop)}  estimated core-hours={total:.3f}  "
           f"|g| <= 10^{args.g_max_digits}")
     if args.plan_only:
@@ -97,14 +99,14 @@ def main() -> int:
     for i, (a, b) in enumerate(ranges):
         task_id = f"{args.campaign_id}-{i:0{width}d}"
         task = {"schema": TASK_SCHEMA, "campaign_id": args.campaign_id, "task_id": task_id,
-                "k": args.k, "h_start": a, "h_stop": b, "g_max_digits": args.g_max_digits,
+                "k": args.k, "mode": args.mode, "h_start": a, "h_stop": b, "g_max_digits": args.g_max_digits,
                 "deadline_seconds": args.deadline_seconds, "parameterization": PARAMETERIZATION}
         path = tasks_dir / f"{task_id}.json"
         atomic_json(path, task)
         entries.append({"task_id": task_id, "file": f"tasks/{path.name}", "h_start": a, "h_stop": b,
                         "pairs": pairs_in(a, b), "estimated_core_hours": round(est(a, b), 6)})
     atomic_json(args.output_dir / "page.json", {
-        "schema": PAGE_SCHEMA, "campaign_id": args.campaign_id, "k": args.k,
+        "schema": PAGE_SCHEMA, "campaign_id": args.campaign_id, "k": args.k, "mode": args.mode,
         "h_start": args.h_start, "h_stop": h_stop, "g_max_digits": args.g_max_digits,
         "us_per_pair": args.us_per_pair, "estimated_core_hours": round(total, 3),
         "parameterization": PARAMETERIZATION,

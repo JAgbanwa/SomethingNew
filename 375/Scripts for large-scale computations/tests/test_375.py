@@ -47,8 +47,8 @@ def representations(k: int, bound: int) -> set[tuple[int, int, int]]:
     return reps
 
 
-def run_worker(k: int, h_stop: int, digits: int = 40) -> list[dict]:
-    out = subprocess.run([str(WORKER), "--k", str(k), "--h-start", "1", "--h-stop", str(h_stop),
+def run_worker(k: int, h_stop: int, digits: int = 40, mode: str = "both") -> list[dict]:
+    out = subprocess.run([str(WORKER), "--k", str(k), "--mode", mode, "--h-start", "1", "--h-stop", str(h_stop),
                           "--g-max-digits", str(digits)], check=True, capture_output=True, text=True).stdout
     return [json.loads(line) for line in out.splitlines()]
 
@@ -234,6 +234,114 @@ class Production375(unittest.TestCase):
                             cubes = (int(-x + s), int(-x - s), int(2 * x + m))
                             self.assertEqual(rec["desired"], primitivity(chart, n, x, s, cubes)["desired"])
         self.assertGreater(checked, 0)
+
+
+def xy_point(rec: dict) -> tuple[int, int, int]:
+    return int(rec["n"]), int(rec["X"]), int(rec["Y"])
+
+
+def xy_brute(k: int, nmax: int) -> set[tuple[int, int, int]]:
+    """Every (n, X, |Y|) with |n| <= nmax, X, Y odd, gcd(X, Y) = 1, primitive cubes, on
+    y^2 = (x+6n+3)^2 + N/x with x = X/2: X must divide N (X odd, 8N/X = Y^2 - (X+2S)^2)."""
+    out = set()
+    for n in range(-nmax, nmax + 1):
+        N = 36 * n ** 3 + 54 * n ** 2 + 27 * n + (27 - k) // 6
+        S = 6 * n + 3
+        for X0 in divisors(N):
+            if X0 % 2 == 0:
+                continue
+            for X in (X0, -X0):
+                v = (X + 2 * S) ** 2 + 8 * N // X
+                Y = isqrt(v) if v >= 0 else -1
+                if Y < 0 or Y * Y != v or Y % 2 == 0 or gcd(X, Y) != 1:
+                    continue
+                x, y = Fraction(X, 2), Fraction(Y, 2)
+                cubes = (int(-x + y), int(-x - y), int(2 * x + S))
+                if primitivity("half", n, x, y, cubes)["desired"]:
+                    out.add((n, X, Y))
+    return out
+
+
+@unittest.skipUnless(WORKER.exists(), "build first: make")
+class XYHalf(unittest.TestCase):
+    """--mode xy-half: rational x = X/2, y = Y/2 (X, Y odd, gcd(X, Y) = 1), both signs of y."""
+
+    H = 130
+    KS = (15, 21, 57, 7125)   # 7125 = 57 * 5^3 exercises the mod-125 filter
+
+    @classmethod
+    def setUpClass(cls):
+        cls.xy = {k: [r for r in run_worker(k, cls.H, mode="xy-half") if r["type"] == "hit"] for k in cls.KS + (375,)}
+        cls.both = {k: [r for r in run_worker(k, cls.H) if r["type"] == "hit"] for k in cls.KS}
+
+    def test_every_xy_hit_verifies(self):
+        for k, recs in self.xy.items():
+            for r in recs:
+                v = verify_hit(r, k)
+                self.assertEqual(v["mode"], "xy-half")
+                self.assertEqual(r["chart"], "half")
+
+    def test_contains_every_desired_half_point_of_the_full_search(self):
+        for k in self.KS:
+            full = {(int(r["n"]), 2 * int(r["x_num"]) // int(r["x_den"]), 2 * int(r["s_num"]) // int(r["s_den"]))
+                    for r in self.both[k] if r["chart"] == "half" and r["desired"]}
+            got = {xy_point(r) for r in self.xy[k] if r["desired"]}
+            self.assertTrue(full or k == 21, f"k={k} needs half points")
+            self.assertLessEqual(full, got, f"k={k}: missed {full - got}")
+
+    def test_k7125_known_points(self):
+        """(-67)^3 + (-46)^3 + 74^3 = 7125: half points x = -7/2, y = 141/2 and x = 113/2, y = 21/2."""
+        got = {xy_point(r) for r in self.xy[7125] if r["desired"]}
+        n = (-67 - 46 + 74 - 3) // 6
+        self.assertIn((n, -7, 141), got)
+        self.assertIn((n, 113, 21), got)
+
+    def test_x_first_brute_force(self):
+        """Independent of the Thue reduction: points with |n| <= 40 and principal d of small height."""
+        for k in (15, 57, 7125):
+            got = {xy_point(r) for r in self.xy[k]}
+            for n, X, Y in xy_brute(k, 40):
+                x, y, S = Fraction(X, 2), Fraction(Y, 2), 6 * n + 3
+                d = -(x + S + y) / (2 * x)
+                if height(d) < self.H:
+                    self.assertIn((n, X, Y), got, f"k={k} n={n} X={X} Y={Y}")
+
+    def test_k375_small_heights_have_no_desired_point(self):
+        self.assertFalse([r for r in self.xy[375] if r["desired"]])
+
+    def test_python_mirror_matches_worker_counts(self):
+        for k in (375, 7125, 15):
+            adm = Admissibility(k, "xy-half")
+            recs = run_worker(k, 160, digits=20, mode="xy-half")
+            worker = {r["h"]: (r["pairs"], r["admissible"]) for r in recs if r["type"] == "shell"}
+            for h in range(1, 160):
+                pairs = list(shell(h))
+                self.assertEqual(worker[h], (len(pairs), sum(adm(p, q) for p, q in pairs)), f"k={k} h={h}")
+
+    def test_mod125_filter_keeps_principal_and_conjugate_d(self):
+        adm = Admissibility(7125, "xy-half")
+        for r in self.xy[7125]:
+            if r["desired"]:
+                self.assertTrue(adm(int(r["thue_p"]), int(r["thue_q"])))
+
+    def test_campaign_lifecycle(self):
+        py = sys.executable
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            subprocess.run([py, str(ROOT / "make_campaign.py"), "--campaign-id", "xy", "--k", "7125", "--mode",
+                            "xy-half", "--h-stop", str(self.H), "--task-hours", "0.0005", "--us-per-pair", "9",
+                            "--g-max-digits", "40", "--output-dir", str(tmp / "camp")], check=True, capture_output=True)
+            page = json.loads((tmp / "camp" / "page.json").read_text())
+            self.assertEqual(page["mode"], "xy-half")
+            for t in page["tasks"]:
+                subprocess.run([py, str(ROOT / "run_task.py"), "--task", str(tmp / "camp" / t["file"]),
+                                "--output-dir", str(tmp / "res" / t["task_id"])], check=True, capture_output=True)
+            subprocess.run([py, str(ROOT / "collect.py"), "--results", str(tmp / "res"), "--page",
+                            str(tmp / "camp" / "page.json"), "--output-dir", str(tmp / "col")],
+                           check=True, capture_output=True)
+            collected = {xy_point(json.loads(line)) for line in (tmp / "col" / "hits.jsonl").read_text().splitlines()}
+            self.assertEqual(collected, {xy_point(r) for r in self.xy[7125]})
+            self.assertIn("y=+-141/2", (tmp / "col" / "desired_d_values.txt").read_text())
 
 
 @unittest.skipUnless(WORKER.exists(), "build first: make")

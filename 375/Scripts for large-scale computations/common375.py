@@ -17,6 +17,11 @@ Primitivity (K = 375 = 3*5^3 is not cube-free, so non-primitive points exist):
     primitive_point: gcd(n, x) = 1 (integer chart), gcd(X, Y) = 1 (half chart)
     primitive_cubes: gcd(A, B, C) = 1 for the cube components
     desired = primitive_point and primitive_cubes
+
+Mode "xy-half" (DERIVATION.md section 9) searches only for rational (x, y) on
+    y^2 = (x+6n+3)^2 + N(n)/x,  x = X/2, y = Y/2, X, Y odd, gcd(X, Y) = 1,
+both signs of y; its hit records carry "mode": "xy-half" and are checked by
+verify_xy_hit().
 """
 from __future__ import annotations
 
@@ -36,6 +41,7 @@ PARAMETERIZATION = "ce375-dfirst-thue-both-charts-v1"
 COUNTERS = ("pairs", "admissible", "convergents", "small_g_values", "thue_solutions",
             "integer_chart", "half_chart", "other_branch", "refinements", "exact_roots")
 MAX_H = 200_000_000
+MODES = ("both", "xy-half")
 
 
 # ---------------------------------------------------------------- utilities
@@ -126,9 +132,18 @@ def _form(p: int, q: int, S: int, g: int) -> int:
 class Admissibility:
     """Independent mirror of the worker's proved necessary conditions."""
 
-    def __init__(self, k: int):
+    def __init__(self, k: int, mode: str = "both"):
         check_k(k)
+        if mode not in MODES:
+            raise ValueError(f"mode must be one of {MODES}")
         self.k = k
+        self.half = mode == "xy-half"
+        # xy-half: for l with v_l(k) >= 3 (l = 5 at k = 375) a primitive point has
+        # (S, g) != (0, 0) mod l. Since k = 0 (mod l), g = 0 (mod l) would force
+        # S = 0 (mod l); so g is a unit mod l^3 and b = pq(p+q) is determined by
+        # (S, g, a = pq). Built here by solving for b, independently of the
+        # worker's exhaustive (S, g, a, b) loop.
+        self.cube_tables: dict[int, set[tuple[int, int]]] = {}
         self.kfac = _factor(k)
         self.local: dict[int, set[tuple[int, int]]] = {}
         for l, v in self.kfac.items():
@@ -141,6 +156,20 @@ class Admissibility:
                            for S in range(l) for g in range(l)):
                         allowed.add((pr, qr))
             self.local[l] = allowed
+        if self.half:
+            for l, v in self.kfac.items():
+                if l < 5 or v < 3 or l ** 3 > 4000:
+                    continue
+                m = l ** 3
+                ab = set()
+                for S in range(m):
+                    for g in range(m):
+                        if g % l == 0:
+                            continue
+                        inv = pow(3 * g ** 3, -1, m)
+                        for a in range(m):
+                            ab.add((a, (k - S ** 3 + 6 * a * S * g * g) * inv % m))
+                self.cube_tables[m] = ab
         self._cap: dict[int, int] = {}
 
     def cap(self, l: int) -> int:
@@ -161,6 +190,12 @@ class Admissibility:
     def __call__(self, p: int, q: int) -> bool:
         if q <= 0 or p == 0 or gcd(p, q) != 1:
             return False
+        if self.half and q % 2 == 0:
+            return False
+        for m, ab in self.cube_tables.items():
+            a = p * q % m
+            if (a, a * (p + q) % m) not in ab:
+                return False
         if p % 3 == 0 or q % 3 == 0 or p % 3 != q % 3:
             return False
         for value in (p, q):
@@ -190,8 +225,49 @@ def _int(record: dict, key: str) -> int:
     return int(value, 10)
 
 
+def verify_xy_hit(record: dict, k: int | None = None) -> dict:
+    """Exact re-verification of one xy-half hit (either branch of the Thue solution)."""
+    rk = _int(record, "k")
+    if k is not None and rk != k:
+        raise ValueError(f"hit is for k={rk}, expected {k}")
+    check_k(rk)
+    n, X, Y = _int(record, "n"), _int(record, "X"), _int(record, "Y")
+    if X % 2 == 0 or Y % 2 == 0 or Y < 0:
+        raise ValueError("need X, Y odd and Y >= 0")
+    if (_int(record, "x_num"), _int(record, "x_den"), _int(record, "y_num"), _int(record, "y_den")) != (X, 2, Y, 2):
+        raise ValueError("x, y fields do not match X/2, Y/2")
+    x, y, S = Fraction(X, 2), Fraction(Y, 2), 6 * n + 3
+    N = 36 * n ** 3 + 54 * n ** 2 + 27 * n + (27 - rk) // 6
+    if y * y != (x + S) ** 2 + N / x:
+        raise ValueError("y^2 != (x+6n+3)^2 + N/x")
+    p, q, g = _int(record, "thue_p"), _int(record, "thue_q"), _int(record, "g")
+    if q <= 0 or gcd(p, q) != 1 or X != -q * g or abs((2 * p + q) * g - 2 * S) != Y or _form(p, q, S, g) != rk:
+        raise ValueError("Thue certificate (p, q, g) does not match the point")
+    d = -(x + S + y) / (2 * x)
+    if Fraction(_int(record, "d_num"), _int(record, "d_den")) != d or N != -2 * d * x * x * (-(x + S) + y):
+        raise ValueError("principal d is wrong")
+    a, b, c = -x + y, -x - y, 2 * x + S
+    if any(v.denominator != 1 for v in (a, b, c)) or a ** 3 + b ** 3 + c ** 3 != rk:
+        raise ValueError("cube identity fails")
+    if (a, b, c) != tuple(Fraction(_int(record, key)) for key in ("cube_a", "cube_b", "cube_c")):
+        raise ValueError("reported cube components are wrong")
+    if n % 3 != n_mod3(rk):
+        raise ValueError(f"invariant n == {n_mod3(rk)} (mod 3) fails")
+    if record.get("chart") != "half":
+        raise ValueError("xy-half hits are half-chart points")
+    prim = primitivity("half", n, x, y, (int(a), int(b), int(c)))
+    for key, value in prim.items():
+        if key in record and record[key] != value:
+            raise ValueError(f"reported {key} is wrong")
+    return {"k": str(rk), "chart": "half", "mode": "xy-half", "d": f"{d.numerator}/{d.denominator}",
+            "n": str(n), "x": str(x), "s": str(y), "y": str(y), "X": str(X), "Y": str(Y),
+            "cubes": [str(a), str(b), str(c)], "g": str(g), **prim}
+
+
 def verify_hit(record: dict, k: int | None = None) -> dict:
     """Exact re-verification of one worker hit; returns a normalized record."""
+    if record.get("mode") == "xy-half":
+        return verify_xy_hit(record, k)
     rk = _int(record, "k")
     if k is not None and rk != k:
         raise ValueError(f"hit is for k={rk}, expected {k}")
@@ -238,6 +314,8 @@ def verify_hit(record: dict, k: int | None = None) -> dict:
 
 
 def hit_key(record: dict) -> str:
+    if record.get("mode") == "xy-half":   # one key per point (n, X, |Y|), whichever d found it
+        return "xy|" + "|".join(str(record[k]) for k in ("k", "n", "X", "Y"))
     return "|".join(str(record[k]) for k in ("k", "d_num", "d_den", "g", "n"))
 
 
@@ -281,8 +359,11 @@ def validate_task(task: dict) -> dict:
     for key in ("campaign_id", "task_id"):
         if not isinstance(task.get(key), str) or not task[key]:
             raise ValueError(f"{key} must be a nonempty string")
+    mode = task.get("mode", "both")
+    if mode not in MODES:
+        raise ValueError(f"mode must be one of {MODES}")
     return {"k": k, "h_start": h_start, "h_stop": h_stop, "g_max_digits": digits,
-            "deadline_seconds": deadline}
+            "deadline_seconds": deadline, "mode": mode}
 
 
 def isqrt_exact(v: int) -> int | None:

@@ -17,6 +17,12 @@
 //   primitive_cubes: gcd(A, B, C) = 1 for the cube components
 // and "desired" = both. Non-primitive hits are still reported, never dropped.
 //
+// --mode xy-half (DERIVATION.md section 9) searches ONLY for rational (x, y)
+// with integer n on  y^2 = (x+6n+3)^2 + N(n)/x,  x = X/2, y = Y/2, X, Y odd,
+// gcd(X, Y) = 1, both signs of y. It uses only odd q and odd g, the single
+// cube factor e = 1, an extra proved 5-adic filter (mod 125), and accepts the
+// conjugate branch (s < 0, i.e. y = -s) as well.
+//
 // For d = p/q in lowest terms (q > 0) the points are exactly the integer
 // solutions (S, g) of the binary cubic Thue equation
 //   F_d(S, g) = S^3 - 6 p q S g^2 + 3 p q (p+q) g^3 = K
@@ -219,6 +225,7 @@ struct Solver {
     bool skip3;          // 3 | g is impossible (proved when K = +-3 mod 9)
     unsigned bits0, max_bits;
     std::vector<Z> cubes;
+    bool odd_g_only = false;  // xy-half mode: q g odd, so g odd
 
     std::vector<Solution> solve(const Form& f, Stats& st, Z* g0_out = nullptr) const {
         std::set<std::pair<std::string, std::string>> seen;
@@ -253,6 +260,7 @@ struct Solver {
         std::vector<Z> roots;
         for (Z g = 1; g <= g0; ++g) {
             if (skip3 && mpz_divisible_ui_p(g.get_mpz_t(), 3)) continue;
+            if (odd_g_only && mpz_even_p(g.get_mpz_t())) continue;
             for (int s : {1, -1}) {
                 Z gs = s * g;
                 roots.clear(); ++st.small_g_values;
@@ -331,6 +339,12 @@ struct Solver {
 // No condition is placed on 2: both parities of q are needed (two charts).
 struct Admissibility {
     long long K;
+    bool half = false;   // xy-half mode: q odd, plus the l^3 tables below
+    // xy-half mode, primes l with v_l(K) >= 3 (l = 5 at K = 375): a primitive
+    // point has (S, g) != (0, 0) mod l, so F_d(S, g) = K must be solvable mod
+    // l^3 with that restriction. F depends on d only via a = pq, b = pq(p+q).
+    struct Cube { long long l, m; std::vector<uint8_t> ab; };  // ab[a*m + b]
+    std::vector<Cube> cube_local;
     std::vector<uint32_t> spf;
     std::vector<uint8_t> ok;
     struct Local { long long l; std::vector<uint8_t> allowed; };  // allowed[(p%l)*l + q%l]
@@ -353,7 +367,8 @@ struct Admissibility {
         return powmod(K, (l - 1) / 3, l) == 1 ? 255 : 0;
     }
 
-    Admissibility(long long K_, uint32_t limit) : K(K_), spf(limit + 1, 0), ok(limit + 1, 1) {
+    Admissibility(long long K_, uint32_t limit, bool half_ = false)
+        : K(K_), half(half_), spf(limit + 1, 0), ok(limit + 1, 1) {
         for (uint64_t i = 2; i <= limit; ++i)
             if (!spf[i]) for (uint64_t j = i; j <= limit; j += i) if (!spf[j]) spf[j] = static_cast<uint32_t>(i);
         std::vector<uint32_t> rest(limit + 1, 1), expo(limit + 1, 0);
@@ -381,11 +396,27 @@ struct Admissibility {
                 loc.allowed[static_cast<std::size_t>(pr * l + qr)] = found;
             }
             // The primitivity (S,g) != (0,0) mod l is valid only when l^3 !| K.
-            if (vval(a, l) >= 3) continue;
+            if (vval(a, l) >= 3) {
+                if (half && l * l * l <= 4000) {
+                    long long m = l * l * l, Km = ((K % m) + m) % m;
+                    Cube cu{l, m, std::vector<uint8_t>(static_cast<std::size_t>(m * m), 0)};
+                    for (long long S = 0; S < m; ++S) for (long long g = 0; g < m; ++g) {
+                        if (S % l == 0 && g % l == 0) continue;
+                        long long S3 = S * S % m * S % m, Sg2 = S * g % m * g % m, g3 = g * g % m * g % m;
+                        for (long long aa = 0; aa < m; ++aa) {
+                            long long base = (S3 - 6 * aa % m * Sg2 % m + 6 * m) % m;
+                            for (long long bb = 0; bb < m; ++bb)
+                                if ((base + 3 * bb % m * g3) % m == Km) cu.ab[static_cast<std::size_t>(aa * m + bb)] = 1;
+                        }
+                    }
+                    cube_local.push_back(std::move(cu));
+                }
+                continue;
+            }
             local.push_back(std::move(loc));
         }
     }
-    bool q_ok(uint32_t q) const { return q % 3 != 0 && ok[q]; }
+    bool q_ok(uint32_t q) const { return q % 3 != 0 && (!half || (q & 1u)) && ok[q]; }
     bool p_ok(int64_t p, uint32_t q) const {
         if (p == 0) return false;
         uint64_t a = static_cast<uint64_t>(p < 0 ? -p : p);
@@ -395,6 +426,11 @@ struct Admissibility {
         for (const auto& loc : local) {
             long long pr = ((p % loc.l) + loc.l) % loc.l, qr = q % loc.l;
             if (!loc.allowed[static_cast<std::size_t>(pr * loc.l + qr)]) return false;
+        }
+        for (const auto& cu : cube_local) {
+            long long pr = ((p % cu.m) + cu.m) % cu.m, qr = q % cu.m;
+            long long aa = pr * qr % cu.m, bb = aa * ((pr + qr) % cu.m) % cu.m;
+            if (!cu.ab[static_cast<std::size_t>(aa * cu.m + bb)]) return false;
         }
         return std::gcd(a, static_cast<uint64_t>(q)) == 1;
     }
@@ -460,8 +496,52 @@ std::string certify(long long K, const Z& p, const Z& q, const Z& S, const Z& g,
     return o.str();
 }
 
+// xy-half mode: verify y^2 = (x+S)^2 + N/x exactly for x = X/2, y = |Y|/2
+// (either branch of the Thue solution), and report the point with y >= 0 and
+// its principal d = -(x + S + y)/(2x).
+std::string certify_xy(long long K, const Z& p, const Z& q, const Z& S, const Z& g, const char* source) {
+    if (mpz_fdiv_ui(S.get_mpz_t(), 6) != 3) throw std::runtime_error("internal S == 3 (mod 6) check failed");
+    Z n = (S - 3) / 6;
+    if (static_cast<int>(mpz_fdiv_ui(n.get_mpz_t(), 3)) != n_mod3(K))
+        throw std::runtime_error("internal n (mod 3) invariant check failed");
+    Z X = -q * g, Ys = (2 * p + q) * g - 2 * S, Y = abs(Ys);
+    if (mpz_even_p(X.get_mpz_t()) || mpz_even_p(Y.get_mpz_t())) throw std::runtime_error("internal X, Y odd check failed");
+    Q x(X, 2), y(Y, 2);
+    Z c(static_cast<long>((27 - K) / 6));
+    Z Nn = 36 * n * n * n + 54 * n * n + 27 * n + c;
+    Q U = x + S;
+    if (y * y != U * U + Q(Nn) / x) throw std::runtime_error("internal y^2 verification failed");
+    Q d = -(x + S + y) / (2 * x); d.canonicalize();
+    if (Q(Nn) != -2 * d * x * x * (-U + y)) throw std::runtime_error("internal original-equation verification failed");
+    Q A = -x + y, B = -x - y, C = 2 * x + S;
+    A.canonicalize(); B.canonicalize(); C.canonicalize();
+    if (A.get_den() != 1 || B.get_den() != 1 || C.get_den() != 1)
+        throw std::runtime_error("internal cube-component integrality failed");
+    Z a = A.get_num(), b = B.get_num(), cc = C.get_num();
+    if (a * a * a + b * b * b + cc * cc * cc != Z(static_cast<long>(K)))
+        throw std::runtime_error("internal cube-sum verification failed");
+    Z gp = zgcd(X, Y), gc = zgcd(zgcd(a, b), cc);
+    bool pp = gp == 1, pc = gc == 1;
+    std::ostringstream o;
+    o << "{\"type\":\"hit\",\"mode\":\"xy-half\",\"chart\":\"half\",\"source\":" << quoted(source)
+      << ",\"branch\":" << quoted(sgn(Ys) >= 0 ? "principal" : "conjugate")
+      << ",\"desired\":" << (pp && pc ? "true" : "false")
+      << ",\"primitive_point\":" << (pp ? "true" : "false") << ",\"primitive_cubes\":" << (pc ? "true" : "false")
+      << ",\"point_gcd\":" << quoted(gp.get_str()) << ",\"cube_gcd\":" << quoted(gc.get_str())
+      << ",\"k\":" << quoted(std::to_string(K))
+      << ",\"n\":" << quoted(n.get_str()) << ",\"X\":" << quoted(X.get_str()) << ",\"Y\":" << quoted(Y.get_str())
+      << ",\"x_num\":" << quoted(X.get_str()) << ",\"x_den\":\"2\""
+      << ",\"y_num\":" << quoted(Y.get_str()) << ",\"y_den\":\"2\""
+      << ",\"d_num\":" << quoted(d.get_num().get_str()) << ",\"d_den\":" << quoted(d.get_den().get_str())
+      << ",\"thue_p\":" << quoted(p.get_str()) << ",\"thue_q\":" << quoted(q.get_str()) << ",\"g\":" << quoted(g.get_str())
+      << ",\"cube_a\":" << quoted(a.get_str()) << ",\"cube_b\":" << quoted(b.get_str())
+      << ",\"cube_c\":" << quoted(cc.get_str()) << "}";
+    return o.str();
+}
+
 struct Config {
     long long K = 375;
+    std::string mode = "both";
     uint32_t h_start = 1, h_stop = 0;
     Z G;
     unsigned g_digits = 100;
@@ -476,6 +556,7 @@ void usage() {
         "                  [--deadline-seconds S] [--precision-bits 128] [--max-precision-bits 262144]\n"
         "  Sweeps every admissible d = p/q with H0 <= max(|p|,q) < H1 (one height shell at a time)\n"
         "  and reports every integer-chart and half-chart point with 1 <= |g| <= 10^digits.\n"
+        "  --mode xy-half: only rational x = X/2, y = Y/2 (X, Y odd, gcd(X,Y) = 1), both signs of y.\n"
         "Usage (raw test mode): thue375_worker --raw --target T --g-max G  (reads 'p q' lines)\n"
         "  Reports ALL integer solutions of F_d(S,g) = T with 1 <= |g| <= G; no filters.\n";
 }
@@ -490,7 +571,8 @@ Config arguments(int argc, char** argv) {
         if (a == "--raw") { c.raw = true; continue; }
         if (i + 1 == argc) throw std::runtime_error("missing value for " + a);
         std::string v = argv[++i];
-        if (a == "--k") { Z z = integer(v); if (z == 0 || abs(z) > Z("1000000000")) throw std::runtime_error("k out of range"); c.K = z.get_si(); }
+        if (a == "--mode") { if (v != "both" && v != "xy-half") throw std::runtime_error("mode must be both or xy-half"); c.mode = v; }
+        else if (a == "--k") { Z z = integer(v); if (z == 0 || abs(z) > Z("1000000000")) throw std::runtime_error("k out of range"); c.K = z.get_si(); }
         else if (a == "--h-start") { Z z = integer(v); if (z < 1 || z > Z("200000000")) throw std::runtime_error("h-start out of range"); c.h_start = static_cast<uint32_t>(z.get_ui()); have_start = true; }
         else if (a == "--h-stop") { Z z = integer(v); if (z < 2 || z > Z("200000001")) throw std::runtime_error("h-stop out of range"); c.h_stop = static_cast<uint32_t>(z.get_ui()); have_stop = true; }
         else if (a == "--g-max-digits") { Z z = integer(v); if (z < 1 || z > 100000) throw std::runtime_error("g-max-digits out of range"); c.g_digits = static_cast<unsigned>(z.get_ui()); }
@@ -540,11 +622,14 @@ int run_raw(const Config& c) {
 
 int run_campaign(const Config& c) {
     auto t0 = std::chrono::steady_clock::now();
-    Admissibility adm(c.K, c.h_stop);
+    const bool half = c.mode == "xy-half";
+    Admissibility adm(c.K, c.h_stop, half);
     Z T = Z(static_cast<long>(c.K));
-    Solver solver{T, c.G, true, c.bits0, c.max_bits, cube_divisors(T)};
+    // xy-half: gcd(X, Y) = 1 forces gcd(S, g) = 1 (DERIVATION.md section 9), so e = 1 only.
+    Solver solver{T, c.G, true, c.bits0, c.max_bits, half ? std::vector<Z>{Z(1)} : cube_divisors(T)};
+    solver.odd_g_only = half;
     std::cout << "{\"type\":\"start\",\"version\":" << quoted(VERSION) << ",\"parameterization\":" << quoted(PARAMETERIZATION)
-              << ",\"k\":" << quoted(std::to_string(c.K))
+              << ",\"k\":" << quoted(std::to_string(c.K)) << ",\"mode\":" << quoted(c.mode)
               << ",\"g_max_digits\":" << c.g_digits << ",\"h_start\":" << c.h_start << ",\"h_stop\":" << c.h_stop << "}\n" << std::flush;
     for (uint32_t H = c.h_start; H < c.h_stop; ++H) {
         auto s0 = std::chrono::steady_clock::now();
@@ -557,6 +642,13 @@ int run_campaign(const Config& c) {
             Z P(static_cast<long>(p)), Qd(static_cast<unsigned long>(q));
             Form f(P, Qd);
             for (const auto& s : solver.solve(f, st)) {
+                if (half) {
+                    if (mpz_even_p(Z(Qd * s.g).get_mpz_t())) continue;  // not the half chart
+                    if (sgn((2 * P + Qd) * s.g - 2 * s.S) < 0) ++st.other_branch;
+                    ++st.half_chart;
+                    std::cout << certify_xy(c.K, P, Qd, s.S, s.g, s.source.c_str()) << "\n" << std::flush;
+                    continue;
+                }
                 // s >= 0 required; s < 0 belongs to the conjugate value of d.
                 if (sgn((2 * P + Qd) * s.g - 2 * s.S) < 0) { ++st.other_branch; continue; }
                 if (mpz_even_p(Z(Qd * s.g).get_mpz_t())) ++st.integer_chart; else ++st.half_chart;

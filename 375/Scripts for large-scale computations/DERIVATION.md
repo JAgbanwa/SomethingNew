@@ -193,3 +193,61 @@ flag rejects it. At `K = 375`, `primitive_cubes` fails exactly when
 All three non-primitive points with height below 4000 (`d = 1, -8, -1/8`,
 from `5*(1,1,1)` and `5*(4,4,-5)`) are recovered by the worker; the test suite
 requires this and requires them to be labelled non-desired.
+
+## 9. Rational (x, y) mode: `--mode xy-half`
+
+Target of this mode: rational `x, y` with `n` an integer on
+
+```text
+y^2 = (x+6n+3)^2 + (36n^3 + 54n^2 + 27n - 58)/x,     x = X/2, y = Y/2, X, Y odd, gcd(X, Y) = 1,
+```
+
+**both signs of `y`**. A point with `y >= 0` is exactly a half-chart point with
+`s = y`; a point with `y < 0` is the half-chart point `(n, x, -y)`. So the
+solution set is the half chart up to the sign of `y`, and each point has two
+values of `d`:
+
+```text
+principal   d = -(x + S + |y|)/(2x),       conjugate   d' = -(x + S - |y|)/(2x).
+```
+
+The mode accepts Thue solutions of **both** branches (`s >= 0` and `s < 0`),
+so a point is found when either of its two `d` values is processed. Hits are
+reported once per point `(n, X, |Y|)` with the principal `d` for reference
+and `branch` saying which one produced it.
+
+Proved restrictions used only in this mode (all necessary for `gcd(X, Y) = 1`):
+
+| Restriction | Proof |
+| --- | --- |
+| `q` odd and `g` odd | `X = -q g` is odd |
+| `gcd(S, g) = 1`, so the CF pass tests only `e = 1` | a prime `l` dividing `S` and `g` divides `X = -qg` and `Y = (2p+q)g - 2S` |
+| `F_d(S, g) = 375 (mod 125)` solvable with `5 !| g` | `5 | g` would give `S^3 = F = 375 = 0 (mod 5)`, so `5 | S`, contradicting the row above |
+
+`F_d` depends on `d` modulo 125 only through `a = pq` and `b = pq(p+q)`. The
+worker tabulates the allowed `(a, b)` by exhaustive search over
+`(S, g, a, b) mod 125`; `common375.py` builds the same table independently by
+solving for `b` (`3g^3` is a unit), and the test suite checks both give
+identical admissible counts shell by shell (at `k = 375`, at `k = 7125 = 57*5^3`
+and at `k = 15`). The 5-adic table keeps about 35 % of residue pairs.
+
+Also, `gcd(X, Y) = 1` already implies primitive cube components (a common
+prime of `A, B, C` divides `A - B = Y` and `A + B = -X`), so in this mode
+`desired` is the same as `gcd(X, Y) = 1`. Non-primitive points that the small-`g`
+path still meets (for example `X = 5, Y = 45` from `20^3+20^3+(-25)^3`) are
+reported with `desired = false`.
+
+Measured at `k = 375`, height `2*10^4`: **0.52 %** of raw pairs are solved
+(against 2.56 % in the default mode) and the cost is **0.9 us/pair** (against
+4.8 us/pair), so the same core-hours reach about `sqrt(5.3) = 2.3` times the
+height.
+
+**Scope of a completed xy-half run:** every point `(n, X/2, +-Y/2)` with
+`X, Y` odd and `gcd(X, Y) = 1` such that its principal or conjugate `d` has
+height in the processed range and, for that `d`, `1 <= |g| <= G`
+(so `|X| <= q G`).
+
+The tests cover this mode with `k = 15, 21, 57` and with `k = 7125 = 57*5^3`,
+whose primitive representation `(-67)^3 + (-46)^3 + 74^3` gives the half
+points `x = -7/2, y = +-141/2` and `x = 113/2, y = +-21/2`; an `(n, X)`
+divisor brute force over `|n| <= 40` on the `y^2` equation must agree.

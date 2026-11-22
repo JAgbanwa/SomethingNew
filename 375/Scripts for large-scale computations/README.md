@@ -27,6 +27,40 @@ A **desired** hit is a result. Non-primitive hits are still recorded
 (tagged `non-primitive`), never discarded, so nothing has to be rerun if the
 definition is tightened or loosened. Details: [DERIVATION.md §8](DERIVATION.md).
 
+## Rational (x, y) mode: `--mode xy-half`
+
+The second target is rational `x, y` with `n` an integer on
+
+```text
+y^2 = (x+6n+3)^2 + (36n^3 + 54n^2 + 27n - 58)/x,      x = X/2,  y = Y/2,  X, Y odd,  gcd(X, Y) = 1,
+```
+
+both signs of `y`. Every task, file and command below takes `--mode xy-half`
+(or `"mode": "xy-half"` in a task file); the default mode `both` is unchanged.
+In this mode the engine uses only odd `q` and odd `g`, a proved 5-adic filter
+modulo 125, and both Thue branches, so it does about **5x less work per height**
+(0.9 against 4.8 us per `(p, q)` pair at height `2*10^4`).
+Each hit is one point `(n, X, |Y|)`; `collected/desired_d_values.txt` lists
+them as `n=..  x=X/2  y=+-Y/2`. Proofs and the exact coverage statement:
+[DERIVATION.md §9](DERIVATION.md).
+
+To go **beyond what is already covered**, start above the heights already
+searched (everything below 20,000 is done for this target, see the pilots at the end):
+
+```sh
+python3 make_campaign.py --campaign-id ce375-xy --mode xy-half --h-start 20000 \
+  --core-hours <HOURS> --us-per-pair <MEASURED> --task-hours 1 --output-dir ce375-xy-tasks
+```
+
+| `h_stop` (from 20,000) | raw pairs | core-hours at 1 us | at 1.5 us |
+| ---: | ---: | ---: | ---: |
+| 200,000 | 7.9e10 | 22 | 33 |
+| 500,000 | 5.0e11 | 139 | 208 |
+| 1,000,000 | 2.0e12 | 555 | 833 |
+| 1,500,000 | 4.5e12 | 1,250 | 1,875 |
+
+Measure `us/pair` on the target CPU first, as below but with `--mode xy-half`.
+
 ## How the search works (one paragraph)
 
 With `S = 6n+3` the left side is `(S^3 - 375)/6`. Every point determines
@@ -189,3 +223,7 @@ anything about larger `g` for those `d`, nor about `d` of larger height.
 Heights `1 <= H < 4000` at `k = 375` (`|g| <= 10^100`): **0 desired hits**;
 the only points are the three non-primitive ones (`d = 1, -8, -1/8`). See
 [validation/pilot-h4000.md](validation/pilot-h4000.md).
+
+`--mode xy-half`, heights `4000 <= H < 20000`: **0 hits** (1.31 us/pair on
+the shared VM). See [validation/xy-pilot-h4000-20000.md](validation/xy-pilot-h4000-20000.md).
+So a new xy-half campaign should start at `--h-start 20000`.

@@ -111,6 +111,9 @@ def main() -> int:
             f.write(json.dumps(rec, sort_keys=True) + "\n")
 
     def line(v: dict) -> str:
+        if v.get("mode") == "xy-half":
+            return (f"n={v['n']}  x={v['X']}/2  y=+-{v['Y']}/2  (principal d = {v['d']})  "
+                    f"cubes={','.join(v['cubes'])}  gcd(X,Y)={v['point_gcd']}  gcd_cubes={v['cube_gcd']}")
         return (f"d = {v['d']}  chart={v['chart']}  n={v['n']}  x={v['x']}  s={v['s']}  "
                 f"cubes={','.join(v['cubes'])}  gcd_point={v['point_gcd']}  gcd_cubes={v['cube_gcd']}")
     with (args.output_dir / "d_values.txt").open("w", encoding="utf-8") as f:
