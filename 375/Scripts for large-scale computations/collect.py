@@ -19,7 +19,9 @@ import json
 from pathlib import Path
 import sys
 
-from common375 import COUNTERS, hit_key, load_json, verify_hit, atomic_json
+from common375 import (CHECKPOINT_SCHEMA, COUNTERS, G_VALUES, MAX_H, MODES, PAGE_SCHEMA,
+                       PARAMETERIZATION, STATUS_SCHEMA, atomic_json, check_k, hit_key,
+                       load_json, validate_scope, validate_task, verify_hit)
 
 
 def merge(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
@@ -40,11 +42,22 @@ def main() -> int:
     args = ap.parse_args()
 
     page = load_json(args.page) if args.page else None
-    k = page["k"] if page else None
+    k = int(page["k"]) if page else None
+    mode = page.get("mode", "xy") if page else None
+    campaign_id = page["campaign_id"] if page else None
+    if page:
+        try:
+            validate_scope(page, PAGE_SCHEMA)
+            check_k(k)
+            if mode not in MODES or not 1 <= int(page["h_start"]) < int(page["h_stop"]) <= MAX_H + 1:
+                raise ValueError("invalid page mode or height range")
+        except (KeyError, ValueError) as exc:
+            print(f"collect: {exc}", file=sys.stderr)
+            return 1
     covered: list[tuple[int, int]] = []
     counters = {c: 0 for c in COUNTERS}
     hits: dict[str, dict] = {}
-    errors, digits = [], set()
+    errors = []
     dirs = set()
     for root in args.results:
         for marker in list(root.rglob("status.json")) + list(root.rglob("checkpoint.json")):
@@ -54,18 +67,33 @@ def main() -> int:
             task = load_json(d / "task.json")
             if page and task["campaign_id"] != page["campaign_id"]:
                 continue
-            k = k if k is not None else int(task["k"])
-            if int(task["k"]) != k:
+            t = validate_task(task)
+            if k is not None and t["k"] != k:
                 raise ValueError("mixed k values")
-            digits.add(int(task["g_max_digits"]))
-            start = int(task["h_start"])
-            nxt = int(load_json(d / "checkpoint.json")["next_h"]) if (d / "checkpoint.json").exists() \
-                else int(load_json(d / "status.json").get("next_h", start))
+            if mode is not None and t["mode"] != mode:
+                raise ValueError("mixed search modes")
+            if campaign_id is not None and task["campaign_id"] != campaign_id:
+                raise ValueError("mixed campaigns")
+            start = t["h_start"]
             cp = d / "checkpoint.json"
+            status_path = d / "status.json"
+            status = load_json(status_path) if status_path.exists() else {}
+            checkpoint = load_json(cp) if cp.exists() else {}
+            for record, schema in ((status, STATUS_SCHEMA), (checkpoint, CHECKPOINT_SCHEMA)):
+                if not record:
+                    continue
+                validate_scope(record, schema)
+                if record.get("campaign_id") != task["campaign_id"] or record.get("task_id") != task["task_id"] \
+                        or int(record["k"]) != t["k"] or record.get("mode") != t["mode"]:
+                    raise ValueError("result metadata does not match its task")
+            nxt = int(checkpoint["next_h"]) if checkpoint else int(status.get("next_h", start))
+            if not start <= nxt <= t["h_stop"]:
+                raise ValueError("result cursor lies outside the task range")
+            task_counters = {c: 0 for c in COUNTERS}
             if cp.exists():
-                for c, v in load_json(cp)["counters"].items():
-                    if c in counters:
-                        counters[c] += int(v)
+                for c, v in checkpoint["counters"].items():
+                    if c in task_counters:
+                        task_counters[c] += int(v)
             # coverage of this directory: from the first shell it ran to next_h
             first = start
             shells = d / "shells.jsonl"
@@ -73,16 +101,23 @@ def main() -> int:
                 hs = [json.loads(line)["h"] for line in shells.read_text().splitlines() if line.strip()]
                 if hs:
                     first = min(hs)
-            if nxt > first:
-                covered.append((first, nxt))
+            task_hits = {}
             hp = d / "hits.jsonl"
             if hp.exists():
                 for line in hp.read_text(encoding="utf-8").splitlines():
                     if line.strip():
                         rec = json.loads(line)
-                        verify_hit(rec, k)
-                        hits[hit_key(rec)] = rec
-            status = load_json(d / "status.json") if (d / "status.json").exists() else {}
+                        verify_hit(rec, t["k"])
+                        if rec.get("mode", "both") != t["mode"]:
+                            raise ValueError("hit mode does not match its task")
+                        task_hits[hit_key(rec)] = rec
+            # Commit this directory only after all scope and certificate checks pass.
+            k, mode, campaign_id = t["k"], t["mode"], task["campaign_id"]
+            if nxt > first:
+                covered.append((first, nxt))
+            for c, v in task_counters.items():
+                counters[c] += v
+            hits.update(task_hits)
             if status.get("state") == "error":
                 errors.append({"dir": str(d), "error": status.get("error")})
         except Exception as exc:  # noqa: BLE001
@@ -114,7 +149,7 @@ def main() -> int:
         if v.get("mode") in ("xy", "xy-half"):
             if v["chart"] == "integer":
                 return (f"d = {v['d']}  chart=integer  n={v['n']}  x={int(v['X']) // 2}  y=+-{int(v['Y']) // 2}  "
-                        f"cubes={','.join(v['cubes'])}  gcd(n,x)={v['point_gcd']}  gcd_cubes={v['cube_gcd']}")
+                        f"cubes={','.join(v['cubes'])}  gcd(n,x,y)={v['point_gcd']}  gcd_cubes={v['cube_gcd']}")
             return (f"d = {v['d']}  chart=half  n={v['n']}  x={v['X']}/2  y=+-{v['Y']}/2  "
                     f"cubes={','.join(v['cubes'])}  gcd(X,Y)={v['point_gcd']}  gcd_cubes={v['cube_gcd']}")
         return (f"d = {v['d']}  chart={v['chart']}  n={v['n']}  x={v['x']}  s={v['s']}  "
@@ -126,8 +161,9 @@ def main() -> int:
     with (args.output_dir / "desired_d_values.txt").open("w", encoding="utf-8") as f:
         for rec in desired:
             f.write(line(verify_hit(rec, k)) + "\n")
-    summary = {"k": k, "covered_heights": [list(c) for c in cov], "gaps": gaps,
-               "g_max_digits": sorted(digits), "counters": counters,
+    summary = {"k": k, "mode": mode, "campaign_id": campaign_id,
+               "covered_heights": [list(c) for c in cov], "gaps": gaps,
+               "g_values": list(G_VALUES), "parameterization": PARAMETERIZATION, "counters": counters,
                "hits": len(ordered), "desired_hits": len(desired),
                "desired_d_values": sorted({f"{r['d_num']}/{r['d_den']}" for r in desired}),
                "integer_chart_hits": sum(r["chart"] == "integer" for r in ordered),

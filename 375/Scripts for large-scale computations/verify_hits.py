@@ -4,7 +4,8 @@
 Checks, in exact rational arithmetic, the ORIGINAL equation
   36n^3+54n^2+27n-58 = -2*d*x^2*(-(x+6n+3) + s),  s = sqrt((x+6n+3)^2 + N/x) >= 0,
 the chart (x, s integers; or x = X/2, s = Y/2 with X, Y odd), the cube identity,
-and the primitivity flags (gcd(n,x) / gcd(X,Y), and gcd of the cube components).
+the fixed production restriction g in {-1, 1}, and the primitivity flags
+(gcd(n,x,y) / gcd(X,Y), with the cube gcd reported separately).
 Usage: python3 verify_hits.py hits.jsonl [...] [--k 375]
 """
 from __future__ import annotations

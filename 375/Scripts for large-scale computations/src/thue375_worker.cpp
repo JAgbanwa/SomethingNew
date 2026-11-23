@@ -1,33 +1,34 @@
-// CE375 d-first engine. See DERIVATION.md for every proof used here.
+// CE375 d-first engine: production campaigns use exactly g = -1 and g = +1.
+// See DERIVATION.md for the parameterization and the scope of this search.
 //
 // Target: rational d with integer n and
 //   N(n) = 36n^3 + 54n^2 + 27n - 58
 //        = -2*d*x^2*( -(x+6n+3) + s ),   s = sqrt((x+6n+3)^2 + N(n)/x) >= 0,
 // where EITHER
-//   (integer chart) x and s are integers, OR
-//   (half chart)    x = X/2 and s = Y/2 with X, Y odd.
+//   (integer chart) x and s are integers with gcd(n, x, s) = 1, OR
+//   (half chart)    x = X/2 and s = Y/2 with X, Y odd and gcd(X, Y) = 1.
 //
 // With S = 6n+3 we have N = (S^3 - K)/6 for K = 375. The constant K is a
 // parameter only so that values with KNOWN representations (K = 3, 15, 21,
-// 57, ...) can exercise the identical code; production uses K = 375 = 3 * 5^3,
-// which is NOT cube-free: a solution (S, g) may share the factor e = 5
-// (e^3 | 375), and the CF pass also tests T / e^3. Every hit is therefore
-// labelled with two primitivity flags (see certify()):
-//   primitive_point: gcd(n, x) = 1 (integer chart) / gcd(X, Y) = 1 (half chart)
+// 57, ...) can exercise the identical code; production uses K = 375 = 3 * 5^3.
+// Every hit is labelled with two primitivity flags (see certify()):
+//   primitive_point: gcd(n, x, s) = 1 (integer chart) / gcd(X, Y) = 1 (half chart)
 //   primitive_cubes: gcd(A, B, C) = 1 for the cube components
-// and "desired" = both. Non-primitive hits are still reported, never dropped.
+// and "desired" = primitive_point. The cube flag is informational; g = +-1
+// already implies gcd(A, B, C) = gcd(S, g) = 1. Either chart can supply a result.
 //
-// --mode xy (DERIVATION.md section 10, the production target) searches the
+// --mode xy (the default) searches the
 // y^2 equation  y^2 = (x+6n+3)^2 + N(n)/x  for DESIRED points of both charts,
-// both signs of y: it uses the single cube factor e = 1, the proved 5-adic
-// filter (mod 125) and both Thue branches. Hits are one per point (n, X, |Y|)
+// both signs of y, using the proved 5-adic filter (mod 125) and both Thue
+// branches. Hits identify the point (n, X, |Y|)
 // with X = 2x, Y = 2|y|, and report the principal d = -(x + 6n+3 + |y|)/(2x).
 //
-// --mode xy-half (DERIVATION.md section 9) searches ONLY for rational (x, y)
+// --mode xy-half searches ONLY for rational (x, y)
 // with integer n on  y^2 = (x+6n+3)^2 + N(n)/x,  x = X/2, y = Y/2, X, Y odd,
-// gcd(X, Y) = 1, both signs of y. It uses only odd q and odd g, the single
-// cube factor e = 1, an extra proved 5-adic filter (mod 125), and accepts the
+// gcd(X, Y) = 1, both signs of y. It uses only odd q, the 5-adic filter, and accepts the
 // conjugate branch (s < 0, i.e. y = -s) as well.
+// --mode both retains principal-square-root reporting for diagnostics, with
+// the same fixed production values g = +-1.
 //
 // For d = p/q in lowest terms (q > 0) the points are exactly the integer
 // solutions (S, g) of the binary cubic Thue equation
@@ -35,10 +36,11 @@
 // with x = -q g / 2 and s = (2p+q) g / 2 - S >= 0. Then q*g even gives the
 // integer chart and q*g odd gives the half chart.
 //
-// Per d, every solution with 1 <= |g| <= G is found: |g| <= g0 by exact
-// integer root finding of the cubic in S, |g| > g0 via certified continued-
-// fraction convergents of the unique real root (Legendre). All acceptance
-// decisions use exact GMP integers/rationals; floating point only proposes.
+// Production finds every integer root S for each of g = -1, +1 directly,
+// with exact GMP arithmetic and no continued-fraction work or configurable g bound.
+// The separate --raw diagnostic solver remains general: for a supplied finite
+// G, it uses exact small-g root finding and certified continued fractions for
+// larger g. Its floating-point values only propose exactly checked brackets.
 #include <gmpxx.h>
 #include <algorithm>
 #include <chrono>
@@ -57,8 +59,8 @@
 namespace {
 using Z = mpz_class;
 using Q = mpq_class;
-constexpr const char* VERSION = "1.0.0";
-constexpr const char* PARAMETERIZATION = "ce375-dfirst-thue-both-charts-v1";
+constexpr const char* VERSION = "2.0.0";
+constexpr const char* PARAMETERIZATION = "ce375-dfirst-unit-g-both-charts-v2";
 
 Z integer(const std::string& s) {
     if (s.empty()) throw std::runtime_error("empty integer");
@@ -122,6 +124,25 @@ void integer_roots_in_S(const Form& f, const Z& g, const Z& T, std::vector<Z>& o
     search(-B, -s - 1, 1);
     search(-s, s, -1);
     search(s + 1, B, 1);
+}
+
+// The production search has two fixed g values. Solve the cubic in S for
+// each sign directly; the general CF solver below is only for --raw diagnostics.
+std::vector<Solution> solve_unit_g(const Form& f, const Z& T, Stats& st) {
+    std::vector<Solution> sols;
+    std::vector<Z> roots;
+    for (int sign : {-1, 1}) {
+        Z g = sign;
+        roots.clear();
+        ++st.small_g_values;
+        integer_roots_in_S(f, g, T, roots);
+        for (const Z& S : roots) {
+            if (f.F(S, g) != T) throw std::runtime_error("internal unit-g solution check failed");
+            sols.push_back({S, g, "unit_g"});
+            ++st.thue_solutions;
+        }
+    }
+    return sols;
 }
 
 // Unique real root alpha of f(t) = t^3 + c1 t + c0, isolated as
@@ -443,7 +464,7 @@ struct Admissibility {
     }
 };
 
-// n (mod 3) forced by K (DERIVATION.md section 4): cube components are all
+// n (mod 3) forced by K (DERIVATION.md section 5): cube components are all
 // 1 (K = 3 mod 9) or all -1 (K = 6 mod 9) mod 3, which fixes S mod 9; with
 // S = 3 (mod 6) that fixes S mod 18, hence n = (S-3)/6 mod 3. K = 375 gives 2.
 int n_mod3(long long K) {
@@ -457,6 +478,7 @@ Z zgcd(const Z& a, const Z& b) { Z r; mpz_gcd(r.get_mpz_t(), a.get_mpz_t(), b.ge
 
 // Exact verification against the ORIGINAL, unsquared equation.
 std::string certify(long long K, const Z& p, const Z& q, const Z& S, const Z& g, const char* source) {
+    if (abs(g) != 1) throw std::runtime_error("campaign hit must have g = -1 or +1");
     if (mpz_fdiv_ui(S.get_mpz_t(), 6) != 3) throw std::runtime_error("internal S == 3 (mod 6) check failed");
     Z n = (S - 3) / 6;
     if (static_cast<int>(mpz_fdiv_ui(n.get_mpz_t(), 3)) != n_mod3(K))
@@ -481,15 +503,15 @@ std::string certify(long long K, const Z& p, const Z& q, const Z& S, const Z& g,
     Z a = A.get_num(), b = B.get_num(), cc = C.get_num();
     if (a * a * a + b * b * b + cc * cc * cc != Z(static_cast<long>(K)))
         throw std::runtime_error("internal cube-sum verification failed");
-    // Primitivity. Integer chart: gcd(n, x) = 1. Half chart: gcd(X, Y) = 1 with
-    // X = 2x, Y = 2s. Cubes: gcd(A, B, C) = 1 (equivalently 5 !| gcd(S, g) at K = 375).
+    // Either chart can qualify independently. Cube primitivity is reported
+    // separately; g = +-1 already forces gcd(A, B, C) = gcd(S, g) = 1.
     Z X = x.get_num() * (2 / x.get_den()), Y = s.get_num() * (2 / s.get_den());
-    Z gp = chart == "integer" ? zgcd(n, x.get_num()) : zgcd(X, Y);
+    Z gp = chart == "integer" ? zgcd(zgcd(n, x.get_num()), s.get_num()) : zgcd(X, Y);
     Z gc = zgcd(zgcd(a, b), cc);
     bool prim_point = gp == 1, prim_cubes = gc == 1;
     std::ostringstream o;
     o << "{\"type\":\"hit\",\"chart\":" << quoted(chart) << ",\"source\":" << quoted(source)
-      << ",\"desired\":" << (prim_point && prim_cubes ? "true" : "false")
+      << ",\"desired\":" << (prim_point ? "true" : "false")
       << ",\"primitive_point\":" << (prim_point ? "true" : "false")
       << ",\"primitive_cubes\":" << (prim_cubes ? "true" : "false")
       << ",\"point_gcd\":" << quoted(gp.get_str()) << ",\"cube_gcd\":" << quoted(gc.get_str())
@@ -508,6 +530,7 @@ std::string certify(long long K, const Z& p, const Z& q, const Z& S, const Z& g,
 // y >= 0 and its principal d = -(x + S + y)/(2x). X even: integer chart.
 std::string certify_xy(long long K, const Z& p, const Z& q, const Z& S, const Z& g, const char* source,
                        const std::string& mode) {
+    if (abs(g) != 1) throw std::runtime_error("campaign hit must have g = -1 or +1");
     if (mpz_fdiv_ui(S.get_mpz_t(), 6) != 3) throw std::runtime_error("internal S == 3 (mod 6) check failed");
     Z n = (S - 3) / 6;
     if (static_cast<int>(mpz_fdiv_ui(n.get_mpz_t(), 3)) != n_mod3(K))
@@ -531,14 +554,14 @@ std::string certify_xy(long long K, const Z& p, const Z& q, const Z& S, const Z&
     Z a = A.get_num(), b = B.get_num(), cc = C.get_num();
     if (a * a * a + b * b * b + cc * cc * cc != Z(static_cast<long>(K)))
         throw std::runtime_error("internal cube-sum verification failed");
-    // Primitivity: integer chart gcd(n, x) = 1; half chart gcd(X, Y) = 1; and gcd(A, B, C) = 1.
-    Z gp = integer_chart ? zgcd(n, X / 2) : zgcd(X, Y), gc = zgcd(zgcd(a, b), cc);
+    // Point primitivity decides success; cube primitivity remains informational.
+    Z gp = integer_chart ? zgcd(zgcd(n, X / 2), Y / 2) : zgcd(X, Y), gc = zgcd(zgcd(a, b), cc);
     bool pp = gp == 1, pc = gc == 1;
     std::ostringstream o;
     o << "{\"type\":\"hit\",\"mode\":" << quoted(mode) << ",\"chart\":" << quoted(integer_chart ? "integer" : "half")
       << ",\"source\":" << quoted(source)
       << ",\"branch\":" << quoted(sgn(Ys) >= 0 ? "principal" : "conjugate")
-      << ",\"desired\":" << (pp && pc ? "true" : "false")
+      << ",\"desired\":" << (pp ? "true" : "false")
       << ",\"primitive_point\":" << (pp ? "true" : "false") << ",\"primitive_cubes\":" << (pc ? "true" : "false")
       << ",\"point_gcd\":" << quoted(gp.get_str()) << ",\"cube_gcd\":" << quoted(gc.get_str())
       << ",\"k\":" << quoted(std::to_string(K))
@@ -554,10 +577,8 @@ std::string certify_xy(long long K, const Z& p, const Z& q, const Z& S, const Z&
 
 struct Config {
     long long K = 375;
-    std::string mode = "both";
+    std::string mode = "xy";
     uint32_t h_start = 1, h_stop = 0;
-    Z G;
-    unsigned g_digits = 100;
     double deadline = 0;
     unsigned bits0 = 128, max_bits = 1u << 18;
     bool raw = false; Z raw_target, raw_gmax; bool have_raw_target = false, have_raw_gmax = false;
@@ -565,13 +586,16 @@ struct Config {
 
 void usage() {
     std::cout <<
-        "Usage (campaign): thue375_worker --h-start H0 --h-stop H1 [--k 375] [--g-max-digits 100]\n"
-        "                  [--deadline-seconds S] [--precision-bits 128] [--max-precision-bits 262144]\n"
+        "Usage (campaign): thue375_worker --h-start H0 --h-stop H1 [--k 375] [--mode xy]\n"
+        "                  [--deadline-seconds S]\n"
         "  Sweeps every admissible d = p/q with H0 <= max(|p|,q) < H1 (one height shell at a time)\n"
-        "  and reports every integer-chart and half-chart point with 1 <= |g| <= 10^digits.\n"
-        "  --mode xy: the y^2 equation, desired (primitive) points of both charts, both signs of y.\n"
+        "  using exactly g = -1 and +1; there is no configurable campaign g bound.\n"
+        "  --mode xy (default): both charts and both signs of y; either primitive chart is a result.\n"
         "  --mode xy-half: only rational x = X/2, y = Y/2 (X, Y odd, gcd(X,Y) = 1), both signs of y.\n"
+        "  --mode both: principal-square-root reporting for both charts, still with g = -1 and +1.\n"
+        "  Integer-chart primitivity is gcd(n,x,y) = 1; cube flags are informational.\n"
         "Usage (raw test mode): thue375_worker --raw --target T --g-max G  (reads 'p q' lines)\n"
+        "                      [--precision-bits 128] [--max-precision-bits 262144]\n"
         "  Reports ALL integer solutions of F_d(S,g) = T with 1 <= |g| <= G; no filters.\n";
 }
 
@@ -583,13 +607,14 @@ Config arguments(int argc, char** argv) {
         if (a == "--version") { std::cout << "ce375-thue-worker " << VERSION << "\n"; std::exit(0); }
         if (a == "--help") { usage(); std::exit(0); }
         if (a == "--raw") { c.raw = true; continue; }
+        if (a == "--g-max-digits")
+            throw std::runtime_error("--g-max-digits is no longer supported: campaigns use exactly g = -1 and +1; use --raw --g-max G only for diagnostics");
         if (i + 1 == argc) throw std::runtime_error("missing value for " + a);
         std::string v = argv[++i];
         if (a == "--mode") { if (v != "both" && v != "xy" && v != "xy-half") throw std::runtime_error("mode must be both, xy or xy-half"); c.mode = v; }
         else if (a == "--k") { Z z = integer(v); if (z == 0 || abs(z) > Z("1000000000")) throw std::runtime_error("k out of range"); c.K = z.get_si(); }
         else if (a == "--h-start") { Z z = integer(v); if (z < 1 || z > Z("200000000")) throw std::runtime_error("h-start out of range"); c.h_start = static_cast<uint32_t>(z.get_ui()); have_start = true; }
         else if (a == "--h-stop") { Z z = integer(v); if (z < 2 || z > Z("200000001")) throw std::runtime_error("h-stop out of range"); c.h_stop = static_cast<uint32_t>(z.get_ui()); have_stop = true; }
-        else if (a == "--g-max-digits") { Z z = integer(v); if (z < 1 || z > 100000) throw std::runtime_error("g-max-digits out of range"); c.g_digits = static_cast<unsigned>(z.get_ui()); }
         else if (a == "--deadline-seconds") { Z z = integer(v); if (z < 0) throw std::runtime_error("deadline must be >= 0"); c.deadline = z.get_d(); }
         else if (a == "--precision-bits") { Z z = integer(v); if (z < 64 || z > (1 << 20)) throw std::runtime_error("precision out of range"); c.bits0 = static_cast<unsigned>(z.get_ui()); }
         else if (a == "--max-precision-bits") { Z z = integer(v); if (z < 64 || z > (1 << 24)) throw std::runtime_error("max precision out of range"); c.max_bits = static_cast<unsigned>(z.get_ui()); }
@@ -601,11 +626,12 @@ Config arguments(int argc, char** argv) {
         if (!c.have_raw_target || !c.have_raw_gmax || c.raw_target == 0) throw std::runtime_error("--raw needs nonzero --target and --g-max");
         return c;
     }
+    if (c.have_raw_target || c.have_raw_gmax)
+        throw std::runtime_error("--target and --g-max require --raw; campaigns use exactly g = -1 and +1");
     if (!have_start || !have_stop || c.h_stop <= c.h_start) throw std::runtime_error("need --h-start < --h-stop");
     long long r9 = ((c.K % 9) + 9) % 9;
     if ((c.K % 2 == 0) || (r9 != 3 && r9 != 6))
         throw std::runtime_error("k must be odd and +-3 (mod 9) (needed for S = 6n+3 and the 3-adic filter)");
-    mpz_ui_pow_ui(c.G.get_mpz_t(), 10, c.g_digits);
     if (c.bits0 > c.max_bits) throw std::runtime_error("initial precision exceeds maximum precision");
     return c;
 }
@@ -639,12 +665,9 @@ int run_campaign(const Config& c) {
     const bool half = c.mode == "xy-half", xy = c.mode == "xy" || half;
     Admissibility adm(c.K, c.h_stop, half, xy);
     Z T = Z(static_cast<long>(c.K));
-    // xy modes: desired points have gcd(S, g) = 1 (DERIVATION.md sections 9, 10), so e = 1 only.
-    Solver solver{T, c.G, true, c.bits0, c.max_bits, xy ? std::vector<Z>{Z(1)} : cube_divisors(T)};
-    solver.odd_g_only = half;
     std::cout << "{\"type\":\"start\",\"version\":" << quoted(VERSION) << ",\"parameterization\":" << quoted(PARAMETERIZATION)
               << ",\"k\":" << quoted(std::to_string(c.K)) << ",\"mode\":" << quoted(c.mode)
-              << ",\"g_max_digits\":" << c.g_digits << ",\"h_start\":" << c.h_start << ",\"h_stop\":" << c.h_stop << "}\n" << std::flush;
+              << ",\"g_values\":[-1,1],\"h_start\":" << c.h_start << ",\"h_stop\":" << c.h_stop << "}\n" << std::flush;
     for (uint32_t H = c.h_start; H < c.h_stop; ++H) {
         auto s0 = std::chrono::steady_clock::now();
         unsigned long long pairs = 0, admissible = 0;
@@ -655,7 +678,7 @@ int run_campaign(const Config& c) {
             ++admissible;
             Z P(static_cast<long>(p)), Qd(static_cast<unsigned long>(q));
             Form f(P, Qd);
-            for (const auto& s : solver.solve(f, st)) {
+            for (const auto& s : solve_unit_g(f, T, st)) {
                 if (xy) {
                     bool even = mpz_even_p(Z(Qd * s.g).get_mpz_t());
                     if (half && even) continue;  // not the half chart
@@ -670,9 +693,16 @@ int run_campaign(const Config& c) {
                 std::cout << certify(c.K, P, Qd, s.S, s.g, s.source.c_str()) << "\n" << std::flush;
             }
         };
-        // Shell H: q = H with -H <= p <= H, then 1 <= q < H with p = -H, +H.
-        for (int64_t p = -static_cast<int64_t>(H); p <= static_cast<int64_t>(H); ++p) handle(p, H);
-        for (uint32_t q = 1; q < H; ++q) { handle(-static_cast<int64_t>(H), q); handle(H, q); }
+        // Shell H covers each pair once. Odd q (the half chart for unit g)
+        // is visited first, followed by even q (the integer chart).
+        for (uint32_t parity : {1u, 0u}) {
+            if ((H & 1u) == parity)
+                for (int64_t p = -static_cast<int64_t>(H); p <= static_cast<int64_t>(H); ++p) handle(p, H);
+            for (uint32_t q = parity ? 1u : 2u; q < H; q += 2) {
+                handle(-static_cast<int64_t>(H), q);
+                handle(H, q);
+            }
+        }
         double secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - s0).count();
         std::cout << "{\"type\":\"shell\",\"h\":" << H << ",\"pairs\":" << pairs << ",\"admissible\":" << admissible
                   << ",\"convergents\":" << st.convergents << ",\"small_g_values\":" << st.small_g_values

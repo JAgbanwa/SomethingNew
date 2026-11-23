@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Write CE375 d-first task files and a page.json manifest.
+"""Write CE375 task files and a page.json manifest with g restricted to {-1, 1}.
 
 Heights h_start <= H < h_stop are cut into consecutive, disjoint tasks of
 roughly equal estimated work. Shell H holds 4H - 1 raw pairs (p, q), so shells
@@ -18,8 +18,8 @@ import datetime as dt
 from pathlib import Path
 import sys
 
-from common375 import (PAGE_SCHEMA, PARAMETERIZATION, PRODUCTION_K, TASK_SCHEMA, atomic_json, check_k,
-                       pairs_in, pairs_through)
+from common375 import (G_VALUES, MAX_H, PAGE_SCHEMA, PARAMETERIZATION, PRODUCTION_K, TASK_SCHEMA,
+                       atomic_json, check_k, pairs_in, pairs_through, validate_task)
 
 
 def derive_h_stop(h_start: int, core_hours: float, us_per_pair: float) -> int:
@@ -70,7 +70,6 @@ def main() -> int:
     ap.add_argument("--task-hours", type=float, default=1.0, help="estimated core-hours per task")
     ap.add_argument("--deadline-seconds", type=int, default=0,
                     help="per-attempt worker deadline written into each task (0 = none)")
-    ap.add_argument("--g-max-digits", type=int, default=100)
     ap.add_argument("--plan-only", action="store_true")
     args = ap.parse_args()
 
@@ -79,9 +78,13 @@ def main() -> int:
         ap.error("give exactly one of --h-stop or --core-hours")
     if args.us_per_pair <= 0 or args.task_hours <= 0:
         ap.error("--us-per-pair and --task-hours must be positive")
+    if args.deadline_seconds < 0:
+        ap.error("--deadline-seconds must be nonnegative")
+    if args.core_hours is not None and args.core_hours <= 0:
+        ap.error("--core-hours must be positive")
     h_stop = args.h_stop if args.h_stop is not None else derive_h_stop(args.h_start, args.core_hours, args.us_per_pair)
-    if not 1 <= args.h_start < h_stop:
-        ap.error("need 1 <= h_start < h_stop")
+    if not 1 <= args.h_start < h_stop <= MAX_H + 1:
+        ap.error(f"need 1 <= h_start < h_stop <= {MAX_H + 1}")
 
     task_pairs = max(1, int(args.task_hours * 3600e6 / args.us_per_pair))
     ranges = split(args.h_start, h_stop, task_pairs)
@@ -89,7 +92,7 @@ def main() -> int:
     total = sum(est(a, b) for a, b in ranges)
     print(f"k={args.k}  mode={args.mode}  heights [{args.h_start}, {h_stop})  tasks={len(ranges)}  "
           f"pairs={pairs_in(args.h_start, h_stop)}  estimated core-hours={total:.3f}  "
-          f"|g| <= 10^{args.g_max_digits}")
+          "g in {-1, 1}")
     if args.plan_only:
         return 0
 
@@ -100,15 +103,16 @@ def main() -> int:
     for i, (a, b) in enumerate(ranges):
         task_id = f"{args.campaign_id}-{i:0{width}d}"
         task = {"schema": TASK_SCHEMA, "campaign_id": args.campaign_id, "task_id": task_id,
-                "k": args.k, "mode": args.mode, "h_start": a, "h_stop": b, "g_max_digits": args.g_max_digits,
+                "k": args.k, "mode": args.mode, "h_start": a, "h_stop": b, "g_values": list(G_VALUES),
                 "deadline_seconds": args.deadline_seconds, "parameterization": PARAMETERIZATION}
+        validate_task(task)
         path = tasks_dir / f"{task_id}.json"
         atomic_json(path, task)
         entries.append({"task_id": task_id, "file": f"tasks/{path.name}", "h_start": a, "h_stop": b,
                         "pairs": pairs_in(a, b), "estimated_core_hours": round(est(a, b), 6)})
     atomic_json(args.output_dir / "page.json", {
         "schema": PAGE_SCHEMA, "campaign_id": args.campaign_id, "k": args.k, "mode": args.mode,
-        "h_start": args.h_start, "h_stop": h_stop, "g_max_digits": args.g_max_digits,
+        "h_start": args.h_start, "h_stop": h_stop, "g_values": list(G_VALUES),
         "us_per_pair": args.us_per_pair, "estimated_core_hours": round(total, 3),
         "parameterization": PARAMETERIZATION,
         "created": dt.datetime.now(dt.timezone.utc).isoformat(), "tasks": entries})
