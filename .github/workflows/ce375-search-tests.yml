@@ -16,6 +16,18 @@ permissions:
   contents: read
 
 jobs:
+  continuing-search:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install coordinator worker dependencies
+        run: sudo apt-get update && sudo apt-get install -y g++ make libgmp-dev
+      - name: Build exact worker
+        run: make -C '375/Scripts for large-scale computations/elkies-jahnel'
+      - name: Verify continuing search and recovery
+        run: python3 -m unittest discover -s 375/tests -v
+
   native:
     runs-on: ubuntu-latest
     timeout-minutes: 20

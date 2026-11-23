@@ -7,6 +7,13 @@ the local/container pilot in
 [`CHARITY_ENGINE_HANDOFF.md`](gap-search/CHARITY_ENGINE_HANDOFF.md); a production
 campaign still needs a measured task size and an agreed deployment environment.
 
+For an automatically continuing **local** search, use
+[`search375.py`](search375.py) and the [continuing-search guide](CONTINUING_SEARCH.md).
+It runs finite EJ jobs, resumes partial attempts, validates returned coverage,
+and stops on the selected number of qualifying primitive triples. Its default
+interleaved schedule revisits unfinished shells while opening higher ones;
+there is no final height bound. It does not submit CE jobs.
+
 The three search paths have different mathematical scopes:
 
 | Path | What it searches | Recommended role |
@@ -73,7 +80,10 @@ for this fixed-`g` implementation. See each engine's own coverage statement.
 
 ## An indefinite campaign still uses finite jobs
 
-A controller can keep issuing new, disjoint work units indefinitely. Following
+The supplied `search375.py` controller keeps issuing and validating finite EJ
+work units until its goal is met or execution is paused. The standalone backend
+planner only emits a page; its cursor tracks planned work, not verified
+execution. Following
 [CE's published guidance](https://www.charityengine.com/docs/pages/18677766/Computing%2Bwith%2BCharity%2BEngine),
 individual jobs should finish a specified interval and return evidence of which part
 completed. The controller then validates outputs, resubmits gaps, and creates

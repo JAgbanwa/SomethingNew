@@ -8,6 +8,7 @@ collect accepts only validated results for that page and one worker binary.
 from __future__ import annotations
 
 import argparse
+import fcntl
 from fractions import Fraction
 import hashlib
 import json
@@ -54,6 +55,18 @@ def lower_index(h, k):
         raise ValueError("height is too small for the proved canonical region")
     a = icbrt(n)
     return 5*(a + (a**3 < n)) // 2
+
+
+def upper_index(h, k):
+    """Safe default top of a shell, retaining exact half-open boundaries.
+
+    For j=5H*a/c, a<=b and |a^3+b^3-c^3|=K imply
+    j^3 <= 125*(H^3+K)/2.  Normally j must be strictly below the
+    task's right endpoint, so an integral cube-root bound needs +1 too.
+    The existing global endpoint 4H is inclusive and may be kept exactly.
+    """
+    lower_index(h, k)  # apply the same proved-shell preconditions
+    return min(4*h, icbrt(125*(h**3+k)//2)+1)
 
 
 def load(path):
@@ -181,7 +194,7 @@ def plan(args):
         h, k, campaign = args.height, args.k, args.campaign_id
         if h is None or not campaign:
             raise ValueError("give --height and --campaign-id, or --cursor")
-        right = args.right_index if args.right_index is not None else 4*h
+        right = args.right_index if args.right_index is not None else upper_index(h, k)
         primitive, scale = not args.include_nonprimitive, str(Fraction(args.tile_scale))
         span, page_size = args.grid_span, args.page_size
         max_tiles, deadline, expected = args.max_tiles, args.deadline_seconds, args.worker_sha256
@@ -198,7 +211,7 @@ def plan(args):
             raise ValueError("planning cursor lies outside its shell")
         if right == low:
             h *= 2
-            right = 4*h
+            right = upper_index(h, k)
             low = lower_index(h, k)
         left = max(low, right-span)
         identity = digest([campaign, k, str(h), str(left), str(right), primitive, scale])[:20]
@@ -232,13 +245,27 @@ def plan(args):
 
 def run(args):
     task = load(args.task)
-    k, h, lo, hi, primitive, scale = validate_task(task)
+    validate_task(task)
     worker = args.worker.resolve()
     worker_hash, task_hash = file_hash(worker), digest(task)
     if task.get("worker_sha256", worker_hash) != worker_hash:
         raise ValueError("worker does not match the pinned binary hash")
     out = args.output_dir
+    cp_path = out / "checkpoint.json"
+    if cp_path.exists() and load(cp_path).get("worker_sha256") != worker_hash:
+        raise ValueError("checkpoint belongs to a different task or worker binary")
     out.mkdir(parents=True, exist_ok=True)
+    with (out / "runner.lock").open("a") as runner_lock:
+        try:
+            fcntl.flock(runner_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise ValueError("another EJ runner already owns this result directory") from None
+        return run_locked(args, task, worker, worker_hash, task_hash)
+
+
+def run_locked(args, task, worker, worker_hash, task_hash):
+    k, h, lo, hi, primitive, scale = validate_task(task)
+    out = args.output_dir
     cp_path, hit_path = out / "checkpoint.json", out / "hits.jsonl"
     cp = {"schema": CHECKPOINT_SCHEMA, "task_sha256": task_hash,
           "worker_sha256": worker_hash, "next_index": str(hi),
@@ -260,6 +287,22 @@ def run(args):
             if rec.get("worker_sha256") != worker_hash:
                 raise ValueError("saved hit has a different worker hash")
             seen.add(verify_hit(rec, task))
+    old_status_path = out / "status.json"
+    if old_status_path.exists():
+        old_status = load(old_status_path)
+        if old_status.get("state") in ("complete", "partial"):
+            # Validate successful saved artifacts before rewriting any status.
+            # A running/error status can legitimately predate a crash-replayed
+            # checkpoint or append, so only terminal successful states assert
+            # this exact cumulative unique-hit count.
+            if not hit_path.is_file():
+                raise ValueError("saved successful result is missing hits.jsonl")
+            if old_status.get("task_sha256") != task_hash \
+                    or old_status.get("worker_sha256") != worker_hash \
+                    or old_status.get("checkpoint") != cp:
+                raise ValueError("saved successful status differs from task/checkpoint")
+            if len(seen) != integer(old_status["hits"]):
+                raise ValueError("saved unique hit count differs from successful status")
     atomic_json(out / "task.json", task)
 
     def status(state, error=None):
@@ -457,7 +500,7 @@ def collect(args):
                     or integer(status_rec["covered_index_start"]) != cursor \
                     or integer(status_rec["covered_index_stop"]) != hi:
                 raise ValueError("status coverage differs from checkpoint")
-            hits = []
+            hits = {}
             for line in (path.parent / "hits.jsonl").read_text().splitlines():
                 rec = json.loads(line)
                 if rec.get("worker_sha256") != wh:
@@ -465,8 +508,10 @@ def collect(args):
                 xyz = verify_hit(rec, task)
                 # Derived point metadata is re-created from verified cubes.
                 # It is not an additional trusted assertion from the worker.
-                hits.append(dict(rec, original_points=original_points(xyz, integer(task["k"]))))
-            staged.append((root_id, task, cursor, hits))
+                hits[xyz] = dict(rec, original_points=original_points(xyz, integer(task["k"])))
+            if len(hits) != integer(status_rec["hits"]):
+                raise ValueError("verified unique hit count differs from saved status")
+            staged.append((root_id, task, cursor, list(hits.values())))
             hashes.add(wh)
         except (OSError, ValueError, KeyError, TypeError) as exc:
             errors.append({"path": str(path.parent), "error": str(exc)})

@@ -17,6 +17,11 @@ the applicable case. Both signs of `y` describe the same squared equation.
 The target constant is `K = 375`; other odd `K = +/-3 (mod 9)` are supported
 for known-answer tests.
 
+This folder's `n` denotes the original conversation's integer `x`, and this
+folder's `x` denotes the original rational parameter `m`. The reliability
+rules below change how completed work is recorded and verified; the bounded
+unit-g mathematical search domain is unchanged.
+
 ## 2. Original equation and cube identity
 
 Put `S = 6n+3` and
@@ -117,6 +122,9 @@ abs(g) = gcd(A+B,A+C),    gcd(A,B,C) = gcd(S,g).
 The fixed-g restriction therefore makes the cube gcd 1 automatically.
 The unit-g restriction and the point-gcd tests remain separate parts of the
 search contract; one is not used as a substitute for the other.
+Primitivity of the cube triple does not imply unit `g`. For example, all-odd
+cube triples have even pair sums and necessarily lie outside this production
+domain, regardless of their cube gcd.
 
 ## 5. Necessary arithmetic filters
 
@@ -140,6 +148,8 @@ the original equation, the reconstruction, and the applicable gcd.
 
 ## 6. Coverage and run records
 
+### Mathematical domain and magnitude bounds
+
 A completed task covers
 
 ```text
@@ -150,11 +160,83 @@ with its chosen mode. It does not impose a guessed interval on `n` or `y`.
 For every returned point, `abs(x) = q/2`; the height interval is not a claim
 of complete coverage of all points below an x bound.
 
+The implementation supports `H <= B = 200000000`. At `K = 375`, the fixed-g
+cubic implies
+
+```text
+abs(S)^3 <= 6 B^2 abs(S) + 6 B^3 + 375.
+```
+
+If `abs(S) >= 3B`, the left side minus `6 B^2 abs(S)` is at least `9B^3`.
+This exceeds `6B^3+375`, since `3B^3 > 375`. Therefore `abs(S) < 3B`.
+Reconstruction then gives the safe integer bound `abs(n) <= 100000000`,
+`abs(x) <= 100000000`, and `abs(y) < 900000000`. The identities in section 4
+give `abs(A), abs(B), abs(C) < 1000000000`. These are outer bounds, not
+assertions of attained maxima. Exact enumeration of all roots of a selected
+cubic does not remove the magnitude restrictions implied by its coefficients.
+
+The parent planner emits finite height pages. Its zero-deadline option
+removes a time limit, not a height endpoint or the unit-g restriction.
+
+### Worker protocol and durable coverage
+
 Version-2 tasks, statuses, checkpoints, and collection results record the
 fixed set `g_values = [-1,1]`. Version-1 large-range tasks are rejected instead
-of being silently reinterpreted. A finite height task is complete only after
-all of its shells have finished; deadlines and interruptions leave explicit
-remaining work.
+of being silently reinterpreted. A finite height task is marked complete only
+after all of the following hold:
+
+1. One worker start record matches the target, mode, parameterization, fixed
+   g values, resumed start height, and task endpoint.
+2. Shell records occur in order, with nonnegative counters and the exact raw
+   pair count `4H-1` for each height.
+3. Exactly one valid terminal record agrees with the reported shell cursor
+   and its state: `complete` at the endpoint, `partial` before it.
+4. No further output follows the terminal record, and the worker exits zero.
+
+The most recent shell is staged until another ordered shell arrives or a
+valid terminal record is followed by exit zero. Only committed shells advance
+the durable checkpoint. Thus a missing terminal record or nonzero exit cannot
+complete the final shell; a retry replays it. A committed checkpoint owns a
+contiguous prefix of `shells.jsonl`. An extra uncommitted tail left by a crash
+is discarded before replay, and the collector checks the committed prefix
+and its accumulated counters.
+
+The saved result must retain its status and hit-file artifacts. Completed or
+partial status records are reconciled with the number of unique `hit_key`
+values in `hits.jsonl`; raw worker hit counters can include repeated points
+and are not used for that comparison. Each checkpoint also records the
+durable unique-hit count. It is a lower bound during an interrupted attempt,
+which may append new hits before its next checkpoint, and an exact count at a
+completed endpoint. Stale running/error status counts do not override these
+durable counts. This prevents a missing or truncated hit file from being
+silently accepted or overwritten by a completed resume.
+
+A legitimate interruption can retain earlier committed shells without
+claiming completion. The runner records the remaining work in a continuation
+manifest. `covered_h_start` and `next_h` delimit the interval actually covered
+by each output directory. Moving a continuation to a fresh directory starts
+that directory's coverage at the continuation height; collection takes the
+union with its predecessor's interval.
+
+### Binary identity and compatibility
+
+The runner and collector accept `--expected-worker-sha256` to pin the worker
+binary. New status, checkpoint, hit, and shell records carry `worker_sha256`;
+saved tasks and continuations carry `expected_worker_sha256`, so moving a
+continuation does not drop the pin. Resume preflight checks saved provenance
+before modifying output. Collection rejects inconsistent or mixed binary
+hashes, and an unexpected pinned hash yields no accepted coverage.
+
+Terminal checkpoints also record `terminal_state` and a successful
+`worker_exit_code`. These reliability fields are additive within version 2;
+they do not alter the mathematical parameterization. Older version-2 outputs
+missing the required provenance or terminal proof must be rerun in fresh
+output directories rather than assigned unverified fields retrospectively.
+
+The collector's `--require-complete` option returns exit code 2 if any part of
+the requested page is uncovered. Errors return 1. Without that option, exit
+zero can describe an accurately reported partial collection; the coverage
+intervals and gaps remain explicit in `summary.json`.
 
 Historical pilot files preserve the previous program's results and scope.
 They are not edited to claim that the new program has been run. Tests on

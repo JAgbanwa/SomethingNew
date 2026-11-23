@@ -180,12 +180,28 @@ Tasks are primitive by default (`"primitive": true`). Use the
 [handoff guide](CHARITY_ENGINE_HANDOFF.md) for a fixed, small pilot before a
 production-sized page. It also distinguishes application checkpoints from CE
 CLI checkpoints, describes release hashes and finite-task continuation, and
-explains the limits of a sampled audit. The runner and collector accept
+explains the limits of a sampled audit. The runner, collector and auditor accept
 `--expected-worker-sha256`; changed-binary resumes and mixed-binary collections
-are rejected. Completion also requires a matching worker terminal record and
+are rejected. The auditor also requires the returned worker hash to match the
+binary actually used for reruns. Completion requires a matching worker terminal record and
 a successful exit. An indefinite controller can keep
 issuing more tasks; extending one gap interval with a fixed ratio cap is not
 complete coverage of all cube triples.
+
+Return `task.json`, `status.json`, `hits.jsonl` and `chunks.jsonl` together, plus
+`checkpoint.json` whenever progress was committed. Empty JSONL files must still
+be present. Missing or truncated logs, inconsistent saved-hit counts, and
+conflicting or missing record provenance cause an error; an invalid directory
+contributes no coverage or hits. The collector reconciles unique hit identities
+inside the durable checkpoint interval with its hit counters. A partial run may
+also have saved hits from an unfinished chunk; those hits are retained, checked
+against the terminal status's total, and deduplicated when that chunk is retried.
+
+The auditor first applies those artifact checks, then reruns a sample of the
+latest committed chunk partition. Each sampled chunk must reproduce both its
+deterministic counters and the exact returned `(x, y, z)` identities in its
+interval. Old replay records are not counted twice. Passing this check does not
+certify execution of unsampled chunks.
 
 ## 6. Validation fixtures and historical pilot
 
@@ -215,6 +231,13 @@ regressions are also included in the suite.
     `P = 10⁶`, with `ρ₃₇₅` in `[0.0580, 0.0592]` (3 tests);
   * an end-to-end campaign at `k = 7125 = 57·5³` finds its primitive solution `(−67)³ + (−46)³ + 74³`,
     collects it as PRIMITIVE, audits cleanly and converts it to two desired half-chart points.
+* **Returned-result integrity regressions:** a native `k = 7125`, `d ∈ [1,100)`,
+  `R = 64` positive control detects missing, empty and truncated hit artifacts;
+  saved-hit counters and per-record release hashes are checked. Audit tests
+  alter a mathematically valid identity without changing its count, remove a
+  hit together with its counts, and attempt a rerun with a different binary.
+  Partial-hit preservation, continuation deduplication, duplicate chunk logs
+  and stale running status are exercised separately with finite protocol fixtures.
 
 **Historical pilot at k = 375** (recorded as worker 1.2.0, 22 Nov 2026, through plan / run / collect / audit; not re-audited for this handoff):
 `δ ∈ [5623413252, 7623413252)`, `R = 4096`, `--primitive`, two tasks in parallel on the two-core
