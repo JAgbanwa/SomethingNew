@@ -22,7 +22,7 @@ from equation375 import (TARGET, Point, RationalDFilter, points_from_cubes,
 import rational_d
 
 ROOT = Path(__file__).resolve().parent
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 
 def exact_fraction(text: str) -> Fraction:
@@ -54,7 +54,8 @@ def nonnegative_int(text: str) -> int:
 
 def source_hashes() -> dict[str, str]:
     names = ("search375.py", "equation375.py", "booker_sutherland.py",
-             "rational_d.py", "elkies_jahnel.py", "ej_worker.cpp")
+             "rational_d.py", "elkies_jahnel.py", "ej_worker.cpp",
+             "booker_native.py", "bs_worker.cpp")
     return {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
             for name in names}
 
@@ -211,6 +212,49 @@ def run_ej_shell(run: Run, height: int, *, start: int | None = None,
     return terminal
 
 
+def run_booker_gap(run: Run) -> int:
+    """Native large-coordinate gap search; its finite ratio cap is explicit."""
+    from booker_native import iter_gap, validate_gap
+    args = run.args
+    validate_gap(args.D_start, args.D_stop, args.ratio_max)
+    run.begin({"kind": "native_integer_gap_and_ratio_band",
+               "D_start": str(args.D_start), "D_stop_exclusive": str(args.D_stop),
+               "ratio_max": str(args.ratio_max),
+               "absolute_z_min": "floor(3847*D/1000)",
+               "absolute_z_max": "ratio_max*D",
+               "D_definition": "abs(u+v), integer; distinct from signed rational d",
+               "sign_sector": "(u+v)*w<0; native pair ordered u>=v",
+               "permutations": "all original-equation charts of each cube triple"})
+    terminal = None
+    native_start = None
+    counters: dict[str, int] = {}
+    run.progress = {"next_D": str(args.D_start)}
+    for record in iter_gap(args.D_start, args.D_stop, target=TARGET,
+                           ratio_max=args.ratio_max, primitive=True,
+                           deadline_seconds=args.deadline_seconds, chunk=args.chunk):
+        if record["type"] == "hit":
+            run.accept_cubes(tuple(int(record[key]) for key in ("x", "y", "z")))
+        elif record["type"] == "start":
+            native_start = record
+            run.show_progress({"next_D": str(args.D_start),
+                               "sieve_limit": record["sieve_limit"],
+                               "setup_seconds": record["setup_seconds"]})
+        elif record["type"] == "chunk":
+            for key, value in record["counters"].items():
+                counters[key] = counters.get(key, 0) + int(value)
+            run.show_progress({"next_D": record["d_stop"], "native_chunk": record},
+                              force=bool(args.progress_every))
+        elif record["type"] == "end":
+            terminal = record
+    if terminal is None:
+        raise RuntimeError("native Booker worker omitted a validated terminal record")
+    complete = terminal["state"] == "complete"
+    run.end(complete=complete, details={"backend_terminal": terminal,
+                                       "native_start": native_start,
+                                       "backend_counters": {key: str(value) for key, value in counters.items()}})
+    return 0 if complete else 3
+
+
 def run_elkies(run: Run) -> int:
     from elkies_jahnel import minimum_index
     args = run.args
@@ -321,6 +365,16 @@ def make_parser() -> argparse.ArgumentParser:
     command = commands.add_parser("booker-box", help="complete cube-height box using Booker-Sutherland")
     command.add_argument("--height-max", type=positive_int, required=True)
     add_filters(command)
+    command = commands.add_parser("booker-gap", help="compiled Booker-Sutherland gap/ratio region")
+    command.add_argument("--D-start", type=positive_int, required=True)
+    command.add_argument("--D-stop", type=positive_int, required=True,
+                         help="exclusive upper integer-gap endpoint")
+    command.add_argument("--ratio-max", type=positive_int, default=1024)
+    command.add_argument("--chunk", type=positive_int, default=65536,
+                         help="checkpoint interval in D values, rounded up to a native block")
+    command.add_argument("--deadline-seconds", type=nonnegative_int, default=0,
+                         help="checked at completed chunks; 0 means no deadline")
+    add_filters(command)
     for name, help_text in (("elkies", "complete cube-height box using exact lattice shells"),
                              ("elkies-shell", "one exact lattice shell or ratio subband")):
         command = commands.add_parser(name, help=help_text)
@@ -362,6 +416,8 @@ def main(argv: list[str] | None = None) -> int:
         run = Run(args, stream)
         if args.command in ("booker", "booker-box"):
             return run_booker(run)
+        if args.command == "booker-gap":
+            return run_booker_gap(run)
         if args.command in ("elkies", "elkies-shell"):
             return run_elkies(run)
         if args.command == "rational-d":

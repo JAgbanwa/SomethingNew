@@ -1,0 +1,431 @@
+{
+  "build": {
+    "binary_sha256": "68f4c566744d79cda00fbfcaea526b3438dc882fc5d66872561aa20257edb2bd",
+    "compiler": [
+      "c++"
+    ],
+    "flags": [
+      "-O3",
+      "-std=c++17"
+    ],
+    "source_sha256": "27e726a70ce495b76899ff1b5635140af77358d4f427b70ac6d26a221cc88a83"
+  },
+  "environment": {
+    "compiler": "c++ (Debian 14.2.0-19) 14.2.0",
+    "cpu_model": "AMD EPYC 9V45 96-Core Processor",
+    "gmp": "6.3.0",
+    "logical_cpus_reported": 9,
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "python": "3.12.14"
+  },
+  "notes": [
+    "Single-run calibration samples, not a full-shell benchmark.",
+    "Timer excludes Python startup but includes native worker launch and validation.",
+    "Repeated sample bands, if any, would not add new coverage.",
+    "Each child process group was hard-limited to five seconds; timeouts supply no accepted coverage."
+  ],
+  "primitive": true,
+  "samples": [
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "0",
+        "next_index": "36056239260",
+        "reason": "complete",
+        "tiles": 1,
+        "type": "end"
+      },
+      "height": "1000000000000000",
+      "hits": 0,
+      "index_start": "36056239260",
+      "index_stop": "36056240260",
+      "index_width": 1000,
+      "location": "lower",
+      "native_cpu_seconds": 0.006234,
+      "process_seconds": 0.05711015600536484,
+      "returncode": 0,
+      "seconds": 0.006620204003411345,
+      "tile_scale": "11/2",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "0",
+        "next_index": "36056239260",
+        "reason": "complete",
+        "tiles": 1,
+        "type": "end"
+      },
+      "height": "1000000000000000",
+      "hits": 0,
+      "index_start": "36056239260",
+      "index_stop": "36056240260",
+      "index_width": 1000,
+      "location": "lower",
+      "native_cpu_seconds": 0.00597,
+      "process_seconds": 0.0466727590028313,
+      "returncode": 0,
+      "seconds": 0.006331503995170351,
+      "tile_scale": "55",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "0",
+        "next_index": "36056239260",
+        "reason": "complete",
+        "tiles": 1,
+        "type": "end"
+      },
+      "height": "1000000000000000",
+      "hits": 0,
+      "index_start": "36056239260",
+      "index_stop": "36056240260",
+      "index_width": 1000,
+      "location": "lower",
+      "native_cpu_seconds": 0.0072299999999999994,
+      "process_seconds": 0.05684791000385303,
+      "returncode": 0,
+      "seconds": 0.007633884000824764,
+      "tile_scale": "550",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "887",
+        "next_index": "2000000000000000",
+        "reason": "complete",
+        "tiles": 36,
+        "type": "end"
+      },
+      "height": "1000000000000000",
+      "hits": 0,
+      "index_start": "2000000000000000",
+      "index_stop": "2000000000001000",
+      "index_width": 1000,
+      "location": "middle",
+      "native_cpu_seconds": 0.129551,
+      "process_seconds": 0.16138808500545565,
+      "returncode": 0,
+      "seconds": 0.1298880110043683,
+      "tile_scale": "11/2",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "78251",
+        "next_index": "2000000000000000",
+        "reason": "complete",
+        "tiles": 4,
+        "type": "end"
+      },
+      "height": "1000000000000000",
+      "hits": 0,
+      "index_start": "2000000000000000",
+      "index_stop": "2000000000001000",
+      "index_width": 1000,
+      "location": "middle",
+      "native_cpu_seconds": 0.150386,
+      "process_seconds": 0.18121314699965296,
+      "returncode": 0,
+      "seconds": 0.15087735799897928,
+      "tile_scale": "55",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "1080103",
+        "next_index": "2000000000000000",
+        "reason": "complete",
+        "tiles": 1,
+        "type": "end"
+      },
+      "height": "1000000000000000",
+      "hits": 0,
+      "index_start": "2000000000000000",
+      "index_stop": "2000000000001000",
+      "index_width": 1000,
+      "location": "middle",
+      "native_cpu_seconds": 0.40044399999999997,
+      "process_seconds": 0.433542419996229,
+      "returncode": 0,
+      "seconds": 0.4008461859993986,
+      "tile_scale": "550",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "2184",
+        "next_index": "3999999999999000",
+        "reason": "complete",
+        "tiles": 67,
+        "type": "end"
+      },
+      "height": "1000000000000000",
+      "hits": 0,
+      "index_start": "3999999999999000",
+      "index_stop": "4000000000000000",
+      "index_width": 1000,
+      "location": "upper",
+      "native_cpu_seconds": 0.17138899999999999,
+      "process_seconds": 0.2165085660017212,
+      "returncode": 0,
+      "seconds": 0.1718890280026244,
+      "tile_scale": "11/2",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "150106",
+        "next_index": "3999999999999000",
+        "reason": "complete",
+        "tiles": 7,
+        "type": "end"
+      },
+      "height": "1000000000000000",
+      "hits": 0,
+      "index_start": "3999999999999000",
+      "index_stop": "4000000000000000",
+      "index_width": 1000,
+      "location": "upper",
+      "native_cpu_seconds": 0.26597099999999996,
+      "process_seconds": 0.29683097900124267,
+      "returncode": 0,
+      "seconds": 0.2677056949978578,
+      "tile_scale": "55",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "6395800",
+        "next_index": "3999999999999000",
+        "reason": "complete",
+        "tiles": 1,
+        "type": "end"
+      },
+      "height": "1000000000000000",
+      "hits": 0,
+      "index_start": "3999999999999000",
+      "index_stop": "4000000000000000",
+      "index_width": 1000,
+      "location": "upper",
+      "native_cpu_seconds": 2.300182,
+      "process_seconds": 2.329347703998792,
+      "returncode": 0,
+      "seconds": 2.3009678999951575,
+      "tile_scale": "550",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "0",
+        "next_index": "167358237522",
+        "reason": "complete",
+        "tiles": 1,
+        "type": "end"
+      },
+      "height": "10000000000000000",
+      "hits": 0,
+      "index_start": "167358237522",
+      "index_stop": "167358238522",
+      "index_width": 1000,
+      "location": "lower",
+      "native_cpu_seconds": 0.005195,
+      "process_seconds": 0.034068187000229955,
+      "returncode": 0,
+      "seconds": 0.005480024999997113,
+      "tile_scale": "11/2",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "0",
+        "next_index": "167358237522",
+        "reason": "complete",
+        "tiles": 1,
+        "type": "end"
+      },
+      "height": "10000000000000000",
+      "hits": 0,
+      "index_start": "167358237522",
+      "index_stop": "167358238522",
+      "index_width": 1000,
+      "location": "lower",
+      "native_cpu_seconds": 0.005203,
+      "process_seconds": 0.029972383999847807,
+      "returncode": 0,
+      "seconds": 0.005444592999992892,
+      "tile_scale": "55",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "0",
+        "next_index": "167358237522",
+        "reason": "complete",
+        "tiles": 1,
+        "type": "end"
+      },
+      "height": "10000000000000000",
+      "hits": 0,
+      "index_start": "167358237522",
+      "index_stop": "167358238522",
+      "index_width": 1000,
+      "location": "lower",
+      "native_cpu_seconds": 0.005448,
+      "process_seconds": 0.03166111500468105,
+      "returncode": 0,
+      "seconds": 0.005711279998649843,
+      "tile_scale": "550",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "827",
+        "next_index": "20000000000000000",
+        "reason": "complete",
+        "tiles": 36,
+        "type": "end"
+      },
+      "height": "10000000000000000",
+      "hits": 0,
+      "index_start": "20000000000000000",
+      "index_stop": "20000000000001000",
+      "index_width": 1000,
+      "location": "middle",
+      "native_cpu_seconds": 0.12479,
+      "process_seconds": 0.16016210200177738,
+      "returncode": 0,
+      "seconds": 0.12515003000589786,
+      "tile_scale": "11/2",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "78322",
+        "next_index": "20000000000000000",
+        "reason": "complete",
+        "tiles": 4,
+        "type": "end"
+      },
+      "height": "10000000000000000",
+      "hits": 0,
+      "index_start": "20000000000000000",
+      "index_stop": "20000000000001000",
+      "index_width": 1000,
+      "location": "middle",
+      "native_cpu_seconds": 0.201893,
+      "process_seconds": 0.23964521300513297,
+      "returncode": 0,
+      "seconds": 0.20236545499938074,
+      "tile_scale": "55",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "1080131",
+        "next_index": "20000000000000000",
+        "reason": "complete",
+        "tiles": 1,
+        "type": "end"
+      },
+      "height": "10000000000000000",
+      "hits": 0,
+      "index_start": "20000000000000000",
+      "index_stop": "20000000000001000",
+      "index_width": 1000,
+      "location": "middle",
+      "native_cpu_seconds": 0.696959,
+      "process_seconds": 0.728906108000956,
+      "returncode": 0,
+      "seconds": 0.698995124999783,
+      "tile_scale": "550",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "1417",
+        "next_index": "39999999999999000",
+        "reason": "complete",
+        "tiles": 67,
+        "type": "end"
+      },
+      "height": "10000000000000000",
+      "hits": 0,
+      "index_start": "39999999999999000",
+      "index_stop": "40000000000000000",
+      "index_width": 1000,
+      "location": "upper",
+      "native_cpu_seconds": 0.18987099999999998,
+      "process_seconds": 0.23234044799755793,
+      "returncode": 0,
+      "seconds": 0.19021534099738346,
+      "tile_scale": "11/2",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "149807",
+        "next_index": "39999999999999000",
+        "reason": "complete",
+        "tiles": 7,
+        "type": "end"
+      },
+      "height": "10000000000000000",
+      "hits": 0,
+      "index_start": "39999999999999000",
+      "index_stop": "40000000000000000",
+      "index_width": 1000,
+      "location": "upper",
+      "native_cpu_seconds": 0.35651499999999997,
+      "process_seconds": 0.38631040500331437,
+      "returncode": 0,
+      "seconds": 0.3568910890026018,
+      "tile_scale": "55",
+      "wall_timeout_seconds": 5
+    },
+    {
+      "end": {
+        "complete": true,
+        "lattice_points": "6396148",
+        "next_index": "39999999999999000",
+        "reason": "complete",
+        "tiles": 1,
+        "type": "end"
+      },
+      "height": "10000000000000000",
+      "hits": 0,
+      "index_start": "39999999999999000",
+      "index_stop": "40000000000000000",
+      "index_width": 1000,
+      "location": "upper",
+      "native_cpu_seconds": 2.479641,
+      "process_seconds": 2.510496118993615,
+      "returncode": 0,
+      "seconds": 2.4812560960053816,
+      "tile_scale": "550",
+      "wall_timeout_seconds": 5
+    }
+  ],
+  "schema": "algorithm-ii-ej-local-bench-v1",
+  "source_sha256": "27e726a70ce495b76899ff1b5635140af77358d4f427b70ac6d26a221cc88a83",
+  "target": 375,
+  "utc_date": "2026-11-23T18:04:17.737799+00:00",
+  "worker_sha256": "68f4c566744d79cda00fbfcaea526b3438dc882fc5d66872561aa20257edb2bd"
+}

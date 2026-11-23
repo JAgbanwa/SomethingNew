@@ -1,0 +1,642 @@
+{
+  "build": {
+    "binary_sha256": "301406e8ae7682d100d042d4bf97f893dfff20b91118f4331572df0d1ee905e8",
+    "compiler": [
+      "c++"
+    ],
+    "flags": [
+      "-O3",
+      "-std=c++17"
+    ],
+    "schema": "algorithm-ii-bs-build-v1",
+    "source_sha256": "da2bf88775759a2cd677bc802e891b6fe673038ec13c539ec2fb4c049899f590",
+    "worker_version": "1.0.0-algorithm-ii-bs"
+  },
+  "created_utc": "2026-11-23T18:12:12.092007+00:00",
+  "notes": [
+    "Single-run local samples, not stable throughput forecasts.",
+    "Low and extended-low intervals overlap; do not add their coverage.",
+    "Native deadlines are checked after completed chunks.",
+    "Each timed-out process group supplies no accepted coverage."
+  ],
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "python": "3.12.14",
+  "samples": [
+    {
+      "accepted_coverage": true,
+      "argv": [
+        "booker-gap",
+        "--D-start",
+        "1",
+        "--D-stop",
+        "1048577",
+        "--ratio-max",
+        "1024",
+        "--chunk",
+        "65536",
+        "--progress-every",
+        "0",
+        "--deadline-seconds",
+        "30"
+      ],
+      "name": "low",
+      "records": [
+        {
+          "command": "booker-gap",
+          "n_filter": {
+            "maximum": null,
+            "minimum": null
+          },
+          "rational_d_filter": {
+            "height": null,
+            "maximum": null,
+            "minimum": null,
+            "values": null
+          },
+          "required": {
+            "gcd_X_Y": 1,
+            "integer_n": true,
+            "odd_X_Y": true,
+            "positive_Y": true
+          },
+          "schema": "algorithm-ii-375-v1",
+          "scope": {
+            "D_definition": "abs(u+v), integer; distinct from signed rational d",
+            "D_start": "1",
+            "D_stop_exclusive": "1048577",
+            "absolute_z_max": "ratio_max*D",
+            "absolute_z_min": "floor(3847*D/1000)",
+            "kind": "native_integer_gap_and_ratio_band",
+            "permutations": "all original-equation charts of each cube triple",
+            "ratio_max": "1024",
+            "sign_sector": "(u+v)*w<0; native pair ordered u>=v"
+          },
+          "source_sha256": {
+            "booker_native.py": "9693e170b7f9fe8ac580faa406961eb31f6900333a035fd0ebc09cfef71641a6",
+            "booker_sutherland.py": "b34ca893e631a7c66c3bb27a5a8d7deda03b03b9f303c28973f9c8f13fae1d73",
+            "bs_worker.cpp": "da2bf88775759a2cd677bc802e891b6fe673038ec13c539ec2fb4c049899f590",
+            "ej_worker.cpp": "27e726a70ce495b76899ff1b5635140af77358d4f427b70ac6d26a221cc88a83",
+            "elkies_jahnel.py": "bb289549501a5ce6389a81df2fab45acd29dbc91c48396062f8f3ce5dd514f9f",
+            "equation375.py": "1f08a76c52ad61073a0fe2ea6665850e70a735d494e3ae7d2f6d97708d8eda91",
+            "rational_d.py": "e6f5d1551ddc3c1f9ccb5c878569d13a9295b604b8a222c8c3117fed7bbef624",
+            "search375.py": "067b3e65e0a8825d43373fa48f8a1ed79045d13991913dbc62008c5fc79f8e70"
+          },
+          "target": 375,
+          "type": "start",
+          "version": "1.1.0"
+        },
+        {
+          "backend_counters": {
+            "candidates": "42524522",
+            "d_live": "235788",
+            "d_no_roots": "329045",
+            "d_skipped_mod3": "349525",
+            "d_skipped_prim": "134218",
+            "d_total": "1048576",
+            "exact_checks": "1269",
+            "hits": "0",
+            "hits_primitive": "0",
+            "pass_2adic": "42524522",
+            "pass_residue": "1269",
+            "roots": "500272"
+          },
+          "backend_terminal": {
+            "d_next": "1048577",
+            "reason": "complete",
+            "state": "complete",
+            "type": "end"
+          },
+          "chart_points_before_optional_filters": 0,
+          "complete": true,
+          "cube_candidates": 0,
+          "elapsed_seconds": 0.17637,
+          "native_start": {
+            "chunk": "65536",
+            "d_start": "1",
+            "d_stop": "1048577",
+            "deadline_seconds": "30",
+            "engine": "booker-sutherland",
+            "k": "375",
+            "method": "booker-sutherland-native-gap-v1",
+            "pair_sum_sign": "opposite_z",
+            "primitive": true,
+            "ratio_max": "1024",
+            "setup_seconds": 7.7014e-05,
+            "sieve_limit": "1024",
+            "square_sieve": true,
+            "type": "start",
+            "version": "1.0.0-algorithm-ii-bs",
+            "z_lo": "floor(3847*d/1000)"
+          },
+          "progress": {
+            "native_chunk": {
+              "counters": {
+                "candidates": "2672092",
+                "d_live": "14441",
+                "d_no_roots": "20861",
+                "d_skipped_mod3": "21845",
+                "d_skipped_prim": "8389",
+                "d_total": "65536",
+                "exact_checks": "84",
+                "hits": "0",
+                "hits_primitive": "0",
+                "pass_2adic": "2672092",
+                "pass_residue": "84",
+                "roots": "31467"
+              },
+              "d_start": "983041",
+              "d_stop": "1048577",
+              "seconds": 0.00960705,
+              "type": "chunk"
+            },
+            "next_D": "1048577"
+          },
+          "scope": {
+            "D_definition": "abs(u+v), integer; distinct from signed rational d",
+            "D_start": "1",
+            "D_stop_exclusive": "1048577",
+            "absolute_z_max": "ratio_max*D",
+            "absolute_z_min": "floor(3847*D/1000)",
+            "kind": "native_integer_gap_and_ratio_band",
+            "permutations": "all original-equation charts of each cube triple",
+            "ratio_max": "1024",
+            "sign_sector": "(u+v)*w<0; native pair ordered u>=v"
+          },
+          "solutions": 0,
+          "status": "complete",
+          "type": "end",
+          "unique_cube_triples": 0
+        }
+      ],
+      "returncode": 0,
+      "seconds_including_python_start": 0.22764877599547617,
+      "stderr": "",
+      "timed_out": false
+    },
+    {
+      "accepted_coverage": true,
+      "argv": [
+        "booker-gap",
+        "--D-start",
+        "1000000000",
+        "--D-stop",
+        "1001048576",
+        "--ratio-max",
+        "1024",
+        "--chunk",
+        "65536",
+        "--progress-every",
+        "0",
+        "--deadline-seconds",
+        "30"
+      ],
+      "name": "middle",
+      "records": [
+        {
+          "command": "booker-gap",
+          "n_filter": {
+            "maximum": null,
+            "minimum": null
+          },
+          "rational_d_filter": {
+            "height": null,
+            "maximum": null,
+            "minimum": null,
+            "values": null
+          },
+          "required": {
+            "gcd_X_Y": 1,
+            "integer_n": true,
+            "odd_X_Y": true,
+            "positive_Y": true
+          },
+          "schema": "algorithm-ii-375-v1",
+          "scope": {
+            "D_definition": "abs(u+v), integer; distinct from signed rational d",
+            "D_start": "1000000000",
+            "D_stop_exclusive": "1001048576",
+            "absolute_z_max": "ratio_max*D",
+            "absolute_z_min": "floor(3847*D/1000)",
+            "kind": "native_integer_gap_and_ratio_band",
+            "permutations": "all original-equation charts of each cube triple",
+            "ratio_max": "1024",
+            "sign_sector": "(u+v)*w<0; native pair ordered u>=v"
+          },
+          "source_sha256": {
+            "booker_native.py": "9693e170b7f9fe8ac580faa406961eb31f6900333a035fd0ebc09cfef71641a6",
+            "booker_sutherland.py": "b34ca893e631a7c66c3bb27a5a8d7deda03b03b9f303c28973f9c8f13fae1d73",
+            "bs_worker.cpp": "da2bf88775759a2cd677bc802e891b6fe673038ec13c539ec2fb4c049899f590",
+            "ej_worker.cpp": "27e726a70ce495b76899ff1b5635140af77358d4f427b70ac6d26a221cc88a83",
+            "elkies_jahnel.py": "bb289549501a5ce6389a81df2fab45acd29dbc91c48396062f8f3ce5dd514f9f",
+            "equation375.py": "1f08a76c52ad61073a0fe2ea6665850e70a735d494e3ae7d2f6d97708d8eda91",
+            "rational_d.py": "e6f5d1551ddc3c1f9ccb5c878569d13a9295b604b8a222c8c3117fed7bbef624",
+            "search375.py": "067b3e65e0a8825d43373fa48f8a1ed79045d13991913dbc62008c5fc79f8e70"
+          },
+          "target": 375,
+          "type": "start",
+          "version": "1.1.0"
+        },
+        {
+          "backend_counters": {
+            "candidates": "42762795",
+            "d_live": "203170",
+            "d_no_roots": "361663",
+            "d_skipped_mod3": "349525",
+            "d_skipped_prim": "134218",
+            "d_total": "1048576",
+            "exact_checks": "1369",
+            "hits": "0",
+            "hits_primitive": "0",
+            "pass_2adic": "42762795",
+            "pass_residue": "1369",
+            "roots": "504200"
+          },
+          "backend_terminal": {
+            "d_next": "1001048576",
+            "reason": "complete",
+            "state": "complete",
+            "type": "end"
+          },
+          "chart_points_before_optional_filters": 0,
+          "complete": true,
+          "cube_candidates": 0,
+          "elapsed_seconds": 0.192089,
+          "native_start": {
+            "chunk": "65536",
+            "d_start": "1000000000",
+            "d_stop": "1001048576",
+            "deadline_seconds": "30",
+            "engine": "booker-sutherland",
+            "k": "375",
+            "method": "booker-sutherland-native-gap-v1",
+            "pair_sum_sign": "opposite_z",
+            "primitive": true,
+            "ratio_max": "1024",
+            "setup_seconds": 0.000594496,
+            "sieve_limit": "31639",
+            "square_sieve": true,
+            "type": "start",
+            "version": "1.0.0-algorithm-ii-bs",
+            "z_lo": "floor(3847*d/1000)"
+          },
+          "progress": {
+            "native_chunk": {
+              "counters": {
+                "candidates": "2699631",
+                "d_live": "12783",
+                "d_no_roots": "22519",
+                "d_skipped_mod3": "21845",
+                "d_skipped_prim": "8389",
+                "d_total": "65536",
+                "exact_checks": "64",
+                "hits": "0",
+                "hits_primitive": "0",
+                "pass_2adic": "2699631",
+                "pass_residue": "64",
+                "roots": "32245"
+              },
+              "d_start": "1000983040",
+              "d_stop": "1001048576",
+              "seconds": 0.0102688,
+              "type": "chunk"
+            },
+            "next_D": "1001048576"
+          },
+          "scope": {
+            "D_definition": "abs(u+v), integer; distinct from signed rational d",
+            "D_start": "1000000000",
+            "D_stop_exclusive": "1001048576",
+            "absolute_z_max": "ratio_max*D",
+            "absolute_z_min": "floor(3847*D/1000)",
+            "kind": "native_integer_gap_and_ratio_band",
+            "permutations": "all original-equation charts of each cube triple",
+            "ratio_max": "1024",
+            "sign_sector": "(u+v)*w<0; native pair ordered u>=v"
+          },
+          "solutions": 0,
+          "status": "complete",
+          "type": "end",
+          "unique_cube_triples": 0
+        }
+      ],
+      "returncode": 0,
+      "seconds_including_python_start": 0.24742199299362255,
+      "stderr": "",
+      "timed_out": false
+    },
+    {
+      "accepted_coverage": true,
+      "argv": [
+        "booker-gap",
+        "--D-start",
+        "999998951425",
+        "--D-stop",
+        "1000000000001",
+        "--ratio-max",
+        "1024",
+        "--chunk",
+        "65536",
+        "--progress-every",
+        "0",
+        "--deadline-seconds",
+        "30"
+      ],
+      "name": "high",
+      "records": [
+        {
+          "command": "booker-gap",
+          "n_filter": {
+            "maximum": null,
+            "minimum": null
+          },
+          "rational_d_filter": {
+            "height": null,
+            "maximum": null,
+            "minimum": null,
+            "values": null
+          },
+          "required": {
+            "gcd_X_Y": 1,
+            "integer_n": true,
+            "odd_X_Y": true,
+            "positive_Y": true
+          },
+          "schema": "algorithm-ii-375-v1",
+          "scope": {
+            "D_definition": "abs(u+v), integer; distinct from signed rational d",
+            "D_start": "999998951425",
+            "D_stop_exclusive": "1000000000001",
+            "absolute_z_max": "ratio_max*D",
+            "absolute_z_min": "floor(3847*D/1000)",
+            "kind": "native_integer_gap_and_ratio_band",
+            "permutations": "all original-equation charts of each cube triple",
+            "ratio_max": "1024",
+            "sign_sector": "(u+v)*w<0; native pair ordered u>=v"
+          },
+          "source_sha256": {
+            "booker_native.py": "9693e170b7f9fe8ac580faa406961eb31f6900333a035fd0ebc09cfef71641a6",
+            "booker_sutherland.py": "b34ca893e631a7c66c3bb27a5a8d7deda03b03b9f303c28973f9c8f13fae1d73",
+            "bs_worker.cpp": "da2bf88775759a2cd677bc802e891b6fe673038ec13c539ec2fb4c049899f590",
+            "ej_worker.cpp": "27e726a70ce495b76899ff1b5635140af77358d4f427b70ac6d26a221cc88a83",
+            "elkies_jahnel.py": "bb289549501a5ce6389a81df2fab45acd29dbc91c48396062f8f3ce5dd514f9f",
+            "equation375.py": "1f08a76c52ad61073a0fe2ea6665850e70a735d494e3ae7d2f6d97708d8eda91",
+            "rational_d.py": "e6f5d1551ddc3c1f9ccb5c878569d13a9295b604b8a222c8c3117fed7bbef624",
+            "search375.py": "067b3e65e0a8825d43373fa48f8a1ed79045d13991913dbc62008c5fc79f8e70"
+          },
+          "target": 375,
+          "type": "start",
+          "version": "1.1.0"
+        },
+        {
+          "backend_counters": {
+            "candidates": "42537976",
+            "d_live": "185641",
+            "d_no_roots": "379192",
+            "d_skipped_mod3": "349525",
+            "d_skipped_prim": "134218",
+            "d_total": "1048576",
+            "exact_checks": "1284",
+            "hits": "0",
+            "hits_primitive": "0",
+            "pass_2adic": "42537976",
+            "pass_residue": "1284",
+            "roots": "499897"
+          },
+          "backend_terminal": {
+            "d_next": "1000000000001",
+            "reason": "complete",
+            "state": "complete",
+            "type": "end"
+          },
+          "chart_points_before_optional_filters": 0,
+          "complete": true,
+          "cube_candidates": 0,
+          "elapsed_seconds": 0.193419,
+          "native_start": {
+            "chunk": "65536",
+            "d_start": "999998951425",
+            "d_stop": "1000000000001",
+            "deadline_seconds": "30",
+            "engine": "booker-sutherland",
+            "k": "375",
+            "method": "booker-sutherland-native-gap-v1",
+            "pair_sum_sign": "opposite_z",
+            "primitive": true,
+            "ratio_max": "1024",
+            "setup_seconds": 0.00461019,
+            "sieve_limit": "1000000",
+            "square_sieve": true,
+            "type": "start",
+            "version": "1.0.0-algorithm-ii-bs",
+            "z_lo": "floor(3847*d/1000)"
+          },
+          "progress": {
+            "native_chunk": {
+              "counters": {
+                "candidates": "2731629",
+                "d_live": "11636",
+                "d_no_roots": "23666",
+                "d_skipped_mod3": "21845",
+                "d_skipped_prim": "8389",
+                "d_total": "65536",
+                "exact_checks": "82",
+                "hits": "0",
+                "hits_primitive": "0",
+                "pass_2adic": "2731629",
+                "pass_residue": "82",
+                "roots": "32036"
+              },
+              "d_start": "999999934465",
+              "d_stop": "1000000000001",
+              "seconds": 0.0107834,
+              "type": "chunk"
+            },
+            "next_D": "1000000000001"
+          },
+          "scope": {
+            "D_definition": "abs(u+v), integer; distinct from signed rational d",
+            "D_start": "999998951425",
+            "D_stop_exclusive": "1000000000001",
+            "absolute_z_max": "ratio_max*D",
+            "absolute_z_min": "floor(3847*D/1000)",
+            "kind": "native_integer_gap_and_ratio_band",
+            "permutations": "all original-equation charts of each cube triple",
+            "ratio_max": "1024",
+            "sign_sector": "(u+v)*w<0; native pair ordered u>=v"
+          },
+          "solutions": 0,
+          "status": "complete",
+          "type": "end",
+          "unique_cube_triples": 0
+        }
+      ],
+      "returncode": 0,
+      "seconds_including_python_start": 0.23530252799537266,
+      "stderr": "",
+      "timed_out": false
+    },
+    {
+      "accepted_coverage": true,
+      "argv": [
+        "booker-gap",
+        "--D-start",
+        "1",
+        "--D-stop",
+        "100000001",
+        "--ratio-max",
+        "1024",
+        "--chunk",
+        "65536",
+        "--progress-every",
+        "0",
+        "--deadline-seconds",
+        "30"
+      ],
+      "name": "extended_low",
+      "records": [
+        {
+          "command": "booker-gap",
+          "n_filter": {
+            "maximum": null,
+            "minimum": null
+          },
+          "rational_d_filter": {
+            "height": null,
+            "maximum": null,
+            "minimum": null,
+            "values": null
+          },
+          "required": {
+            "gcd_X_Y": 1,
+            "integer_n": true,
+            "odd_X_Y": true,
+            "positive_Y": true
+          },
+          "schema": "algorithm-ii-375-v1",
+          "scope": {
+            "D_definition": "abs(u+v), integer; distinct from signed rational d",
+            "D_start": "1",
+            "D_stop_exclusive": "100000001",
+            "absolute_z_max": "ratio_max*D",
+            "absolute_z_min": "floor(3847*D/1000)",
+            "kind": "native_integer_gap_and_ratio_band",
+            "permutations": "all original-equation charts of each cube triple",
+            "ratio_max": "1024",
+            "sign_sector": "(u+v)*w<0; native pair ordered u>=v"
+          },
+          "source_sha256": {
+            "booker_native.py": "9693e170b7f9fe8ac580faa406961eb31f6900333a035fd0ebc09cfef71641a6",
+            "booker_sutherland.py": "b34ca893e631a7c66c3bb27a5a8d7deda03b03b9f303c28973f9c8f13fae1d73",
+            "bs_worker.cpp": "da2bf88775759a2cd677bc802e891b6fe673038ec13c539ec2fb4c049899f590",
+            "ej_worker.cpp": "27e726a70ce495b76899ff1b5635140af77358d4f427b70ac6d26a221cc88a83",
+            "elkies_jahnel.py": "bb289549501a5ce6389a81df2fab45acd29dbc91c48396062f8f3ce5dd514f9f",
+            "equation375.py": "1f08a76c52ad61073a0fe2ea6665850e70a735d494e3ae7d2f6d97708d8eda91",
+            "rational_d.py": "e6f5d1551ddc3c1f9ccb5c878569d13a9295b604b8a222c8c3117fed7bbef624",
+            "search375.py": "067b3e65e0a8825d43373fa48f8a1ed79045d13991913dbc62008c5fc79f8e70"
+          },
+          "target": 375,
+          "type": "start",
+          "version": "1.1.0"
+        },
+        {
+          "backend_counters": {
+            "candidates": "4052713299",
+            "d_live": "20463031",
+            "d_no_roots": "33403636",
+            "d_skipped_mod3": "33333333",
+            "d_skipped_prim": "12800000",
+            "d_total": "100000000",
+            "exact_checks": "123547",
+            "hits": "0",
+            "hits_primitive": "0",
+            "pass_2adic": "4052713299",
+            "pass_residue": "123547",
+            "roots": "47671333"
+          },
+          "backend_terminal": {
+            "d_next": "100000001",
+            "reason": "complete",
+            "state": "complete",
+            "type": "end"
+          },
+          "chart_points_before_optional_filters": 0,
+          "complete": true,
+          "cube_candidates": 0,
+          "elapsed_seconds": 15.34882,
+          "native_start": {
+            "chunk": "65536",
+            "d_start": "1",
+            "d_stop": "100000001",
+            "deadline_seconds": "30",
+            "engine": "booker-sutherland",
+            "k": "375",
+            "method": "booker-sutherland-native-gap-v1",
+            "pair_sum_sign": "opposite_z",
+            "primitive": true,
+            "ratio_max": "1024",
+            "setup_seconds": 0.000220118,
+            "sieve_limit": "10000",
+            "square_sieve": true,
+            "type": "start",
+            "version": "1.0.0-algorithm-ii-bs",
+            "z_lo": "floor(3847*d/1000)"
+          },
+          "progress": {
+            "native_chunk": {
+              "counters": {
+                "candidates": "2362842",
+                "d_live": "11555",
+                "d_no_roots": "19473",
+                "d_skipped_mod3": "19200",
+                "d_skipped_prim": "7372",
+                "d_total": "57600",
+                "exact_checks": "67",
+                "hits": "0",
+                "hits_primitive": "0",
+                "pass_2adic": "2362842",
+                "pass_residue": "67",
+                "roots": "27603"
+              },
+              "d_start": "99942401",
+              "d_stop": "100000001",
+              "seconds": 0.0102873,
+              "type": "chunk"
+            },
+            "next_D": "100000001"
+          },
+          "scope": {
+            "D_definition": "abs(u+v), integer; distinct from signed rational d",
+            "D_start": "1",
+            "D_stop_exclusive": "100000001",
+            "absolute_z_max": "ratio_max*D",
+            "absolute_z_min": "floor(3847*D/1000)",
+            "kind": "native_integer_gap_and_ratio_band",
+            "permutations": "all original-equation charts of each cube triple",
+            "ratio_max": "1024",
+            "sign_sector": "(u+v)*w<0; native pair ordered u>=v"
+          },
+          "solutions": 0,
+          "status": "complete",
+          "type": "end",
+          "unique_cube_triples": 0
+        }
+      ],
+      "returncode": 0,
+      "seconds_including_python_start": 15.388178410001274,
+      "stderr": "",
+      "timed_out": false
+    }
+  ],
+  "schema": "algorithm-ii-native-booker-calibration-v1",
+  "source_sha256": {
+    "booker_native.py": "9693e170b7f9fe8ac580faa406961eb31f6900333a035fd0ebc09cfef71641a6",
+    "booker_sutherland.py": "b34ca893e631a7c66c3bb27a5a8d7deda03b03b9f303c28973f9c8f13fae1d73",
+    "bs_worker.cpp": "da2bf88775759a2cd677bc802e891b6fe673038ec13c539ec2fb4c049899f590",
+    "ej_worker.cpp": "27e726a70ce495b76899ff1b5635140af77358d4f427b70ac6d26a221cc88a83",
+    "elkies_jahnel.py": "bb289549501a5ce6389a81df2fab45acd29dbc91c48396062f8f3ce5dd514f9f",
+    "equation375.py": "1f08a76c52ad61073a0fe2ea6665850e70a735d494e3ae7d2f6d97708d8eda91",
+    "rational_d.py": "e6f5d1551ddc3c1f9ccb5c878569d13a9295b604b8a222c8c3117fed7bbef624",
+    "search375.py": "067b3e65e0a8825d43373fa48f8a1ed79045d13991913dbc62008c5fc79f8e70"
+  },
+  "target": "375"
+}

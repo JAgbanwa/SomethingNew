@@ -16,6 +16,53 @@ Every emitted solution is rechecked in the original, unsquared equation using
 exact rational arithmetic. The implementations and their finite coverage are
 documented; a completed run with no solutions excludes only its recorded region.
 
+## Large ranges and resumable work
+
+The bounds of 500 and 50 used in the original examples are **validation
+settings**. They are not the intended discovery limits. Version 1.1 adds a
+compiled, exact Booker gap worker and a compact, resumable campaign system.
+The committed [large campaign plan](campaigns/large.json) selects:
+
+| Backend | Planned region | Partition |
+| --- | --- | --- |
+| Native Booker--Sutherland | `1 <= D <= 10^12`, `floor(3847D/1000) <= abs(w) <= 1024D`, `(u+v)w < 0` | Up to 1,048,576 integer gaps per task |
+| Elkies--Elsenhans--Jahnel | `10^15 <= max(abs(u),abs(v),abs(w)) < 1.6*10^16`, all proved ratio bands | Four doubling shells; 100,000 ratio-index units per task |
+| Original equation | Every admissible chart produced in these regions | No optional cutoff on rational `d`, rational height, or integer `n` |
+
+These are **planned regions**, not a report that the whole campaign has been
+completed. A Booker ratio cap is a genuine restriction, and its gap region is
+not a complete cube box. The EJ region starts at `10^15`; this campaign does
+not certify everything below that height. The much larger logical partitions
+are generated arithmetically, so creating the plan does not create billions of
+job files.
+
+```sh
+cd '375/Algorithm II'
+make build
+
+# Execute bounded work; repeat the same command to resume it.
+python3 campaign375.py run --plan campaigns/large.json \
+  --state-dir runs/large --engine booker --max-tasks 10
+
+# Inspect actual verified progress, not the size of the plan.
+python3 campaign375.py status --plan campaigns/large.json --state-dir runs/large
+```
+
+The default attempt budgets are 30 seconds for native Booker (checked at
+completed chunks) and 1000 tiles for EJ. They are checkpoint budgets,
+not hard wall-clock deadlines. An unfinished attempt returns exit 3; repeating
+the command continues its remaining interval. All output passes the common
+strict original-equation verifier. Sources, regions, and output fingerprints
+are checked before progress is credited.
+
+Actual large-coordinate measurements and the bounds they cover are in
+[LARGE_SEARCH.md](LARGE_SEARCH.md), with reproducible native calibration in
+[large_bs_bench.json](large_bs_bench.json) and
+[large_ej_bench.json](large_ej_bench.json). In particular, **full EJ shells at
+these heights are prohibitively costly for this reference implementation on
+a single machine**. Arbitrary-precision coordinate support does not imply
+the historical authors' optimized throughput. See [EJ_SCALING.md](EJ_SCALING.md).
+
 ## The equation and the corrected parameter
 
 Write
@@ -65,7 +112,8 @@ magnitude or sign condition is imposed unless explicitly selected as a filter.
 Requirements:
 
 * Python **3.10 or newer**, using only its standard library.
-* For the lattice backend: a C++17 compiler and GMP development headers/libraries.
+* For both native backends: a C++17 compiler and GMP development headers/libraries.
+* For the campaign runner: a POSIX platform providing advisory file locks (for example Linux).
 * `make` is convenient but optional.
 
 On Debian/Ubuntu the corresponding packages are `python3`, `build-essential`,
@@ -81,15 +129,38 @@ The equivalent commands without Make are
 
 ```sh
 python3 -c 'from elkies_jahnel import build_worker; print(build_worker())'
+python3 -c 'from booker_native import build_worker; print(build_worker())'
 python3 -m unittest discover -s tests -v
 ```
 
-The first lattice run can also build its worker automatically. Set `CXX` to a
+The first run of either native backend can also build its worker automatically. Set `CXX` to a
 compiler command if needed. The source and binary fingerprints are checked before
 reuse; compilation errors fail the run. Generated binaries stay in `build/`.
-The Booker and rational-`d` searches need only Python.
+The portable Booker reference and rational-`d` searches need only Python.
 
-## 1. Booker–Sutherland search
+## 1. Booker–Sutherland searches
+
+### Compiled gap backend for large ranges
+
+```sh
+python3 search375.py booker-gap \
+  --D-start 999998951425 --D-stop 1000000000001 --ratio-max 1024 \
+  --deadline-seconds 30 --output large-gap.jsonl
+```
+
+`D-start` is inclusive and `D-stop` is **exclusive**. This native worker uses
+segmented factorization, complete modular cube roots, CRT, batched residue
+sieving and exact GMP reconstruction. It searches
+`floor(3847D/1000) <= abs(w) <= ratio_max*D` in the sign sector
+`(u+v)*w<0`, where `D=abs(u+v)`. The public wrapper verifies the native
+contract and maps every emitted cube triple through all strict original charts.
+Its scope, finite arithmetic limits, interruption behavior and provenance are
+documented in [BS_NATIVE_METHOD.md](BS_NATIVE_METHOD.md).
+
+The integer gap `D` remains distinct from the signed rational `d`. There is
+no substitution of a rational number into an integer-modulus algorithm.
+
+### Portable reference and validation boxes
 
 `booker_sutherland.py` implements segmented gap factorization, complete modular
 cube roots, prime-power lifting, CRT, square sieving, and exact reconstruction.
@@ -276,7 +347,7 @@ Exit status:
 | --- | --- |
 | 0 | Requested finite region completed, or explicit verification completed |
 | 2 | Invalid input, invalid candidate, failed build, or failed worker contract |
-| 3 | Lattice task stopped at a tile budget/signal before its region completed |
+| 3 | A native task stopped at its budget/signal before its region completed |
 | 130 | Python process interrupted; no completed-region claim |
 
 Progress is written to stderr. Booker progress marks only whole completed D
@@ -304,7 +375,11 @@ the performance of the authors' historical optimized executables.
 * `search375.py`: fixed-375 CLI, finite scopes, strict output and status handling.
 * `equation375.py`: shared original-equation verification and chart conversion.
 * `booker_sutherland.py`, `BS_METHOD.md`: modular-root/CRT/square search and proof.
+* `bs_worker.cpp`, `booker_native.py`, `BS_NATIVE_METHOD.md`: compiled gap backend and validated interface.
 * `ej_worker.cpp`, `elkies_jahnel.py`, `EJ_METHOD.md`: exact lattice search and proof.
+* `campaign375.py`, `campaigns/large.json`: lazy task partitions, atomic checkpoints, resumption and audit.
+* `LARGE_SEARCH.md`, `EJ_SCALING.md`: planned large ranges, actual measurements and costs.
+* `benchmark_booker.py`: reproducible bounded native calibration.
 * `rational_d.py`: direct rational-parameter search with all integer scales.
 * `tests/`: independent arithmetic, coverage and integration controls.
 * `VALIDATION.md`: actual local validation and bounded-run results.

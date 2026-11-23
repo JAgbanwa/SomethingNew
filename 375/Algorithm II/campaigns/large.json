@@ -1,0 +1,61 @@
+{
+  "created_utc": "2026-11-23T18:17:10.604092+00:00",
+  "families": [
+    {
+      "engine": "booker",
+      "ratio_max": "1024",
+      "start": "1",
+      "stop": "1000000000001",
+      "task_width": "1048576"
+    },
+    {
+      "engine": "elkies",
+      "height": "1000000000000000",
+      "start": "36056239260",
+      "stop": "4000000000000000",
+      "task_width": "100000",
+      "tile_scale": "11/2"
+    },
+    {
+      "engine": "elkies",
+      "height": "2000000000000000",
+      "start": "57235712130",
+      "stop": "8000000000000000",
+      "task_width": "100000",
+      "tile_scale": "11/2"
+    },
+    {
+      "engine": "elkies",
+      "height": "4000000000000000",
+      "start": "90856029642",
+      "stop": "16000000000000000",
+      "task_width": "100000",
+      "tile_scale": "11/2"
+    },
+    {
+      "engine": "elkies",
+      "height": "8000000000000000",
+      "start": "144224957032",
+      "stop": "32000000000000000",
+      "task_width": "100000",
+      "tile_scale": "11/2"
+    }
+  ],
+  "name": "large-375",
+  "optional_filters": "none",
+  "schema": "algorithm-ii-campaign-v1",
+  "source_sha256": {
+    "booker_native.py": "9693e170b7f9fe8ac580faa406961eb31f6900333a035fd0ebc09cfef71641a6",
+    "booker_sutherland.py": "b34ca893e631a7c66c3bb27a5a8d7deda03b03b9f303c28973f9c8f13fae1d73",
+    "bs_worker.cpp": "da2bf88775759a2cd677bc802e891b6fe673038ec13c539ec2fb4c049899f590",
+    "campaign375.py": "e7562e8be40aa64ad9b743b8f31c9d78fb932ff4bd11a1c59f6183f52415fd87",
+    "ej_worker.cpp": "27e726a70ce495b76899ff1b5635140af77358d4f427b70ac6d26a221cc88a83",
+    "elkies_jahnel.py": "bb289549501a5ce6389a81df2fab45acd29dbc91c48396062f8f3ce5dd514f9f",
+    "equation375.py": "1f08a76c52ad61073a0fe2ea6665850e70a735d494e3ae7d2f6d97708d8eda91",
+    "rational_d.py": "e6f5d1551ddc3c1f9ccb5c878569d13a9295b604b8a222c8c3117fed7bbef624",
+    "search375.py": "067b3e65e0a8825d43373fa48f8a1ed79045d13991913dbc62008c5fc79f8e70"
+  },
+  "status": "planned_only_no_completed_search_implied",
+  "target": "375",
+  "task_count": "599997669947"
+}

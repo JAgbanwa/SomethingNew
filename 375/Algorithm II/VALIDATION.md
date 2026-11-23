@@ -5,7 +5,7 @@ The original repository source inspected was commit
 `857adf3f89831816461641d6d4f7bbf89783304f`. The Python runtime was 3.12.14; the
 native lattice worker compiled successfully with C++17 and GMP.
 
-## Automated checks
+## Original version 1.0 checks
 
 ```sh
 make test
@@ -62,3 +62,31 @@ diagnostic measurements; they are not a large-search performance comparison.
 
 These runs establish completion of the stated finite regions. They neither
 claim a new primitive375 representation nor establish global nonexistence.
+
+## Version 1.1 large-range work
+
+Current `make test` result: **79 tests passed**, process exit code 0
+(5.817 seconds with the already compiled native workers).
+
+The large-range revision adds the native Booker worker and a source-pinned,
+resumable campaign runner. Native checks compare against independent coordinate
+enumeration and the portable reference, exercise singular roots and a nonempty
+large-coordinate target-3 control, and check primitive output separately from
+safe gap pruning. Real SIGINT and deadline tests verify that the continuation
+starts at the first fully unprocessed D and that prefix plus continuation
+agrees with an uninterrupted run.
+
+Campaign tests include an actual partial-to-complete EJ run, disjoint arithmetic
+task partitions, two-process lock exclusion, exact source/scope fingerprints,
+corrupted/missing/trailing output rejection, and reauditing of checkpoint
+digests. Noncanonical aliases such as `task-00` cannot double-count `task-0`
+and falsely complete a campaign.
+
+The actual large-coordinate runs are documented in [LARGE_SEARCH.md](LARGE_SEARCH.md).
+In particular, native Booker completed `D=1..100,000,000` with ratio cap 1024,
+plus two disjoint 1,048,576-gap samples near `10^9` and `10^12`, with zero
+accepted points. EJ completed six distinct width-1000 ratio bands at heights
+`10^15` and `10^16`, each measured at three tile scales, with zero hits.
+The reports `large_bs_bench.json` and `large_ej_bench.json` preserve exact
+regions, fingerprints and outcomes. The enormous `campaigns/large.json`
+region is a plan and is not declared completed by these measurements.
