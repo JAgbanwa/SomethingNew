@@ -6,8 +6,10 @@
 with n an integer, in the two accepted charts of ../Scripts for large-scale computations/README.md:
   integer chart  n, x, y integers;
   half chart     x = X/2, y = Y/2, X, Y odd.
-Each point carries the same flags as that folder's worker: primitive_point (gcd(n, x) = 1, resp.
-gcd(X, Y) = 1), primitive_cubes (gcd(a, b, c) = 1) and desired (both). Every point is checked exactly
+Each point carries primitive_point (gcd(n, x, y) = 1, resp. gcd(X, Y) = 1),
+primitive_cubes (gcd(a, b, c) = 1) and desired (both). The point-gcd test agrees
+with the fixed-g folder; its diagnostic desired flag is point-only, whereas
+this primitive-cube search requires both flags. Every point is checked exactly
 on the equation before it is printed.
 
   python3 to_points375.py collected/hits.jsonl     # worker hits (raw output lines are accepted too)
@@ -51,7 +53,7 @@ def points(a: int, b: int, c: int, k: int) -> list[dict]:
         if d != Fraction(A + C, A + B) or d_conj != Fraction(B + C, A + B):
             raise AssertionError("closed form of d disagrees")
         if x.denominator == 1:
-            chart, pg = "integer", gcd(n, int(x))
+            chart, pg = "integer", gcd(gcd(n, int(x)), int(s))
         else:
             X, Y = int(2 * x), int(2 * s)
             if X % 2 == 0 or Y % 2 == 0:

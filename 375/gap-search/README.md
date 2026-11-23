@@ -1,37 +1,57 @@
 # CE375 primitive gap search: finding primitive representations of 375
 
-**Goal.** Rational `x, y` with `n` an integer on
+**Goal.** Find primitive integer representations `a^3+b^3+c^3=375`, then convert
+them to points on
 
 ```text
 y² = (x + 6n + 3)² + (36n³ + 54n² + 27n − 58)/x,     36n³ + 54n² + 27n − 58 = ((6n+3)³ − 375)/6,
 ```
 
-accepting primitive integers `(n, x)` with `y` an integer, or `x = X/2`, `y = Y/2` with `X, Y` odd
-and `gcd(X, Y) = 1`. With `A = −x + y`, `B = −x − y`, `C = 2x + 6n + 3`, the equation is exactly
-`A³ + B³ + C³ = 375`, so the accepted points are the points of *primitive* representations
-`375 = a³ + b³ + c³`, `gcd(a, b, c) = 1` (one representation gives up to three points, in either
-chart). This folder searches for those representations; `to_points375.py` turns each one into its
-points `(n, x, ±y)` with the same flags as the d-first folder (`primitive_point`,
-`primitive_cubes`, `desired`) and checks every point exactly on the equation.
+With `A = −x + y`, `B = −x − y`, `C = 2x + 6n + 3`, the equation is equivalent to
+`A³ + B³ + C³ = 375`. The integer chart has integer `n,x,y`; the half-integer chart
+has `x=X/2`, `y=Y/2` with odd `X,Y`. `to_points375.py` checks the equation exactly
+and records cube primitivity separately from point primitivity. The latter is
+`gcd(n,x,y)=1` in the integer chart and `gcd(X,Y)=1` in the half chart. This
+folder's `desired` flag requires both primitive cubes and a primitive point.
+The fixed-`g` folder's diagnostic `desired` flag tests point primitivity alone;
+its production restriction already forces primitive cubes.
+
+**Notation:** the original discussion's integer `x` is **`n` here**; its rational
+`m` is **`x` here**. The discussion's `10^14` is an example search area; no
+fixed magnitude threshold is part of the requested acceptance criteria.
+Task gap bounds and the heuristic cube-height frontier have separate meanings.
+See the [search selection guide](../README.md).
+
+**Charity Engine:** start with the reproducible local/container pilot in
+[`CHARITY_ENGINE_HANDOFF.md`](CHARITY_ENGINE_HANDOFF.md). Campaign generation does
+not submit jobs. The guide covers finite work units, build identity, collection,
+restarts, calibration, and the CE execution contract.
 
 ## 1. Why this folder exists
 
-The engine in [`../Scripts for large-scale computations/`](../Scripts%20for%20large-scale%20computations/)
-reaches each point through the slope `(A+C)/(A+B)` of its representation, enumerated by height `H`. A representation of size `M` only appears at
-height about `M/g`, with `g = gcd(A+B, A+C)`, so it is reached only if `g ≥ M/H`. Nothing forces
-`g` to be large, and under the Booker–Sutherland model the d-first yield on 1,800 core-hours
-(`H ≈ 1.5·10⁶`) is `E/ρ ≈ 5·10⁻⁹` for a frontier of `10¹⁵`. The search here enumerates where
-solutions are expected instead, `δ = |a+b|` and the cube roots of 375 modulo `δ`
-(Booker–Sutherland), restricted to `δ` that can carry a primitive solution, and starts at the
-frontier of what has already been searched. Measured plans give `E/ρ ≈ 0.4–2.7` on the same
-1,800 hours (section 4), about **10⁸ times** the d-first figure. With `ρ = 0.0586` (computed in
-section 3) that is a **2–14 % chance** of a primitive solution, depending on the frontier.
+This engine enumerates the cancellation gap `δ = |a+b|` and cube roots of 375
+modulo `δ`, using a Booker–Sutherland-style search adapted to the cube factor
+`5³` in 375. It searches primitive representations directly in an assigned
+gap/ratio region and has a compiled worker plus a distributed-task pipeline.
+It is the recommended starting point for a CE pilot.
 
-The full rationale, with proofs, is [`ce375_rationale.pdf`](ce375_rationale.pdf) (source
-[`ce375_rationale.tex`](ce375_rationale.tex)).
+The current engine in
+[`../Scripts for large-scale computations/`](../Scripts%20for%20large-scale%20computations/)
+has a different contract: it searches reduced slopes `(A+C)/(A+B)=p/q` with
+**only `g=-1,+1`**, through slope height `H=max(abs(p),q)`. Its normal height
+limit is `200000000`. It is useful for that restricted family, not general
+primitive-cube coverage. The complementary compiled
+[Elkies–Jahnel backend](../Scripts%20for%20large-scale%20computations/elkies-jahnel/)
+organizes its search by cube-height shells and lattice tiles. It should be
+benchmarked as a separate method before allocating a large campaign to it.
 
-That engine stays useful for exact statements about points whose slope has small height; it is not
-the tool for finding a representation.
+The historical rationale is retained as
+[`ce375_rationale.pdf`](ce375_rationale.pdf) (source
+[`ce375_rationale.tex`](ce375_rationale.tex)). Its quantitative d-first comparison
+predates the current fixed-`g` contract. Section 4 below preserves historical
+timings and model outputs with that qualification; they are not a measured
+speedup or discovery probability for the current engines. The current frontier
+interpretation is corrected in section 3.
 
 ## 2. Mathematics
 
@@ -59,25 +79,41 @@ directly, for any `e` (the inherited brute force refused `5^11 | δ`).
 
 ## 3. The frontier and the yield model
 
-For 114, Booker and Sutherland's runs excluded every `δ` up to `10¹⁹/54`. Their algorithm is
-stated for cube-free `k`, so 375 may not have been in those runs. The public bound that does
-cover all `k < 1000`, primitive solutions of 375 included, is Elsenhans–Jahnel's Elkies-type search
-with `max(|a|, |b|, |c|) ≤ 10¹⁴` (Huisman later reached `10¹⁵`). The planner takes this
-**frontier** `N` as a parameter (`--frontier`, default `10¹⁴`) and counts only solutions beyond it:
-the largest coordinate is `(δ + √Δ)/2`, so a solution lies beyond `N` exactly when
+The [Booker–Sutherland paper](https://arxiv.org/abs/2007.01209) treats cube-free
+targets; its search limits must not automatically be attributed to primitive
+375. Historical height searches are described in
+[Sutherland's 2022 survey](https://math.mit.edu/~drew/Mordell2022.pdf) and
+[Huisman's 2016 paper](https://arxiv.org/abs/1604.07746), the latter reporting a
+search for `k<1000` through coordinate magnitude `10^15`. These historical
+reports do not establish the entire currently unsearched gap/ratio region.
+Record the source and exact scope of any assumed exclusion before a production
+campaign; the planner's default is not a verification of the present frontier.
+
+The planner takes a cube-coordinate **frontier** `N` as `--frontier` (default
+`10^14`) and models the expected yield beyond it. It uses the asymptotic
+expression
 
 ```text
 z³ > δ (3 (2N − δ)² + δ²) / 4.
 ```
 
-Integrating the Booker–Sutherland density `ρ/(2√α) δ^(−1/2) z^(−3/2)` over `δ/α < z ≤ Rδ` above that
-curve gives the expected number of primitive solutions `E` in a campaign, as a multiple of `ρ`.
-The frontier moves the best region to *small* `δ` with a *large* ratio `R`, where each `δ` is cheap
-and carries a lot of heuristic weight.
+This is a **planning approximation**, not an exact exclusion filter. In the
+normalization `Δ=(4(z³−K)/δ−δ²)/3`, where `K` is the appropriate signed target,
+the largest coordinate is `(δ+√Δ)/2`. For `δ<=2N`, its exact threshold includes
+the additional term `+K` on the right; for `δ>2N` it exceeds `N` automatically.
+The planner neglects the signed constant at large scale. The worker does not
+use `--frontier` to prune candidates: it checks the actual target exactly.
 
-**`ρ` for primitive solutions of 375 is `0.0586`** (`tools/rho.py`, record in
-`validation/rho-P1e8.txt`). Booker and Sutherland tabulate `ρ` only for cube-free `k`, so it is
-computed from local densities, `ρ = C ∏_p σ_p`:
+Integrating the Booker–Sutherland density
+`ρ/(2√α) δ^(−1/2) z^(−3/2)` over the planned region gives a heuristic expected
+count `E`. Applying that distribution model to primitive 375 and converting
+`E` to `1-exp(-E)` are modeling assumptions. They do not give a verified
+discovery probability or a guarantee that a representation will be found.
+
+The recorded truncated-product estimate is **`ρ ≈ 0.0586`** for primitive
+solutions of 375 (`tools/rho.py`, record in `validation/rho-P1e8.txt`). Booker and
+Sutherland tabulate `ρ` only for cube-free `k`, so this estimate is computed
+from local densities, `ρ = C ∏_p σ_p`:
 
 * `p ≡ 2 (mod 3)`, `p ∤ 3k`: `σ_p = 1`.
 * `p ≡ 1 (mod 3)`, `p ∤ 3k`: `σ_p = N_p/p²` with `N_p = p² + 6p − L` if `k` is a cube mod `p` and
@@ -90,7 +126,13 @@ computed from local densities, `ρ = C ∏_p σ_p`:
 The Euler product over `p ≡ 1 (mod 3)` converges conditionally; truncated at `10⁵, 10⁶, 10⁷, 10⁸`
 it gives `ρ₃₇₅ = 0.05865, 0.05862, 0.05862, 0.05861`. For comparison `ρ₁₁₄ = 0.05846`.
 
-## 4. Measured plans for 1,800 core-hours
+## 4. Historical timing records and model illustrations
+
+The following figures are retained from the earlier repository report. They
+have not been re-audited as part of this handoff, are not CE hardware
+measurements, and do not benchmark the new Elkies–Jahnel backend. The d-first
+column refers to the older general-`g` comparison, not today's fixed-`g` worker.
+Use new measurements and a documented frontier for a proposed allocation.
 
 Calibration (`gap_campaign.py --calibrate`, k = 375, `--primitive`, development host, one core):
 
@@ -104,24 +146,24 @@ Calibration (`gap_campaign.py --calibrate`, k = 375, `--primitive`, development 
 | 32768 | 0.700 | 0.690 |
 | 65536 | 1.206 | 1.186 |
 
-Best plans (`gap_campaign.py --optimize`, 1,800 core-hours), against the d-first engine on the same
-hours and the same model:
+Historical model illustrations (`gap_campaign.py --optimize`, 1,800 core-hours):
 
-| frontier N | best plan | E/ρ | **E (ρ = 0.0586)** | **P(≥ 1 solution)** | E, d-first (H ≈ 1.5·10⁶) |
+| assumed frontier N | historical plan | E/ρ | E (ρ = 0.0586) | model P(≥ 1) | old general-g d-first model (H ≈ 1.5·10⁶) |
 | --- | --- | ---: | ---: | ---: | ---: |
 | 10¹⁴ | δ from 5.6·10⁸ to 2.4·10¹³, R = 4096 | 2.66 | 0.156 | **14.4 %** | ~3·10⁻⁹ |
 | 10¹⁵ | δ from 5.6·10⁹ to 2.4·10¹³, R = 4096 | 1.07 | 0.063 | **6.1 %** | ~3·10⁻¹⁰ |
 | 10¹⁶ | δ from 5.6·10⁹ to 1.4·10¹³, R = 16384 | 0.39 | 0.023 | **2.3 %** | ~3·10⁻¹¹ |
 
-Compare 1 in 151,000 for 114 on the same hours. **One thing must be confirmed before launch:
-the frontier.** Ask Booker or Sutherland (or Charity Engine) whether any search beyond the
-Elkies-type bounds has covered primitive solutions of 375. A higher frontier lowers the odds as in
-the table; a search that already covered this `(δ, z)` region would make the campaign redundant.
+The value of these illustrations depends on their model and frontier
+assumptions. Existing coverage of the proposed `(δ,z)` region can make a
+campaign redundant. Resolving that scope, measuring current throughput, and
+validating the image and retry workflow are separate prerequisites for a large
+allocation. No contact or new verification of the frontier is claimed here.
 
 ## 5. Running
 
 ```sh
-make && make test                                    # 34 tests, about 2.5 minutes
+make && make test                                    # run the current suite
 python3 gap_campaign.py --calibrate --calibration-d 1e10 --save-calibration calib.json   # on the grid's CPU
 python3 gap_campaign.py --optimize calib.json --core-hours 1800 --frontier <confirmed N>
 python3 gap_campaign.py --campaign-id ce375-gap --core-hours 1800 --d-start <D0> --ratio-max <R> \
@@ -131,13 +173,25 @@ python3 run_gap_task.py --task ce375-gap-tasks/tasks/ce375-gap-0000.json --outpu
 # afterwards
 python3 collect_gap.py --page ce375-gap-tasks/page.json --results results --output-dir collected --require-complete
 python3 audit_gap.py   --page ce375-gap-tasks/page.json --results results --fraction 0.02
-python3 to_points375.py collected/hits.jsonl              # points and d in both charts, DESIRED flagged
+python3 to_points375.py collected/hits.jsonl              # when the hit file is nonempty
 ```
 
-Tasks are primitive by default (`"primitive": true`); the runner, collector and auditor all check
-it. Checkpointing, continuations, coverage gaps and the 2 % audit are those of the 114 pipeline.
+Tasks are primitive by default (`"primitive": true`). Use the
+[handoff guide](CHARITY_ENGINE_HANDOFF.md) for a fixed, small pilot before a
+production-sized page. It also distinguishes application checkpoints from CE
+CLI checkpoints, describes release hashes and finite-task continuation, and
+explains the limits of a sampled audit. The runner and collector accept
+`--expected-worker-sha256`; changed-binary resumes and mixed-binary collections
+are rejected. Completion also requires a matching worker terminal record and
+a successful exit. An indefinite controller can keep
+issuing more tasks; extending one gap interval with a fixed ratio cap is not
+complete coverage of all cube triples.
 
-## 6. Validation (`make test`, 34 tests)
+## 6. Validation fixtures and historical pilot
+
+`make test` is the source of truth for the current test count and result. The
+following list describes the inherited mathematical fixtures; new deployment
+regressions are also included in the suite.
 
 * **Inherited engine tests (16):** the record solutions of 33, 42, 3, 165, 579, 795, 906; a brute
   force for every `k ≡ ±3 (mod 9)` up to 100; filter verdicts against exact arithmetic (including
@@ -154,15 +208,15 @@ it. Checkpointing, continuations, coverage gaps and the 2 % audit are those of t
     without `--primitive` and skipped with it; cube-free `k` are unaffected; `k = 3·7³` is refused
     (`7 ≡ 1 mod 3`, where the lemma does not hold);
   * counters are identical however a range is split (the audit's precondition);
-  * the converter agrees with the d-first folder's `common375.py` on points, `d` and flags;
-  * the yield model reduces to the closed form without a frontier and places the frontier exactly;
+  * the converter is cross-checked against the d-first folder on reconstructed points and point-gcd tests; `desired` retains this folder's additional cube-primitivity condition;
+  * the yield model reduces to its closed form without a frontier and implements its asymptotic frontier expression;
   * `ρ`: the point-count formula against brute force for eight primes, the exact local factors
     (`σ₃ = 1/3`, `σ₅ = 24/25`), and the calibration constant equal for 114, 390, 627 to 0.5 % at
     `P = 10⁶`, with `ρ₃₇₅` in `[0.0580, 0.0592]` (3 tests);
   * an end-to-end campaign at `k = 7125 = 57·5³` finds its primitive solution `(−67)³ + (−46)³ + 74³`,
     collects it as PRIMITIVE, audits cleanly and converts it to two desired half-chart points.
 
-**Pilot at k = 375** (worker 1.2.0, 22 Nov 2026, through plan / run / collect / audit):
+**Historical pilot at k = 375** (recorded as worker 1.2.0, 22 Nov 2026, through plan / run / collect / audit; not re-audited for this handoff):
 `δ ∈ [5623413252, 7623413252)`, `R = 4096`, `--primitive`, two tasks in parallel on the two-core
 development host.
 
@@ -184,7 +238,16 @@ range is split.
 
 ## 7. What a completed run proves
 
-That 375 has no primitive representation with `δ = |a+b|` in the covered range and
-`3.847 δ ≤ |c| ≤ R δ`, and hence no accepted point `(n, x, ±y)` of either chart arising from one. The odds in
-section 4 are heuristic (Heath-Brown's conjecture and the Booker–Sutherland model) and conditional
-on the frontier.
+A fully completed and validated campaign with no hits excludes primitive
+representations within its recorded gap/ratio region, with the worker's exact
+integer endpoint conventions. The displayed decimal `3.847` is a rounded
+description; keep the
+task manifest and worker version for the precise coverage statement. It does
+not exclude representations outside that region, prove that no primitive
+representation exists, or certify every unsampled worker execution merely
+because a sampled audit passed.
+
+An individual reported hit is checked exactly. The historical yield figures
+in section 4 remain heuristic and conditional on their assumptions. For a
+height-shell exclusion or a complementary implementation check, use and
+benchmark the separate Elkies–Jahnel backend with its own coverage contract.

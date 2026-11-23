@@ -244,7 +244,7 @@ class Converter(unittest.TestCase):
         self.assertFalse(p[0]["desired"])
         pts = to_points375.points(-67, -46, 74, 7125)
         self.assertEqual(sorted(q["chart"] for q in pts), ["half", "half", "integer"])
-        self.assertEqual(sum(q["desired"] for q in pts), 2)
+        self.assertEqual(sum(q["desired"] for q in pts), 3)
         with self.assertRaises(ValueError):
             to_points375.points(1, 2, 3, 375)
 
@@ -253,9 +253,10 @@ class Converter(unittest.TestCase):
         sys.path.insert(0, str(D375))
         import common375
         for t, k in (((-67, -46, 74), 7125), ((5, 5, 5), 375), ((20, 20, -25), 375), ((-29, -29, 37), 1875)):
+            primitive_cubes = gcd(gcd(t[0], t[1]), t[2]) == 1
             mine = {(q["chart"], q["d"], q["n"], q["x"], q["y"], q["desired"]) for q in to_points375.points(*t, k)}
             theirs = {(q["chart"], q["d"], q["n"], q["x"], q["s"],
-                       common375.primitivity(q["chart"], q["n"], q["x"], q["s"], t)["desired"])
+                       common375.primitivity(q["chart"], q["n"], q["x"], q["s"], t)["desired"] and primitive_cubes)
                       for q in common375.d_values_from_cubes(*t, k)}
             self.assertEqual(mine, theirs, (t, k))
 

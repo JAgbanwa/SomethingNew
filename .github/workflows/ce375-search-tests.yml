@@ -1,0 +1,95 @@
+name: CE375 search validation
+
+on:
+  pull_request:
+    paths:
+      - '375/**'
+      - '.github/workflows/ce375-search-tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - '375/**'
+      - '.github/workflows/ce375-search-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        directory:
+          - '375/gap-search'
+          - '375/Scripts for large-scale computations'
+          - '375/Scripts for large-scale computations/elkies-jahnel'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native build dependencies
+        run: sudo apt-get update && sudo apt-get install -y g++ make libgmp-dev python3-numpy
+      - name: Build and run finite tests
+        working-directory: ${{ matrix.directory }}
+        run: PATH="/usr/bin:$PATH" make test
+
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - directory: '375/gap-search'
+            image: ce375-gap-test
+            engine: gap
+          - directory: '375/Scripts for large-scale computations/elkies-jahnel'
+            image: ce375-ej-test
+            engine: ej
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image including isolated-context tests
+        run: docker build -t '${{ matrix.image }}' '${{ matrix.directory }}'
+      - name: Generate finite container-contract task
+        env:
+          ENGINE: ${{ matrix.engine }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/ce375-input" "$RUNNER_TEMP/ce375-output"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          if os.environ['ENGINE'] == 'gap':
+              task = {'schema':'ce375-gap-task-v1', 'campaign_id':'ci', 'task_id':'ci-gap',
+                      'k':7125, 'd_start':1, 'd_stop':100, 'ratio_max':64,
+                      'primitive':True, 'deadline_seconds':0}
+          else:
+              task = {'schema':'ce375-ej-task-v1', 'engine':'elkies-jahnel',
+                      'campaign_id':'ci', 'task_id':'ci-ej', 'k':6, 'height':'64',
+                      'index_start':'57', 'index_stop':'256', 'primitive':True,
+                      'tile_scale':'11/2', 'max_tiles':0, 'deadline_seconds':0}
+          path = Path(os.environ['RUNNER_TEMP'])/'ce375-input'/'task.json'
+          path.write_text(json.dumps(task)+'\n')
+          PY
+      - name: Run default container entrypoint with CE paths
+        run: |
+          docker run --rm \
+            -v "$RUNNER_TEMP/ce375-input:/local/input:ro" \
+            -v "$RUNNER_TEMP/ce375-output:/local/output" \
+            '${{ matrix.image }}'
+      - name: Verify completed nonempty result independently
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from math import gcd
+          from pathlib import Path
+          out = Path(os.environ['RUNNER_TEMP'])/'ce375-output'
+          status = json.loads((out/'status.json').read_text())
+          assert status['state'] == 'complete', status
+          rows = [json.loads(s) for s in (out/'hits.jsonl').read_text().splitlines()]
+          assert rows, 'positive-control task returned no hits'
+          for r in rows:
+              x,y,z = (int(r[k]) for k in ('x','y','z'))
+              assert x**3+y**3+z**3 == int(r['k'])
+              assert gcd(gcd(x,y),z) == 1
+          PY

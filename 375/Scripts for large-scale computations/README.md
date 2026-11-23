@@ -1,5 +1,17 @@
 # CE375: primitive-point search with g = -1 or +1
 
+**This README describes the existing d-first/unit-g worker.** Its directory
+name does not mean that it searches all large primitive cube representations.
+The complementary [Elkies--Jahnel backend](elkies-jahnel/README.md) now provides
+a separate C++/GMP geometric lattice search in cube-height/ratio tiles, with
+its own task schema, exact verification, checkpoints and coverage collector.
+It does not change this worker's fixed-g contract or reuse its coverage records.
+
+For the practical choice between engines, read [the 375 overview](../README.md).
+The recommended first Charity Engine pilot is the hardened
+[`gap-search`](../gap-search/CHARITY_ENGINE_HANDOFF.md) package. Benchmark the
+new lattice backend before allocating a large campaign to it.
+
 Production searches use exactly **`g in {-1, +1}`**. There is no configurable
 large-g range. This is an explicit search restriction, separate from the
 point-primitivity tests below.
