@@ -1,0 +1,252 @@
+{
+  "date": "2026-11-23",
+  "python": "3.12.14",
+  "test_command": "make test",
+  "tests_passed": 54,
+  "test_exit_code": 0,
+  "source_base_commit": "857adf3f89831816461641d6d4f7bbf89783304f",
+  "pilots": {
+    "booker_box": {
+      "exit_code": 0,
+      "start": {
+        "command": "booker-box",
+        "n_filter": {
+          "maximum": null,
+          "minimum": null
+        },
+        "rational_d_filter": {
+          "height": null,
+          "maximum": null,
+          "minimum": null,
+          "values": null
+        },
+        "required": {
+          "gcd_X_Y": 1,
+          "integer_n": true,
+          "odd_X_Y": true,
+          "positive_Y": true
+        },
+        "schema": "algorithm-ii-375-v1",
+        "scope": {
+          "D_definition": "abs(u+v), integer; distinct from signed rational d",
+          "D_max": "1000",
+          "D_min": "1",
+          "cube_height_max": "500",
+          "endpoints": "inclusive",
+          "kind": "cube_box",
+          "permutations": "all original-equation charts of each cube triple",
+          "z_max": "500",
+          "z_min": "-500"
+        },
+        "source_sha256": {
+          "booker_sutherland.py": "b34ca893e631a7c66c3bb27a5a8d7deda03b03b9f303c28973f9c8f13fae1d73",
+          "ej_worker.cpp": "27e726a70ce495b76899ff1b5635140af77358d4f427b70ac6d26a221cc88a83",
+          "elkies_jahnel.py": "bb289549501a5ce6389a81df2fab45acd29dbc91c48396062f8f3ce5dd514f9f",
+          "equation375.py": "1f08a76c52ad61073a0fe2ea6665850e70a735d494e3ae7d2f6d97708d8eda91",
+          "rational_d.py": "e6f5d1551ddc3c1f9ccb5c878569d13a9295b604b8a222c8c3117fed7bbef624",
+          "search375.py": "40c3605a009fba56ba2ce74b8a1590f31c6e2bb50815acedf71f022c6e200bdc"
+        },
+        "target": 375,
+        "type": "start",
+        "version": "1.0.0"
+      },
+      "end": {
+        "backend_counters": {
+          "D_processed": 1000,
+          "D_skipped_mod3": 333,
+          "D_skipped_primitive": 128,
+          "D_without_roots": 257,
+          "candidates": 1321,
+          "cube_roots": 504,
+          "hits": 0,
+          "nonnegative_integral_discriminants": 562,
+          "nonprimitive_hits": 0,
+          "residue_classes": 504,
+          "sieve_rejected": 562,
+          "square_tests": 0
+        },
+        "chart_points_before_optional_filters": 0,
+        "complete": true,
+        "cube_candidates": 0,
+        "elapsed_seconds": 0.006234,
+        "progress": {
+          "completed_D": 1000,
+          "counters": {
+            "D_processed": 1000,
+            "D_skipped_mod3": 333,
+            "D_skipped_primitive": 128,
+            "D_without_roots": 257,
+            "candidates": 1321,
+            "cube_roots": 504,
+            "hits": 0,
+            "nonnegative_integral_discriminants": 562,
+            "nonprimitive_hits": 0,
+            "residue_classes": 504,
+            "sieve_rejected": 562,
+            "square_tests": 0
+          },
+          "next_D": 1001
+        },
+        "scope": {
+          "D_definition": "abs(u+v), integer; distinct from signed rational d",
+          "D_max": "1000",
+          "D_min": "1",
+          "cube_height_max": "500",
+          "endpoints": "inclusive",
+          "kind": "cube_box",
+          "permutations": "all original-equation charts of each cube triple",
+          "z_max": "500",
+          "z_min": "-500"
+        },
+        "solutions": 0,
+        "status": "complete",
+        "type": "end",
+        "unique_cube_triples": 0
+      }
+    },
+    "elkies_box": {
+      "exit_code": 0,
+      "start": {
+        "command": "elkies",
+        "n_filter": {
+          "maximum": null,
+          "minimum": null
+        },
+        "rational_d_filter": {
+          "height": null,
+          "maximum": null,
+          "minimum": null,
+          "values": null
+        },
+        "required": {
+          "gcd_X_Y": 1,
+          "integer_n": true,
+          "odd_X_Y": true,
+          "positive_Y": true
+        },
+        "schema": "algorithm-ii-375-v1",
+        "scope": {
+          "cube_height_max": "500",
+          "endpoints": "inclusive",
+          "kind": "cube_box",
+          "low_height_closure": "exact enumeration below 25",
+          "remaining_region": "complete lattice shells H=25,50,100,...; final shell filtered"
+        },
+        "source_sha256": {
+          "booker_sutherland.py": "b34ca893e631a7c66c3bb27a5a8d7deda03b03b9f303c28973f9c8f13fae1d73",
+          "ej_worker.cpp": "27e726a70ce495b76899ff1b5635140af77358d4f427b70ac6d26a221cc88a83",
+          "elkies_jahnel.py": "bb289549501a5ce6389a81df2fab45acd29dbc91c48396062f8f3ce5dd514f9f",
+          "equation375.py": "1f08a76c52ad61073a0fe2ea6665850e70a735d494e3ae7d2f6d97708d8eda91",
+          "rational_d.py": "e6f5d1551ddc3c1f9ccb5c878569d13a9295b604b8a222c8c3117fed7bbef624",
+          "search375.py": "40c3605a009fba56ba2ce74b8a1590f31c6e2bb50815acedf71f022c6e200bdc"
+        },
+        "target": 375,
+        "type": "start",
+        "version": "1.0.0"
+      },
+      "end": {
+        "chart_points_before_optional_filters": 0,
+        "complete": true,
+        "completed_shells": 5,
+        "cube_candidates": 1,
+        "elapsed_seconds": 0.065937,
+        "progress": {
+          "complete": true,
+          "height": "400",
+          "lattice_points": "1544",
+          "next_index": "197",
+          "reason": "complete",
+          "tiles": 56
+        },
+        "scope": {
+          "cube_height_max": "500",
+          "endpoints": "inclusive",
+          "kind": "cube_box",
+          "low_height_closure": "exact enumeration below 25",
+          "remaining_region": "complete lattice shells H=25,50,100,...; final shell filtered"
+        },
+        "solutions": 0,
+        "status": "complete",
+        "type": "end",
+        "unique_cube_triples": 1
+      }
+    },
+    "rational_d": {
+      "exit_code": 0,
+      "start": {
+        "command": "rational-d",
+        "n_filter": {
+          "maximum": "100",
+          "minimum": "-100"
+        },
+        "rational_d_filter": {
+          "height": null,
+          "maximum": null,
+          "minimum": null,
+          "values": null
+        },
+        "required": {
+          "gcd_X_Y": 1,
+          "integer_n": true,
+          "odd_X_Y": true,
+          "positive_Y": true
+        },
+        "schema": "algorithm-ii-375-v1",
+        "scope": {
+          "endpoints": "inclusive",
+          "height_definition": "max(abs(p),q), d=p/q reduced, q>0",
+          "height_max": "50",
+          "height_min": "1",
+          "integer_scale_m": "all integer roots; no +/-1 restriction or fixed m cutoff",
+          "kind": "rational_d_height_and_integer_n",
+          "n_max": "100",
+          "n_min": "-100"
+        },
+        "source_sha256": {
+          "booker_sutherland.py": "b34ca893e631a7c66c3bb27a5a8d7deda03b03b9f303c28973f9c8f13fae1d73",
+          "ej_worker.cpp": "27e726a70ce495b76899ff1b5635140af77358d4f427b70ac6d26a221cc88a83",
+          "elkies_jahnel.py": "bb289549501a5ce6389a81df2fab45acd29dbc91c48396062f8f3ce5dd514f9f",
+          "equation375.py": "1f08a76c52ad61073a0fe2ea6665850e70a735d494e3ae7d2f6d97708d8eda91",
+          "rational_d.py": "e6f5d1551ddc3c1f9ccb5c878569d13a9295b604b8a222c8c3117fed7bbef624",
+          "search375.py": "40c3605a009fba56ba2ce74b8a1590f31c6e2bb50815acedf71f022c6e200bdc"
+        },
+        "target": 375,
+        "type": "start",
+        "version": "1.0.0"
+      },
+      "end": {
+        "backend_counters": {
+          "accepted_points": 0,
+          "integer_scales": 3,
+          "n_values": 35242,
+          "parameters": 526
+        },
+        "chart_points_before_optional_filters": 0,
+        "complete": true,
+        "cube_candidates": 0,
+        "elapsed_seconds": 0.223619,
+        "progress": {
+          "accepted_points": 0,
+          "integer_scales": 3,
+          "last_d": "-50/49",
+          "n_values": 35242,
+          "parameters": 526
+        },
+        "scope": {
+          "endpoints": "inclusive",
+          "height_definition": "max(abs(p),q), d=p/q reduced, q>0",
+          "height_max": "50",
+          "height_min": "1",
+          "integer_scale_m": "all integer roots; no +/-1 restriction or fixed m cutoff",
+          "kind": "rational_d_height_and_integer_n",
+          "n_max": "100",
+          "n_min": "-100"
+        },
+        "solutions": 0,
+        "status": "complete",
+        "type": "end",
+        "unique_cube_triples": 0
+      }
+    }
+  }
+}
