@@ -23,10 +23,12 @@ Each task fixes:
 - `ratio_max`, limiting the smallest coordinate magnitude relative to the gap;
 - a task identifier and application deadline.
 
-`to_points375.py` converts verified cube triples back to equation points. A
-request such as original `abs(x)>=10^14` means repository `abs(n)>=10^14` and must
-be checked on those points. It is not the same as the planner's cube-coordinate
-frontier. Keep odd-numerator, sign, and point-gcd conditions explicit.
+`to_points375.py` converts verified cube triples back to equation points. The
+discussion's `10^14` is an example search area, not a requested lower or upper
+cutoff. Accept qualifying points at any magnitude encountered in the assigned
+regions; do not add an `abs(n)>=10^14` filter. Keep odd-numerator, sign, and
+point-gcd conditions explicit. The planner's cube-coordinate frontier is a
+separate heuristic assumption, not a solution-acceptance threshold.
 
 Each completed task supports a statement only about its specified gap/ratio
 region and filters. `--frontier` changes the planner's heuristic estimate; it
@@ -235,7 +237,7 @@ individual tasks from measurements, allowing for setup time and slower hosts;
 the planner's processing estimate does not replace an end-to-end timing.
 
 Keep an explicit distinction between a published cube-height exclusion, any
-later gap-region exclusions, and the original requested point threshold. The
+later gap-region exclusions, and an illustrative starting region. The
 currently unsearched primitive-375 frontier has not been established by these
 instructions. Heuristic expected counts and Poisson-style probabilities assume
 a distribution model; they are not measured chances or guarantees.

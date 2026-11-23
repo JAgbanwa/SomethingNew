@@ -115,12 +115,18 @@ as a newly discovered primitive representation.
 
 ## Plan a bounded pilot, then keep extending
 
-Start with a short page at a genuinely large cube height:
+For illustration, start a short page at cube height `10^14`:
 
 ```sh
 python3 ej375.py plan --campaign-id ce375-ej-pilot --height 100000000000000 \
   --grid-span 1000 --page-size 2 --output-dir pilot
 ```
+
+The height is a selectable starting region, not a required solution magnitude
+or a final search limit. No fixed lower or upper size cutoff was requested.
+This cursor visits that shell and then higher shells; regions below the chosen
+start need their own planned coverage if they are to be included. Starting
+elsewhere changes the assigned work, not the solution-acceptance criteria.
 
 `grid-span` is the integer ratio-index width of each task, not a coordinate
 bound or a promised runtime. Calibrate it on the intended worker hardware.
@@ -197,12 +203,11 @@ is `gcd(n,m,y)`; the half-chart test is `gcd(M,Y)`. These point conditions are
 reported separately from coordinate-gcd primitivity.
 
 The native campaign searches all primitive cube representations in its region,
-including all-odd cube triples. Odd `M,Y` correspond to the half chart. If the
-original requirement is `|n|>=10^14`, use only those returned points when
-accepting a result. A proved necessary cube-height bound is
-`c>=10|n|-5` for `c>=25`, so the starting height may be
-`999999999999995` for that requirement. This is distinct from simply starting
-the cube-height search at `10^14`.
+including all-odd cube triples. Odd `M,Y` correspond to the half chart. The
+discussion's `10^14` was an example search area. It supplies no lower or upper
+acceptance threshold for `n`, `m`, `y`, or the cube coordinates. The converter
+reports qualifying points at every magnitude found in the assigned region;
+there is no `|n|>=10^14` acceptance filter or derived mandatory starting height.
 
 ## Container contract
 

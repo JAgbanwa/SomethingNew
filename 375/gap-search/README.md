@@ -17,8 +17,10 @@ The fixed-`g` folder's diagnostic `desired` flag tests point primitivity alone;
 its production restriction already forces primitive cubes.
 
 **Notation:** the original discussion's integer `x` is **`n` here**; its rational
-`m` is **`x` here**. Thus original `abs(x)>=10^14` is a filter on `abs(n)`, not a
-gap bound or a cube-height frontier. See the [search selection guide](../README.md).
+`m` is **`x` here**. The discussion's `10^14` is an example search area; no
+fixed magnitude threshold is part of the requested acceptance criteria.
+Task gap bounds and the heuristic cube-height frontier have separate meanings.
+See the [search selection guide](../README.md).
 
 **Charity Engine:** start with the reproducible local/container pilot in
 [`CHARITY_ENGINE_HANDOFF.md`](CHARITY_ENGINE_HANDOFF.md). Campaign generation does

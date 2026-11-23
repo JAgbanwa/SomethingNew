@@ -38,9 +38,11 @@ parameter was called `m`. Their correspondence is:
 | `m=M/2` | `x=X/2`, so `X=M` |
 | `y=Y/2` | `y=Y/2` |
 
-Thus the request for original `abs(x)>=10^14` is a condition on **repository
-`abs(n)`**, not on repository `abs(x)`, a slope height, or a cube height.
-An explicit requested sign or parity is an additional point-selection condition.
+The value `10^14` mentioned in the discussion is an **example search area**.
+No fixed lower or upper size cutoff was requested for the original variables.
+Do not add `abs(n)>=10^14`, or any other magnitude threshold, to the acceptance
+criteria on that basis. Original integer `x` is repository `n`; a separately
+requested sign, parity, or size condition would need to use that correspondence.
 
 For an integer cube triple, choose a permutation `(A,B,C)` and reconstruct
 
@@ -54,8 +56,8 @@ For target 375 the first expression is integral. Odd `X=2x` and `Y=2y` give the
 half-integer chart from the original request. Integer cube primitivity means
 `gcd(A,B,C)=1`; a separate condition such as `gcd(X,Y)=1` must be checked on the
 reconstructed point. Cube height `max(abs(A),abs(B),abs(C))` and `abs(n)` are
-different quantities. If a large-`abs(n)` filter is requested, apply it to the
-reconstructed point and record it with the campaign.
+different quantities. Task ranges determine which region is being examined;
+they do not impose an additional magnitude condition on a returned solution.
 
 ## Why the fixed-`g` parent engine is not the general search
 
@@ -96,7 +98,7 @@ running the local pilot.
 The currently unsearched frontier for primitive 375 needs an identified source
 and a precisely stated region. A planner's `--frontier` value is an assumption,
 not a verified exclusion result. Published historical height bounds, recent
-gap searches, and a requested original-variable threshold are not interchangeable.
+gap searches, and illustrative starting regions are not interchangeable.
 The repository's probability calculations are heuristic planning aids, not
 measured discovery rates or guarantees of a solution.
 
