@@ -1,0 +1,32 @@
+{
+  "campaign_id": "ce375-local-pilot",
+  "created": "2026-11-22T13:40:46.871089+00:00",
+  "d_start": "1000000000000",
+  "d_stop": "1000100000000",
+  "estimated_core_hours": 0.01,
+  "height_min": "10000000000000000",
+  "heuristic_expected_solutions": 3.8080923029900585e-07,
+  "k": 375,
+  "method": "booker-sutherland-primitive-v1",
+  "primitive_only": true,
+  "ratio_max": 32768,
+  "rho": 0.05860992,
+  "schema": "ce375-primitive-page-v1",
+  "tasks": [
+    {
+      "d_start": "1000000000000",
+      "d_stop": "1000050000000",
+      "estimated_core_hours": 0.004,
+      "file": "tasks/ce375-local-pilot-0.json",
+      "task_id": "ce375-local-pilot-0"
+    },
+    {
+      "d_start": "1000050000000",
+      "d_stop": "1000100000000",
+      "estimated_core_hours": 0.004,
+      "file": "tasks/ce375-local-pilot-1.json",
+      "task_id": "ce375-local-pilot-1"
+    }
+  ],
+  "us_per_d": 0.29
+}

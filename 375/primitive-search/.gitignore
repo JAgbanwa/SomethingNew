@@ -1,0 +1,8 @@
+/bin/
+__pycache__/
+*.pyc
+/campaigns/
+/results/
+/ce-state/
+*.token
+.env

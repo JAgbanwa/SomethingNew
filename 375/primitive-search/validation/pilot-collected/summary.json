@@ -1,0 +1,35 @@
+{
+  "campaign_id": "ce375-local-pilot",
+  "counters": {
+    "candidates": 112221288971,
+    "d_live": 17667824,
+    "d_no_roots": 36198843,
+    "d_skipped_mod3": 33333333,
+    "d_skipped_primitive": 12800000,
+    "d_total": 100000000,
+    "exact_checks": 3215147,
+    "hits": 0,
+    "pass_2adic": 112221288971,
+    "pass_residue": 3215147,
+    "roots": 41954585
+  },
+  "covered_d": [
+    [
+      "1000000000000",
+      "1000100000000"
+    ]
+  ],
+  "d_values_covered": 100000000,
+  "errors": [],
+  "gaps": [],
+  "height_min": "10000000000000000",
+  "heuristic_expected_solutions_covered": 3.8080923029900585e-07,
+  "hits": 0,
+  "k": 375,
+  "primitive_only": true,
+  "ratio_max": 32768,
+  "worker_core_hours": 0.02,
+  "worker_sha256": [
+    "8126231ebef5c67c8ce5098af6c73945a10ec775e65e17aff5649c88ba476f34"
+  ]
+}

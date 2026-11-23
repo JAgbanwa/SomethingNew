@@ -1,0 +1,13 @@
+{
+  "campaign_id": "ce375-local-pilot",
+  "d_start": "1000000000000",
+  "d_stop": "1000050000000",
+  "deadline_seconds": 120,
+  "height_min": "10000000000000000",
+  "k": 375,
+  "method": "booker-sutherland-primitive-v1",
+  "primitive_only": true,
+  "ratio_max": 32768,
+  "schema": "ce375-primitive-task-v1",
+  "task_id": "ce375-local-pilot-0"
+}
