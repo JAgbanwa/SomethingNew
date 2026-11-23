@@ -1,0 +1,58 @@
+{
+  "base_commit": "9bc97d87873498e28d796be26540a4b80c4c5cb2",
+  "collector_summary": {
+    "campaign_id": "ce375-smoke",
+    "counters": {
+      "candidates": 161427900,
+      "d_live": 187101,
+      "d_no_roots": 351566,
+      "d_skipped_mod3": 333333,
+      "d_skipped_prim": 128000,
+      "d_total": 1000000,
+      "exact_checks": 4911,
+      "hits": 0,
+      "hits_primitive": 0,
+      "pass_2adic": 161427900,
+      "pass_residue": 4911,
+      "roots": 472785
+    },
+    "covered_d": [
+      [
+        "10000000000",
+        "10001000000"
+      ]
+    ],
+    "d_values_covered": 1000000,
+    "errors": [],
+    "expected_worker_sha256": "b86593f81f702a23b09f17f54ca0613956671aa10338bec9b270efdd10645485",
+    "frontier": 0.0,
+    "gaps": [],
+    "heuristic_expected_over_rho_covered": 9.693037359848595e-05,
+    "heuristic_expected_solutions_covered": 5.6801198928712765e-06,
+    "hits": 0,
+    "k": 375,
+    "primitive": true,
+    "primitive_hits": 0,
+    "ratio_max": 4096,
+    "worker_core_hours": 0.0,
+    "worker_sha256": [
+      "b86593f81f702a23b09f17f54ca0613956671aa10338bec9b270efdd10645485"
+    ]
+  },
+  "compiler": "g++ (Debian 14.2.0-19) 14.2.0",
+  "file_sha256": {
+    "audit_gap.py": "28033cefefed421869f5d200852b5a79a25db80432dace0c4fa043b0552a3cce",
+    "collect_gap.py": "7b7362637031ceef31c9082fd47cf398dd2086b194f52ac9e2bb6181079aa732",
+    "gap_common.py": "c48b1d1e865a9c3d356fa7a44bc683cfcf40a452bfedd70bf00d9cb246b5929b",
+    "run_gap_task.py": "0586ae51078cad894d50efdb3a0d572b7851cd9bacc7c5c658962c0bd2203325",
+    "src/gap_worker.cpp": "a13d8e81f82e1afccdce15068c1fb13fad7ce5f96f3863258718d6a5604c8c5e"
+  },
+  "independent_audit": {
+    "chunks": 2,
+    "fraction": 1,
+    "matched": 2
+  },
+  "platform": "x86_64",
+  "scope": "finite local infrastructure pilot; no CE submission and no discovery claim",
+  "tasks": 2
+}

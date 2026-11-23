@@ -9,6 +9,7 @@ COPY Makefile ./
 COPY src/ ./src/
 COPY *.py ./
 COPY tests/ ./tests/
+COPY tools/ ./tools/
 RUN make all && make test
 
 FROM debian:bookworm-slim
