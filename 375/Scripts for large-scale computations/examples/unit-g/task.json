@@ -1,0 +1,15 @@
+{
+  "campaign_id": "ce375-unit-g-example",
+  "deadline_seconds": 0,
+  "g_values": [
+    -1,
+    1
+  ],
+  "h_start": 1,
+  "h_stop": 20,
+  "k": 375,
+  "mode": "xy",
+  "parameterization": "ce375-dfirst-unit-g-both-charts-v2",
+  "schema": "ce375-dfirst-task-v2",
+  "task_id": "ce375-unit-g-example-0"
+}

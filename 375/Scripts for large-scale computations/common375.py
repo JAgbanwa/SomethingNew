@@ -1,4 +1,4 @@
-"""Shared, independent Python logic for the CE375 d-first search.
+"""Shared, independent Python logic for the CE375 unit-g search.
 
 Nothing here calls the native worker. It re-implements, in exact integer and
 rational arithmetic, everything a result must satisfy, so the runner and the
@@ -13,12 +13,12 @@ accepted in either chart:
     integer chart: x, s integers
     half chart:    x = X/2, s = Y/2 with X, Y odd.
 
-Primitivity (K = 375 = 3*5^3 is not cube-free, so non-primitive points exist):
-    primitive_point: gcd(n, x) = 1 (integer chart), gcd(X, Y) = 1 (half chart)
-    primitive_cubes: gcd(A, B, C) = 1 for the cube components
-    desired = primitive_point and primitive_cubes
+Production campaigns use only g in {-1, 1}. Either primitive chart is enough:
+    primitive_point: gcd(n, x, s) = 1 (integer chart), gcd(X, Y) = 1 (half chart)
+    primitive_cubes: gcd(A, B, C) = 1, reported as an independent diagnostic
+    desired = primitive_point
 
-Mode "xy-half" (DERIVATION.md section 9) searches only for rational (x, y) on
+Mode "xy-half" (DERIVATION.md sections 1-3) searches only for rational (x, y) on
     y^2 = (x+6n+3)^2 + N(n)/x,  x = X/2, y = Y/2, X, Y odd, gcd(X, Y) = 1,
 both signs of y; its hit records carry "mode": "xy-half" and are checked by
 verify_xy_hit().
@@ -33,11 +33,12 @@ from pathlib import Path
 from typing import Any
 
 PRODUCTION_K = 375
-TASK_SCHEMA = "ce375-dfirst-task-v1"
-PAGE_SCHEMA = "ce375-dfirst-page-v1"
-STATUS_SCHEMA = "ce375-dfirst-status-v1"
-CHECKPOINT_SCHEMA = "ce375-dfirst-checkpoint-v1"
-PARAMETERIZATION = "ce375-dfirst-thue-both-charts-v1"
+TASK_SCHEMA = "ce375-dfirst-task-v2"
+PAGE_SCHEMA = "ce375-dfirst-page-v2"
+STATUS_SCHEMA = "ce375-dfirst-status-v2"
+CHECKPOINT_SCHEMA = "ce375-dfirst-checkpoint-v2"
+PARAMETERIZATION = "ce375-dfirst-unit-g-both-charts-v2"
+G_VALUES = (-1, 1)
 COUNTERS = ("pairs", "admissible", "convergents", "small_g_values", "thue_solutions",
             "integer_chart", "half_chart", "other_branch", "refinements", "exact_roots")
 MAX_H = 200_000_000
@@ -84,7 +85,7 @@ def check_k(k: int) -> None:
 
 
 def n_mod3(k: int) -> int:
-    """The residue n (mod 3) forced by k (DERIVATION.md section 4); 2 for k = 375."""
+    """The residue n (mod 3) forced by k (DERIVATION.md section 5); 2 for k = 375."""
     check_k(k)
     s9 = ((k + 6) // 3) % 9 if k % 9 == 3 else ((k - 6) // 3) % 9   # S mod 9
     s18 = next(v for v in range(3, 18, 6) if v % 9 == s9)            # S mod 18, S = 3 (mod 6)
@@ -94,12 +95,12 @@ def n_mod3(k: int) -> int:
 def primitivity(chart: str, n: int, x: Fraction, s: Fraction, cubes: tuple[int, int, int]) -> dict:
     """Independent primitivity flags; see the module docstring."""
     if chart == "integer":
-        pg = gcd(n, int(x))
+        pg = gcd(n, int(x), int(s))
     else:
         pg = gcd(int(2 * x), int(2 * s))
     cg = gcd(gcd(cubes[0], cubes[1]), cubes[2])
     return {"primitive_point": pg == 1, "primitive_cubes": cg == 1,
-            "desired": pg == 1 and cg == 1, "point_gcd": str(pg), "cube_gcd": str(cg)}
+            "desired": pg == 1, "point_gcd": str(pg), "cube_gcd": str(cg)}
 
 
 # ------------------------------------------------------------ admissibility
@@ -247,6 +248,8 @@ def verify_xy_hit(record: dict, k: int | None = None) -> dict:
     if y * y != (x + S) ** 2 + N / x:
         raise ValueError("y^2 != (x+6n+3)^2 + N/x")
     p, q, g = _int(record, "thue_p"), _int(record, "thue_q"), _int(record, "g")
+    if g not in G_VALUES:
+        raise ValueError("production hits require g in {-1, 1}")
     if q <= 0 or gcd(p, q) != 1 or X != -q * g or abs((2 * p + q) * g - 2 * S) != Y or _form(p, q, S, g) != rk:
         raise ValueError("Thue certificate (p, q, g) does not match the point")
     d = -(x + S + y) / (2 * x)
@@ -280,6 +283,8 @@ def verify_hit(record: dict, k: int | None = None) -> dict:
     check_k(rk)
     p, q = _int(record, "d_num"), _int(record, "d_den")
     g, n = _int(record, "g"), _int(record, "n")
+    if g not in G_VALUES:
+        raise ValueError("production hits require g in {-1, 1}")
     if q <= 0 or gcd(p, q) != 1:
         raise ValueError("d is not a reduced fraction with positive denominator")
     d = Fraction(p, q)
@@ -348,27 +353,36 @@ def d_values_from_cubes(a: int, b: int, c: int, k: int) -> list[dict]:
     return out
 
 
+def validate_scope(record: dict, schema: str | None = None) -> None:
+    """Reject legacy or mixed search scopes before resuming or counting coverage."""
+    if schema is not None and record.get("schema") != schema:
+        raise ValueError(f"schema must be {schema}")
+    if record.get("parameterization") != PARAMETERIZATION:
+        raise ValueError(f"parameterization must be {PARAMETERIZATION}")
+    if "g_max_digits" in record:
+        raise ValueError("g_max_digits is obsolete: production uses only g in {-1, 1}")
+    values = record.get("g_values")
+    if values != list(G_VALUES) or any(type(v) is not int for v in values):
+        raise ValueError("g_values must be [-1, 1]")
+
+
 def validate_task(task: dict) -> dict:
-    if task.get("schema") != TASK_SCHEMA:
-        raise ValueError(f"task schema must be {TASK_SCHEMA}")
+    validate_scope(task, TASK_SCHEMA)
     k = int(task["k"])
     check_k(k)
     h_start, h_stop = int(task["h_start"]), int(task["h_stop"])
     if not 1 <= h_start < h_stop <= MAX_H + 1:
         raise ValueError("need 1 <= h_start < h_stop")
-    digits = int(task.get("g_max_digits", 100))
-    if not 1 <= digits <= 100000:
-        raise ValueError("g_max_digits out of range")
     deadline = int(task.get("deadline_seconds", 0))
     if deadline < 0:
         raise ValueError("deadline_seconds must be >= 0")
     for key in ("campaign_id", "task_id"):
         if not isinstance(task.get(key), str) or not task[key]:
             raise ValueError(f"{key} must be a nonempty string")
-    mode = task.get("mode", "both")
+    mode = task.get("mode", "xy")
     if mode not in MODES:
         raise ValueError(f"mode must be one of {MODES}")
-    return {"k": k, "h_start": h_start, "h_stop": h_stop, "g_max_digits": digits,
+    return {"k": k, "h_start": h_start, "h_stop": h_stop, "g_values": list(G_VALUES),
             "deadline_seconds": deadline, "mode": mode}
 
 

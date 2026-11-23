@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run one restartable CE375 d-first task.
+"""Run one restartable CE375 task with g restricted to {-1, 1}.
 
 A task is a range of height shells h_start <= H < h_stop. The native worker
 prints one record per completed shell; after each one this runner rewrites
@@ -28,8 +28,9 @@ import subprocess
 import sys
 import time
 
-from common375 import (CHECKPOINT_SCHEMA, COUNTERS, PARAMETERIZATION, STATUS_SCHEMA, atomic_json,
-                       hit_key, load_json, sha256_file, validate_task, verify_hit)
+from common375 import (CHECKPOINT_SCHEMA, COUNTERS, G_VALUES, PARAMETERIZATION, STATUS_SCHEMA,
+                       atomic_json, hit_key, load_json, sha256_file, validate_scope, validate_task,
+                       verify_hit)
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_WORKER = ROOT / "bin" / "thue375_worker"
@@ -42,11 +43,23 @@ def now() -> str:
 def consume(proc, t, task, out, cp_path, hits_path, seen, counters, say, cursor):
     """Stream worker records; returns (end_state, next cursor)."""
     end_state = None
+    started = False
     with hits_path.open("a", encoding="utf-8") as hits, (out / "shells.jsonl").open("a", encoding="utf-8") as shells:
         assert proc.stdout is not None
         for line in proc.stdout:
             record = json.loads(line)
             kind = record.get("type")
+            if kind == "start":
+                if started:
+                    raise RuntimeError("worker emitted more than one start record")
+                validate_scope(record)
+                if (int(record["k"]), record.get("mode"), int(record["h_start"]), int(record["h_stop"])) \
+                        != (t["k"], t["mode"], cursor, t["h_stop"]):
+                    raise RuntimeError("worker start record does not match the task")
+                started = True
+                continue
+            if not started:
+                raise RuntimeError("worker output is missing a matching unit-g start record")
             if kind == "hit":
                 verify_hit(record, t["k"])  # raises on any discrepancy
                 key = hit_key(record)
@@ -67,6 +80,8 @@ def consume(proc, t, task, out, cp_path, hits_path, seen, counters, say, cursor)
                 shells.flush()
                 atomic_json(cp_path, {"schema": CHECKPOINT_SCHEMA, "campaign_id": task["campaign_id"],
                                       "task_id": task["task_id"], "next_h": cursor,
+                                      "k": t["k"], "mode": t["mode"],
+                                      "parameterization": PARAMETERIZATION, "g_values": list(G_VALUES),
                                       "counters": counters, "updated": now()})
             elif kind == "end":
                 end_state = record["state"]
@@ -87,13 +102,27 @@ def run(args: argparse.Namespace) -> int:
     cursor = t["h_start"]
     counters = {key: 0 for key in COUNTERS}
     cp_path = out / "checkpoint.json"
+    saved_task_path = out / "task.json"
+    saved = None
+    if saved_task_path.exists():
+        saved_task = load_json(saved_task_path)
+        saved = validate_task(saved_task)
+        if any(saved_task[key] != task[key] for key in ("campaign_id", "task_id")) \
+                or any(saved[key] != t[key] for key in ("k", "mode", "h_stop", "g_values")):
+            raise ValueError("output directory holds a different task or search scope")
     if cp_path.exists():
         cp = load_json(cp_path)
-        if cp.get("schema") != CHECKPOINT_SCHEMA or cp.get("task_id") != task["task_id"] \
-                or cp.get("campaign_id") != task["campaign_id"]:
+        validate_scope(cp, CHECKPOINT_SCHEMA)
+        if cp.get("task_id") != task["task_id"] or cp.get("campaign_id") != task["campaign_id"] \
+                or cp.get("k") != t["k"] or cp.get("mode") != t["mode"]:
             raise ValueError("output directory holds a checkpoint of a different task")
         cursor = int(cp["next_h"])
+        if not t["h_start"] <= cursor <= t["h_stop"]:
+            raise ValueError("checkpoint lies outside the task range")
         counters.update({key: int(cp["counters"].get(key, 0)) for key in COUNTERS})
+    if saved is not None and saved["h_start"] != t["h_start"] \
+            and (not cp_path.exists() or t["h_start"] != cursor):
+        raise ValueError("changed starting height does not match the saved continuation")
     atomic_json(out / "task.json", task)
 
     seen = set()
@@ -101,7 +130,9 @@ def run(args: argparse.Namespace) -> int:
     if hits_path.exists():
         for line in hits_path.read_text(encoding="utf-8").splitlines():
             if line.strip():
-                seen.add(hit_key(json.loads(line)))
+                record = json.loads(line)
+                verify_hit(record, t["k"])
+                seen.add(hit_key(record))
 
     log = (out / "run.log").open("a", encoding="utf-8")
 
@@ -115,7 +146,7 @@ def run(args: argparse.Namespace) -> int:
             "campaign_id": task["campaign_id"], "task_id": task["task_id"],
             "k": t["k"], "mode": t["mode"], "h_start": t["h_start"], "h_stop": t["h_stop"],
             "covered_h_start": t["h_start"], "next_h": cursor,
-            "g_max_digits": t["g_max_digits"], "parameterization": PARAMETERIZATION,
+            "g_values": list(G_VALUES), "parameterization": PARAMETERIZATION,
             "worker_sha256": sha256_file(worker), "counters": counters,
             "hits": len(seen), "updated": now()})
 
@@ -127,8 +158,10 @@ def run(args: argparse.Namespace) -> int:
     deadline = t["deadline_seconds"]
     if args.deadline_seconds is not None:
         deadline = args.deadline_seconds
+    if deadline < 0:
+        raise ValueError("deadline_seconds must be >= 0")
     cmd = [str(worker), "--k", str(t["k"]), "--mode", t["mode"], "--h-start", str(cursor), "--h-stop", str(t["h_stop"]),
-           "--g-max-digits", str(t["g_max_digits"]), "--deadline-seconds", str(deadline)]
+           "--deadline-seconds", str(deadline)]
     say("start " + " ".join(cmd))
     status("running")
     stderr = (out / "worker.stderr.log").open("a", encoding="utf-8")
@@ -186,8 +219,18 @@ def main() -> int:
     except Exception as exc:  # noqa: BLE001 - recorded, then non-zero exit
         print(f"run_task: {exc}", file=sys.stderr)
         try:
+            error_status = {"schema": STATUS_SCHEMA, "state": "error", "error": str(exc), "updated": now()}
+            try:
+                task = load_json(args.task)
+                t = validate_task(task)
+                error_status.update({"campaign_id": task["campaign_id"], "task_id": task["task_id"],
+                                     "k": t["k"], "mode": t["mode"], "h_start": t["h_start"],
+                                     "h_stop": t["h_stop"], "next_h": t["h_start"],
+                                     "g_values": list(G_VALUES), "parameterization": PARAMETERIZATION})
+            except (OSError, KeyError, TypeError, ValueError):
+                pass
             atomic_json(Path(args.output_dir) / "status.json",
-                        {"schema": STATUS_SCHEMA, "state": "error", "error": str(exc), "updated": now()})
+                        error_status)
         except OSError:
             pass
         return 1
