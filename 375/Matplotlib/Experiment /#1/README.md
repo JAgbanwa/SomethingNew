@@ -25,7 +25,7 @@ Use Python **3.10 or later**, with Matplotlib and NumPy.
 From the root of a local checkout of this repository:
 
 ```bash
-cd "375/Mathplotlib/Experiment /#1"
+cd "375/Matplotlib/Experiment /#1"
 python3 -m pip install matplotlib numpy
 python3 Script --n 1 --x-min -100 --x-max 100 --slices 12 --mode residual
 ```

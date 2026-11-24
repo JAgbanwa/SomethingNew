@@ -65,7 +65,7 @@ python3 Script --preset large
 If navigating from the repository root, preserve the spaces in the directory names:
 
 ```bash
-cd '375/Mathplotlib/Experiment /#2 '
+cd '375/Matplotlib/Experiment /#2 '
 ```
 
 The file does not need a `.py` extension when passed directly to Python. The equivalent command used with a downloaded copy named `rational_y_lab.py` is:

@@ -374,7 +374,7 @@ The 906 nonzero trial records are retained diagnostics. They are not a count of 
 The repository file is named `Script` and can be executed directly by Python without a `.py` extension. From a local checkout of this repository:
 
 ```bash
-cd '375/Mathplotlib/Experiment /#3'
+cd '375/Matplotlib/Experiment /#3'
 python3 -m pip install matplotlib numpy sympy python-flint
 python3 Script
 ```
