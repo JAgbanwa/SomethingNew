@@ -1,0 +1,589 @@
+#!/usr/bin/env python3
+"""Explore y² = 1 + (36n³+54n²+27n−58) / [x(6n+3+x)²].
+
+Quick start (Python 3.10+):
+    python -m pip install matplotlib numpy
+    python equation_squared_lab.py
+    python equation_squared_lab.py --mode curves --x-min 1 --x-max 100
+    python equation_squared_lab.py --n 2 --x-min -25 --x-max -1 --slices 1 --mode curves
+    python equation_squared_lab.py --n 20 --slices 20 --x-max 200
+    python equation_squared_lab.py --n 2 --x-min 1 --x-max 100 --search-only
+    python equation_squared_lab.py --mode curves --save-prefix my-curves
+
+The RESIDUAL view is a lattice experiment inspired by the slicing idea:
+    S=6n+3, N=36n³+54n²+27n−58, D=x(S+x)², Q=(D+N)/D.
+For each integer n,x in the chosen finite sample, omit D=0 and Q<0.
+For the real domain, choose m=floor(sqrt(Q)) and ceil(sqrt(Q)); deduplicate
+an exact integer square. The candidate ±m has exact residual
+    R = D(m²−1)−N.
+Only R=0 is an integer solution of the supplied equation. Nonzero dots
+are integer candidates near the real branches.
+
+At R=0, an integer point gives a sum-of-three-cubes solution to 375:
+    a=-x-y(S+x), b=-x+y(S+x), c=S+2x.
+In fact a³+b³+c³=375−6R. Integer y is a restriction on this
+parametrization; this experiment does not search every cubic solution.
+The points (n,x,y)=(2,-20,0),(2,-5,0) are exact solutions here; their
+cubic triples have gcd 5, so they are not primitive cubic solutions.
+
+The CURVES view draws the actual real branches y=±sqrt(Q), with a separate
+line segment on each valid domain interval. Isolated real points are
+retained (notably n=2,x=-5,y=0). Lines never cross a pole or a forbidden
+interval. Selected curve samples are floating-point samples;
+selected residual dots and integer-solution stars show exact arithmetic.
+
+Both windows use x/(6n+3) horizontally by default (--axis x uses raw x).
+The 2D window compares n and n+1; the 3D window stacks every requested n.
+Its depth coordinate n−starting_n is just a translation of n.
+
+Controls: Previous n / Next n buttons or Left/Right keys shift the window;
+the View button switches between residuals and actual real curves.
+Drag the 3D axes to rotate; use the toolbar to zoom. Click a dot or line
+to inspect it. Each residual dot represents both ±m (only 0 when m=0).
+
+Exact arithmetic: Python integers, Fraction, and isqrt decide validity,
+candidate roots, and R=0. Only drawing uses floats. Continuous curves are
+approximate, especially near poles. For coordinates beyond 2**53, integer
+steps may merge visually; use --search-only and --csv for exact results.
+
+CSV stores ALL valid integer candidates in the initial finite sample,
+including candidates hidden by --solutions-only or --residual-limit.
+Arrow-key changes do not update an already-exported CSV. Import large
+integer CSV fields as text if using spreadsheet software.
+
+This is a standalone educational explorer, not Jeff Banks's source code.
+Its residual convention is specific to the equation above. A finite
+search result makes no claim about integer points outside its ranges.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+from dataclasses import dataclass, replace
+from fractions import Fraction
+from math import gcd, isfinite, isqrt, ulp
+from pathlib import Path
+
+
+def coefficients(n: int) -> tuple[int, int]:
+    return 6 * n + 3, 36 * n**3 + 54 * n**2 + 27 * n - 58
+
+
+@dataclass(frozen=True)
+class Settings:
+    n: int = 1
+    x_min: int = -100
+    x_max: int = 100
+    slices: int = 12
+    axis: str = "ratio"
+    residual_limit: int | None = None
+    solutions_only: bool = False
+
+
+@dataclass(frozen=True)
+class Candidate:
+    n: int
+    x: int
+    m: int
+    d: int
+    q: Fraction
+    residual: int
+
+    def horizontal(self, axis: str) -> float:
+        return float(self.x) if axis == "x" else float(Fraction(self.x, 6 * self.n + 3))
+
+    @property
+    def y_label(self) -> str:
+        return "0" if self.m == 0 else f"±{self.m}"
+
+    def detail(self) -> str:
+        status = "EXACT INTEGER SOLUTION" if self.residual == 0 else "INTEGER CANDIDATE; not a solution"
+        domain_or_cubes = "Valid real domain: D≠0 and Q≥0."
+        if self.residual == 0:
+            s = 6 * self.n + 3
+            triple = (-self.x - self.m * (s + self.x),
+                      -self.x + self.m * (s + self.x), s + 2 * self.x)
+            domain_or_cubes = f"Cube triple {triple} has sum 375; gcd={gcd(*triple)}."
+        return (
+            f"{status}: n={self.n}, x={self.x}, y={self.y_label}\n"
+            f"Q={self.q}; R={self.residual}; D={self.d}\n"
+            f"{domain_or_cubes}"
+        )
+
+
+@dataclass
+class Sample:
+    candidates: list[Candidate]
+    pairs: int = 0
+    poles: int = 0
+    nonreal: int = 0
+    valid_pairs: int = 0
+
+    @property
+    def solutions(self) -> list[Candidate]:
+        return [p for p in self.candidates if p.residual == 0]
+
+
+def pair_candidates(n: int, x: int) -> tuple[str, list[Candidate]]:
+    """Return domain status plus exact adjacent-integer candidates."""
+    s, numerator = coefficients(n)
+    denominator = x * (s + x)**2
+    if denominator == 0:
+        return "pole", []
+    q = Fraction(denominator + numerator, denominator)
+    if q < 0:
+        return "nonreal", []
+    # floor(sqrt(p/q)) = isqrt(floor(p/q)) for p>=0,q>0.
+    lower = isqrt(q.numerator // q.denominator)
+    exact = lower * lower * q.denominator == q.numerator
+    roots = [lower] if exact else [lower, lower + 1]
+    return "valid", [
+        Candidate(n, x, m, denominator, q, denominator * (m * m - 1) - numerator)
+        for m in roots
+    ]
+
+
+def generate_sample(settings: Settings) -> Sample:
+    sample = Sample([])
+    for n in range(settings.n, settings.n + settings.slices):
+        for x in range(settings.x_min, settings.x_max + 1):
+            sample.pairs += 1
+            status, points = pair_candidates(n, x)
+            if status == "pole":
+                sample.poles += 1
+            elif status == "nonreal":
+                sample.nonreal += 1
+            else:
+                sample.valid_pairs += 1
+                sample.candidates.extend(points)
+    return sample
+
+
+def visible_candidates(sample: Sample, settings: Settings) -> list[Candidate]:
+    return [
+        p for p in sample.candidates
+        if (not settings.solutions_only or p.residual == 0)
+        and (settings.residual_limit is None or abs(p.residual) <= settings.residual_limit)
+    ]
+
+
+def export_csv(path: Path, sample: Sample) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["n", "x", "abs_y_candidate", "y_signs", "D", "Q_numerator", "Q_denominator", "R", "exact_integer_solution"])
+        for p in sample.candidates:
+            writer.writerow([p.n, p.x, p.m, p.y_label, p.d, p.q.numerator, p.q.denominator, p.residual, p.residual == 0])
+
+
+def numerator_roots(n: int) -> list[float]:
+    """Real roots of x(x+S)²+N, for integer n.
+
+    Normalize to f(u)=u(u+1)²+N/S³. Since |S|>=3, its real roots
+    lie in [-4,4]. The derivative vanishes only at -1 and -1/3,
+    giving monotone brackets for bisection. Handle the one repeated-root
+    case exactly, including its isolated real point in the final graph.
+    """
+    if n == 2:
+        return [-20.0, -5.0]  # (x+20)(x+5)²
+    s, numerator = coefficients(n)
+    scale = float(Fraction(numerator, s**3))
+
+    def f(u):
+        return u * (u + 1.0)**2 + scale
+
+    knots = (-4.0, -1.0, -1.0 / 3.0, 4.0)
+    roots = []
+    for lo, hi in zip(knots, knots[1:]):
+        flo, fhi = f(lo), f(hi)
+        if flo * fhi >= 0:
+            continue
+        for _ in range(80):
+            mid = lo + (hi - lo) / 2
+            if mid == lo or mid == hi:
+                break
+            fm = f(mid)
+            if fm == 0:
+                lo = hi = mid
+                break
+            if (fm < 0) == (flo < 0):
+                lo, flo = mid, fm
+            else:
+                hi = mid
+        roots.append(float(s) * (lo + (hi - lo) / 2))
+    return sorted(roots)
+
+
+def curve_segments(n: int, x_min: int, x_max: int, density: int = 1000):
+    """Return separate (x,y>=0) arrays on valid continuous intervals.
+
+    Split at poles 0,-S and at real zeros of x(x+S)²+N. Classify an
+    interval by its midpoint; signs cannot change inside it. Isolated
+    roots are returned as one-point segments. Poles and gaps never join.
+    """
+    import numpy as np
+
+    if x_min == x_max:
+        return []
+    s, numerator = coefficients(n)
+    left, right = float(x_min), float(x_max)
+    sf = float(s)
+    if not all(isfinite(v) for v in (left, right, sf)):
+        raise ValueError("Curve coordinates are too large for floating-point drawing; use --search-only.")
+    if left >= right:
+        raise ValueError("This x interval collapses in floating-point drawing; widen it or use --search-only.")
+    poles = {0.0, -sf}
+    boundaries = {left, right}
+    boundaries.update(p for p in poles if left < p < right)
+    roots = numerator_roots(n)
+    boundaries.update(r for r in roots if left < r < right)
+    boundaries = sorted(boundaries)
+    result = []
+    scale = float(Fraction(numerator, s**3))
+    for lo, hi in zip(boundaries, boundaries[1:]):
+        midpoint = lo + (hi - lo) / 2
+        u_mid = midpoint / sf
+        d_mid = u_mid * (u_mid + 1)**2
+        if d_mid == 0 or 1 + scale / d_mid < 0:
+            continue
+        width = hi - lo
+        # A small visible offset avoids evaluating a pole. It is a sampling
+        # choice, not a new mathematical domain restriction.
+        lo_sample = lo + max(width * 1e-5, 8 * ulp(lo)) if lo in poles else lo
+        hi_sample = hi - max(width * 1e-5, 8 * ulp(hi)) if hi in poles else hi
+        if lo_sample >= hi_sample:
+            continue
+        count = max(32, min(density, round(density * width / (right - left))))
+        xs = np.linspace(lo_sample, hi_sample, count)
+        u = xs / sf
+        with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+            radicand = 1.0 + scale / (u * (u + 1.0)**2)
+        # A computed cubic root is a zero endpoint by construction.
+        if lo in roots and lo_sample == lo:
+            radicand[0] = 0.0
+        if hi in roots and hi_sample == hi:
+            radicand[-1] = 0.0
+        # Roundoff can put a sampled numerator-root endpoint just below 0.
+        tolerance = 64 * np.finfo(float).eps * np.maximum(1.0, np.abs(radicand))
+        radicand = np.where((radicand < 0) & (radicand >= -tolerance), 0.0, radicand)
+        good = np.isfinite(radicand) & (radicand >= 0)
+        ys = np.full_like(xs, np.nan)
+        ys[good] = np.sqrt(radicand[good])
+        if np.any(good):
+            result.append((xs, ys))
+    for root in roots:
+        if left <= root <= right and root not in poles:
+            covered = any(xs[0] == root or xs[-1] == root for xs, _ in result)
+            if not covered:
+                result.append((np.array([root]), np.array([0.0])))
+    return result
+
+
+class EquationExplorer:
+    def __init__(self, settings: Settings, mode: str = "residual"):
+        import matplotlib.pyplot as plt
+        from matplotlib.widgets import Button
+
+        self.plt = plt
+        self.settings = settings
+        self.mode = mode
+        self.sample = Sample([])
+        self.pick_data = {}
+        self.fig2, self.ax2 = plt.subplots(figsize=(12.5, 8.0))
+        self.fig3 = plt.figure(figsize=(12.5, 9.0))
+        self.ax3 = self.fig3.add_subplot(111, projection="3d")
+        self.fig2.subplots_adjust(left=0.10, right=0.97, top=0.83, bottom=0.29)
+        self.fig3.subplots_adjust(left=0.03, right=0.94, top=0.83, bottom=0.26)
+        self.headers = []
+        self.summaries = []
+        self.details = []
+        self.buttons = []
+        self.mode_buttons = []
+        for fig, name in ((self.fig2, "two neighboring slices"), (self.fig3, "stacked slices")):
+            fig.canvas.manager.set_window_title(f"Squared Equation Slice Lab — {name}")
+            fig.text(0.045, 0.855, "y² = 1 + (36n³ + 54n² + 27n − 58) / [x(6n + 3 + x)²]", fontsize=9)
+            self.headers.append(fig.suptitle("", x=0.045, ha="left", fontsize=14))
+            self.summaries.append(fig.text(0.045, 0.90, "", fontsize=9, va="top"))
+            self.details.append(fig.text(0.045, 0.095, "", fontsize=9, va="bottom"))
+            for rect, label, action in (
+                ([0.045, 0.025, 0.14, 0.042], "Previous n", lambda event: self.shift(-1)),
+                ([0.195, 0.025, 0.14, 0.042], "Next n", lambda event: self.shift(1)),
+                ([0.35, 0.025, 0.19, 0.042], "", self.toggle_mode),
+            ):
+                button = Button(fig.add_axes(rect), label)
+                button.on_clicked(action)
+                self.buttons.append(button)
+                if not label:
+                    self.mode_buttons.append(button)
+            fig.canvas.mpl_connect("pick_event", self.on_pick)
+            fig.canvas.mpl_connect("key_press_event", self.on_key)
+        self.draw()
+
+    def shift(self, step: int) -> None:
+        self.settings = replace(self.settings, n=self.settings.n + step)
+        self.draw()
+
+    def on_key(self, event) -> None:
+        if event.key in ("left", "right"):
+            self.shift(-1 if event.key == "left" else 1)
+
+    def toggle_mode(self, event=None) -> None:
+        self.mode = "curves" if self.mode == "residual" else "residual"
+        self.draw()
+
+    def show_detail(self, message: str) -> None:
+        for detail in self.details:
+            detail.set_text(message)
+        for fig in (self.fig2, self.fig3):
+            fig.canvas.draw_idle()
+
+    def on_pick(self, event) -> None:
+        registered = self.pick_data.get(event.artist)
+        if registered is None or len(event.ind) == 0:
+            return
+        kind, data = registered
+        index = int(event.ind[0])
+        if kind == "integer":
+            message = data[index].detail()
+        else:
+            n, xs, ys = data
+            message = (
+                f"REAL CURVE SAMPLE (approximate): n={n}, x≈{xs[index]:.12g}, y≈{ys[index]:.12g}\n"
+                f"Q≈{ys[index] ** 2:.12g}; this floating-point sample is not an integer-solution test.\n"
+                "Domain: sampled on a real branch, with poles excluded."
+            )
+        self.show_detail(message)
+        print(message, flush=True)
+
+    def draw(self) -> None:
+        from matplotlib.ticker import MaxNLocator, ScalarFormatter
+
+        view = self.ax3.elev, self.ax3.azim
+        self.ax2.clear()
+        self.ax3.clear()
+        self.ax3.view_init(*view)
+        self.pick_data.clear()
+        self.sample = generate_sample(self.settings)
+        s = self.settings
+        title = "Integer candidates · exact residual R" if self.mode == "residual" else "Actual real branches · y = ±√Q"
+        adjacent = f"{s.n}, {s.n+1}" if s.slices > 1 else str(s.n)
+        self.headers[0].set_text(f"{title}\nNeighboring n-slices: {adjacent}")
+        self.headers[1].set_text(f"{title}\nStack: n = {s.n}…{s.n+s.slices-1}")
+        precision = ""
+        if max(abs(s.n), abs(s.n + s.slices - 1), abs(s.x_min), abs(s.x_max)) > 2**53:
+            precision = " · Drawing cannot resolve every integer step at this scale."
+        summary = (
+            f"Integer sample: {self.sample.pairs:,} pairs · {self.sample.valid_pairs:,} real-domain pairs · "
+            f"{self.sample.poles:,} poles omitted · {self.sample.nonreal:,} nonreal pairs omitted\n"
+            f"{len(self.sample.solutions):,} exact (n,x,|y|) solutions; each nonzero |y| represents both signs.{precision}"
+        )
+        for text in self.summaries:
+            text.set_text(summary)
+        for button in self.mode_buttons:
+            button.label.set_text("Show real curves" if self.mode == "residual" else "Show residuals")
+        xlabel = "x" if s.axis == "x" else "Normalized x / (6n + 3)"
+        for ax in (self.ax2, self.ax3):
+            ax.set_xlabel(xlabel, labelpad=10)
+            ax.xaxis.set_major_locator(MaxNLocator(6))
+            ax.xaxis.set_major_formatter(ScalarFormatter(useOffset=True))
+        self.ax2.grid(alpha=0.16)
+        self.ax3.set_ylabel(f"Slice depth n − ({s.n})", labelpad=10)
+        self.ax3.yaxis.set_major_locator(MaxNLocator(nbins=6, integer=True))
+        if self.mode == "residual":
+            self.draw_residuals()
+        else:
+            self.draw_curves()
+        if self.ax2.get_legend_handles_labels()[0]:
+            self.ax2.legend(loc="best", fontsize=8)
+        if self.ax3.get_legend_handles_labels()[0]:
+            self.ax3.legend(loc="upper left", fontsize=8)
+        for fig in (self.fig2, self.fig3):
+            fig.canvas.draw_idle()
+
+    def draw_residuals(self) -> None:
+        import numpy as np
+
+        s = self.settings
+        points = visible_candidates(self.sample, s)
+        self.ax2.set_ylabel("Exact residual R = D(y² − 1) − N", labelpad=10)
+        self.ax3.set_zlabel("Exact residual R", labelpad=10)
+        self.ax2.axhline(0, color="0.45", linewidth=0.9, zorder=0)
+        if points and s.slices > 1:
+            horizontal = [p.horizontal(s.axis) for p in points]
+            lo, hi = min(horizontal), max(horizontal)
+            if lo == hi:
+                pad = max(abs(lo) * 0.01, 0.01)
+                lo, hi = lo - pad, hi + pad
+            plane_x, plane_n = np.meshgrid([lo, hi], [0, s.slices - 1])
+            self.ax3.plot_surface(
+                plane_x, plane_n, np.zeros_like(plane_x),
+                color="0.5", alpha=0.08, linewidth=0, shade=False,
+            )
+            self.ax3.text(lo, s.slices - 1, 0, "R = 0", fontsize=8, color="0.3")
+        groups = [(-1, "v", "C0", "R < 0"), (1, "^", "C1", "R > 0"), (0, "*", "C2", "R = 0; exact")]
+        for sign, marker, color, label in groups:
+            chosen = [p for p in points if ((p.residual > 0) - (p.residual < 0)) == sign]
+            if not chosen:
+                continue
+            for offset in range(min(2, s.slices)):
+                nearby = [p for p in chosen if p.n == s.n + offset]
+                if not nearby:
+                    continue
+                artist = self.ax2.scatter(
+                    [p.horizontal(s.axis) for p in nearby], [float(p.residual) for p in nearby],
+                    s=100 if sign == 0 else 38, marker=marker,
+                    facecolors=color if offset == 0 or sign == 0 else "none", edgecolors=color,
+                    linewidths=0.8, picker=6, label=f"n={s.n+offset}; {label}",
+                )
+                self.pick_data[artist] = ("integer", nearby)
+            artist = self.ax3.scatter(
+                [p.horizontal(s.axis) for p in chosen], [p.n - s.n for p in chosen],
+                [float(p.residual) for p in chosen], s=90 if sign == 0 else 20,
+                color=color, marker=marker, alpha=0.8, depthshade=False, picker=6, label=label,
+            )
+            self.pick_data[artist] = ("integer", chosen)
+        if s.residual_limit is not None:
+            # The filter stays exact; only the drawing bounds become floats.
+            limit = float(s.residual_limit)
+            self.ax2.set_ylim(-limit, limit)
+            self.ax3.set_zlim(-limit, limit)
+        if points:
+            self.show_detail(points[0].detail())
+        else:
+            self.show_detail(
+                "No integer candidates remain in the displayed sample/filter.\n"
+                "R=0 is the exact-solution condition; nonzero candidates are not solutions.\n"
+                "Change the n/x range, remove the residual limit, or turn off --solutions-only."
+            )
+
+    def draw_curves(self) -> None:
+        import numpy as np
+
+        s = self.settings
+        self.ax2.set_ylabel("Real y", labelpad=10)
+        self.ax3.set_zlabel("Real y", labelpad=10)
+        self.ax2.axhline(0, color="0.6", linewidth=0.8, zorder=0)
+        first_message = None
+        for offset in range(s.slices):
+            n = s.n + offset
+            sf = float(6 * n + 3)
+            segments = curve_segments(n, s.x_min, s.x_max)
+            for segment_index, (xs, positive_y) in enumerate(segments):
+                horizontal = xs if s.axis == "x" else xs / sf
+                signs = (1,) if np.all(positive_y == 0) else (1, -1)
+                for sign in signs:
+                    ys = sign * positive_y
+                    if first_message is None:
+                        good = np.flatnonzero(np.isfinite(ys))
+                        if good.size:
+                            j = int(good[len(good) // 2])
+                            first_message = (
+                                f"REAL CURVES: n={n}; example x≈{xs[j]:.10g}, y≈±{abs(ys[j]):.10g}\n"
+                                "Separate segments exclude poles and nonreal intervals; isolated real points are retained.\n"
+                                "Continuous lines use floating point; click a line for approximate values."
+                            )
+                    if offset < 2:
+                        label = f"n={n}; both y branches" if sign == 1 and segment_index == 0 else None
+                        line, = self.ax2.plot(horizontal, ys, color=f"C{offset}", linewidth=1.5,
+                                              marker="o" if len(xs) == 1 else None, label=label, picker=5)
+                        self.pick_data[line] = ("curve", (n, xs, ys))
+                    line, = self.ax3.plot(
+                        horizontal, np.full(len(xs), offset), ys,
+                        color=f"C{offset % 10}", linewidth=0.8, alpha=0.8,
+                        marker="o" if len(xs) == 1 else None, picker=5,
+                    )
+                    self.pick_data[line] = ("curve", (n, xs, ys))
+        exact = self.sample.solutions
+        if exact:
+            repeated = [(p, sign * p.m) for p in exact for sign in ([1] if p.m == 0 else [1, -1])]
+            nearby = [(p, y) for p, y in repeated if p.n < s.n + 2]
+            if nearby:
+                artist = self.ax2.scatter(
+                    [p.horizontal(s.axis) for p, y in nearby], [float(y) for p, y in nearby],
+                    marker="*", color="C2", s=100, picker=7, label="Exact integer solutions", zorder=4,
+                )
+                self.pick_data[artist] = ("integer", [p for p, y in nearby])
+            artist = self.ax3.scatter(
+                [p.horizontal(s.axis) for p, y in repeated], [p.n - s.n for p, y in repeated],
+                [float(y) for p, y in repeated], marker="*", color="C2", s=90,
+                picker=7, label="Exact integer solutions", depthshade=False,
+            )
+            self.pick_data[artist] = ("integer", [p for p, y in repeated])
+        self.show_detail(first_message or "No continuous real branch lies in this displayed x interval.\nAn interval of nonzero width is needed to draw a curve.")
+
+    def save(self, prefix: Path) -> tuple[Path, Path]:
+        prefix.parent.mkdir(parents=True, exist_ok=True)
+        paths = tuple(prefix.with_name(f"{prefix.name}-{dimension}.png") for dimension in ("2d", "3d"))
+        for figure, path in zip((self.fig2, self.fig3), paths):
+            figure.savefig(path, dpi=150)
+        return paths
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--n", type=int, default=1, help="First integer n slice (default 1)")
+    parser.add_argument("--x-min", type=int, default=-100, help="Inclusive minimum integer x (default -100)")
+    parser.add_argument("--x-max", type=int, default=100, help="Inclusive maximum integer x")
+    parser.add_argument("--slices", type=int, default=12, help="Consecutive integer n slices, 1…100")
+    parser.add_argument("--mode", choices=("residual", "curves"), default="residual")
+    parser.add_argument("--axis", choices=("ratio", "x"), default="ratio")
+    parser.add_argument("--residual-limit", type=int, help="Show only |R| <= this positive integer in residual mode")
+    parser.add_argument("--solutions-only", action="store_true", help="Hide nonzero residual candidates; real curves remain visible in curves mode")
+    parser.add_argument("--csv", type=Path, help="Export all exact integer candidates in the initial sample")
+    parser.add_argument("--save-prefix", type=Path, help="Save PREFIX-2d.png and PREFIX-3d.png without opening windows")
+    parser.add_argument("--search-only", action="store_true", help="Check the finite integer sample and print exact solutions; no graphics")
+    args = parser.parse_args(argv)
+    if args.x_min > args.x_max:
+        parser.error("Require x-min <= x-max")
+    if not 1 <= args.slices <= 100:
+        parser.error("--slices must be from 1 to 100")
+    if (args.x_max - args.x_min + 1) * args.slices > 300_000:
+        parser.error("This explorer is limited to 300,000 (n,x) pairs per sample")
+    if args.residual_limit is not None and args.residual_limit <= 0:
+        parser.error("--residual-limit must be positive")
+    if args.search_only and args.save_prefix:
+        parser.error("Choose --search-only or --save-prefix")
+    settings = Settings(args.n, args.x_min, args.x_max, args.slices, args.axis, args.residual_limit, args.solutions_only)
+    return args, settings
+
+
+def print_summary(sample: Sample, settings: Settings) -> None:
+    print("Equation: y^2 = 1 + (36n^3+54n^2+27n-58) / [x(6n+3+x)^2]")
+    print(f"n={settings.n}…{settings.n+settings.slices-1}; integer x={settings.x_min}…{settings.x_max} (inclusive)")
+    print(f"Tested {sample.pairs:,} (n,x) pairs: {sample.valid_pairs:,} real-domain pairs, {sample.poles:,} poles, {sample.nonreal:,} nonreal pairs.")
+    print(f"{len(sample.candidates):,} adjacent-integer candidates; {len(sample.solutions):,} exact (n,x,|y|) solutions.")
+    for point in sample.solutions[:100]:
+        print(point.detail())
+    if len(sample.solutions) > 100:
+        print("Only the first 100 solutions are printed; --csv preserves every candidate and solution.")
+    print("These are finite ranges. Nonzero residual points are candidates, not solutions.")
+
+
+def main(argv=None) -> None:
+    args, settings = parse_args(argv)
+    if args.search_only:
+        sample = generate_sample(settings)
+        print_summary(sample, settings)
+        if args.csv:
+            export_csv(args.csv, sample)
+            print(f"Wrote {args.csv}")
+        return
+    if args.save_prefix:
+        import matplotlib
+        matplotlib.use("Agg")
+    explorer = EquationExplorer(settings, args.mode)
+    print_summary(explorer.sample, settings)
+    if args.csv:
+        export_csv(args.csv, explorer.sample)
+        print(f"Wrote {args.csv}")
+    if args.save_prefix:
+        for path in explorer.save(args.save_prefix):
+            print(f"Saved {path}")
+        explorer.plt.close("all")
+    else:
+        explorer.plt.show()
+
+
+if __name__ == "__main__":
+    main()
