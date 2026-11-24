@@ -25,12 +25,12 @@ Use Python **3.10 or later**, with Matplotlib and NumPy.
 From the root of a local checkout of this repository:
 
 ```bash
-cd "375/Mathlib /Experiment /#1"
+cd "375/Mathplotlib/Experiment /#1"
 python3 -m pip install matplotlib numpy
 python3 Script --n 1 --x-min -100 --x-max 100 --slices 12 --mode residual
 ```
 
-The directory names `Mathlib ` and `Experiment ` contain trailing spaces. Copy the quoted path exactly. The executable Python source is named `Script`, so it can be run directly with `python3 Script`.
+The directory name `Experiment ` contains a trailing space. Copy the quoted path exactly. The executable Python source is named `Script`, so it can be run directly with `python3 Script`.
 
 For the Mac setup used in this experiment, `/usr/local/bin/python3` can be substituted for `python3` in these commands.
 
