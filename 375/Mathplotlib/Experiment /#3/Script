@@ -1,0 +1,1565 @@
+#!/usr/bin/env python3
+"""Rational-y global lab: complete real geometry and exact all-x searches.
+
+Equation
+--------
+    y^2 = 1 + (36*n^3 + 54*n^2 + 27*n - 58) / (x*(6*n+3+x)^2)
+    n, x integers; y rational; x != 0, x != -(6*n+3).
+
+Install and run on macOS
+-----------------------
+    /usr/local/bin/python3 -m pip install matplotlib numpy sympy python-flint
+    /usr/local/bin/python3 rational_y_global_lab.py
+
+Defaults: 10^16 <= n <= 10^18, 24 logarithmically spaced integer samples,
+3 seconds of factorization/proof work per sample. Both Matplotlib windows
+open after the finite search. Use --geometry-only for an immediate map.
+
+    python3 rational_y_global_lab.py --slices 48 --factor-seconds 15
+    python3 rational_y_global_lab.py --n 13
+    python3 rational_y_global_lab.py --save-prefix global375 --csv points.csv
+    python3 rational_y_global_lab.py --help
+
+WHAT IS GLOBAL, AND WHAT IS SAMPLED
+---------------------------------
+The figures show the complete real branches, including irrational y and
+the limits x -> +/-infinity and y -> +/-infinity. Coordinates are compressed
+by 2*atan(value)/pi; tick labels show the original x/(6*n+3) and y values.
+The 3D depth axis is log10(n). Continuous surfaces are geometry, not a list
+of rational solutions. At these n the normalized shapes are almost equal.
+
+The exact arithmetic search handles a FINITE selection of integer n values.
+It does NOT enumerate the 990,000,000,000,000,001 integers in the default
+interval. At a selected n, a proven complete prime factorization followed
+by completed factor-pair enumeration covers EVERY integer x and rational y
+for that n. There is no chosen x centre or arbitrary x half-width. A timeout,
+unproved factor, or enumeration budget leaves that slice explicitly PARTIAL.
+A missing marker on a partial slice is not a nonexistence result.
+
+Samples are constructed with integer arithmetic, so n above 2^53 is never
+rounded through a float. Default samples are adjusted to n = 2 or 5 (mod 9),
+necessary for integer cube lifts. --all-residues removes this sampling filter
+to explore rational-only points as well. --n checks exactly the specified n,
+regardless of that filter. This geometry interface requires n >= 3.
+
+MARKERS AND CONTROLS
+--------------------
+Green star: an exact primitive INTEGER cube solution, cube sum 375, gcd 1.
+Orange circle: an exact nonprimitive integer cube solution, gcd 5.
+Purple diamond: an exact rational y with no integer cube lift.
+Grey point: a rational trial with NONZERO residual; not an equation solution.
+One +/-y pair is counted once; both signs are drawn. The green-star legend
+may say 0. No point is called a solution from floating-point closeness.
+
+Previous/Next (or arrow keys) selects another computed n. Click a point for
+the exact integers/fractions in Terminal. Enter any integer x in the box and
+press Check x for an exact square test at the selected n. The lower panel
+separates magnitudes on signed logarithmic axes; the horizontal zero line
+is the exact target. Extreme finite values can merge visually at compressed
+endpoints; exact data and CSV files retain their full precision.
+
+--save-prefix saves 2D and 3D PNGs without opening windows. --csv writes point
+records and a companion -coverage.csv. After an interactive window closes,
+CSV data are refreshed to include manual x checks. --search-only omits plots.
+
+EXACT EQUATION, CUBE LIFT, AND COMPLETENESS
+-----------------------------------------
+Put S=6*n+3, T=S+x, N=(S^3-375)/6. With t=y*T define
+    R = x*(t^2-T^2)-N,
+    (a,b,c) = (-x-t, -x+t, S+2*x).
+Then a^3+b^3+c^3 = 375-6*R. R is the cleared-denominator residual;
+the direct discrepancy in the original y^2 equation is R/(x*T^2).
+At an exact rational point, the cube lift is integral iff t is integral,
+equivalently x divides N. Primitive means gcd(a,b,c)=1. The displayed
+original equation, cube sum, and gcd are rechecked independently before a
+green marker is drawn.
+
+For a direct check at any n,x, H=x^2*T^2+x*N is an integer. The original
+equation has rational y iff H is a nonnegative perfect square. In that case
+    |y| = isqrt(H)/abs(x*T).
+This test uses exact integers and Fraction, never approximate square roots.
+
+For a complete all-x search, write x=sign*s*a0^2 uniquely, with s positive
+and squarefree, a0>=1. Rationality forces s|N and c0=a0*|t| to be an integer:
+c0^2=a0^2*T^2+sign*N/s has a squarefree reduced denominator and is a rational
+square, so that denominator must be 1. For every squarefree divisor s|N and
+positive factor pair d*e=N/s, d<=e with equal parity, solve exactly:
+
+    Positive x: s*a0^3 + S*a0 = (e-d)/2,
+                c0=(e+d)/2, x=s*a0^2.
+    Negative x: s*a0^3 - S*a0 = (e+d)/2,
+                c0=(e-d)/2, x=-s*a0^2.
+
+The negative equation is restricted to a0>sqrt(S/s), the outer real branch.
+For n>=3 there is no omitted inner negative real branch. Both cubics are
+strictly increasing on the searched domains and are bracketed using exact
+integer arithmetic. A hit gives |y|=c0/(a0*abs(S+x)). Full factor enumeration
+therefore exhausts rational y for all integer x at that fixed n.
+
+Partial factorizations use only proven prime factors to form squarefree s;
+unresolved factors may be kept as whole divisor blocks. This gives a valid
+subset, never a claim of completeness. Trial retention limits affect only
+nonzero residuals: every exact hit found is retained.
+
+The real x-domain is unbounded, but rational points at integer x have proven
+finite bounds. For p=abs(x), every such point necessarily satisfies
+    x>0: 4*p*(S+p)^2 <= (N-1)^2,
+    x<0: 4*p*(S-p)^2 <= (N+1)^2.
+The outer endpoints grow like 18^(2/3)*n^2. These bounds are included in the
+coverage CSV for inspection; the factor-pair search need not scan that range.
+
+IMPLEMENTATION AND REFERENCES
+-----------------------------
+SymPy discovers factors. Optional python-flint proves primality through
+fmpz.is_prime(). Without it, deterministic tests below 2^64 and exact
+Pocklington certificates where obtainable certify factors. A large probable
+prime is not enough for a complete status. Factor workers have a wall-clock
+budget and retain validated partial progress. Multiprocessing uses spawn,
+including on macOS; run this file from Terminal, not by pasting it into a
+Python prompt. Plotting floats are used only after exact search decisions.
+
+This global factor-pair search is a separate method from the previous local
+tangent-tile visualization; it is not presented as Huisman's original 3D
+lattice algorithm or as an exhaustive search of the entire n interval.
+
+Primary dependency documentation:
+  https://docs.sympy.org/latest/modules/ntheory.html
+  https://python-flint.readthedocs.io/en/latest/fmpz.html
+  https://flintlib.org/doc/fmpz/fmpz_is_prime.html
+Background on sums of three cubes (Huisman):
+  https://arxiv.org/abs/1604.07746
+"""
+
+from __future__ import annotations
+
+
+
+"""Exact all-x rational-y enumeration from a factorization of N(n).
+
+Standalone standard-library component. Supports n >= 1. A complete certified
+prime factorization plus complete enumeration proves coverage of EVERY integer
+x for this n, not just a bounded x scan. A partial factorization into integer
+atoms still generates valid candidates but cannot certify complete coverage.
+
+For x = sigma*s*a^2 (a positive, s squarefree positive at a complete factorization),
+rationality forces s|N. With M=N/s and positive factor pairs d*e=M, d<=e of
+the same parity, the equations are:
+  positive x: s*a^3+S*a = (e-d)/2; c=(e+d)/2;
+  negative outer branch: s*a^3-S*a = (e+d)/2; c=(e-d)/2.
+Then |y|=c/[a*|S+x|]. For n=1,2 a small negative inner branch is handled too.
+All generated values are independently checked against the original rational
+equation; only zero residual is an exact hit. Trials may be included to display
+the exact failure of nearby integer a values, but they are never solutions.
+"""
+
+from fractions import Fraction
+from itertools import product
+from math import gcd, isqrt
+
+
+def _global_coeffs(n):
+    if not isinstance(n, int) or n < 1:
+        raise ValueError("The all-x factor-pair search currently requires integer n >= 1")
+    return 6*n+3, 36*n**3+54*n**2+27*n-58
+
+
+def _largest_bounded_integer(function, bound, lower=0):
+    """Largest integer >=lower satisfying a monotone inequality."""
+    lo, hi = lower, max(1, lower+1)
+    while function(hi) <= bound:
+        lo, hi = hi, 2*hi
+    while hi-lo > 1:
+        mid=(lo+hi)//2
+        if function(mid) <= bound:
+            lo=mid
+        else:
+            hi=mid
+    return lo
+
+
+def rational_x_bounds(n):
+    """Proven inclusive finite x bounds for ALL rational-y points (n>=1).
+
+    If p=|x|, q=p*|S+x|, H=r^2 and d=|r-q|, then p divides d^2 and
+    d>=sqrt(p). Comparing adjacent squares gives the necessary inequalities
+        x>0: 4*p*(S+p)^2 <= (N-1)^2;
+        x<0: 4*p*(S-p)^2 <= (N+1)^2.
+    The negative inequality is monotone for p>=S; all p<S are also covered.
+    """
+    S,N=_global_coeffs(n)
+    positive=_largest_bounded_integer(lambda p:4*p*(S+p)**2,(N-1)**2)
+    negative=_largest_bounded_integer(lambda p:4*p*(p-S)**2,(N+1)**2,lower=S)
+    return -negative,positive
+
+
+def integer_cube_x_bounds(n):
+    """Sharper inclusive bounds for integer cube lifts, n>=1."""
+    S,N=_global_coeffs(n)
+    b=2*S+1
+    root=isqrt(b*b+8*N)
+    return -((root+b)//4), (root-b)//4
+
+
+def _divisors_from_atoms(factors):
+    """Yield positive divisors represented by the supplied integer atoms."""
+    factors=list(factors)
+    def walk(index,value):
+        if index==len(factors):
+            yield value
+            return
+        base,exponent=factors[index]
+        for _ in range(exponent+1):
+            yield from walk(index+1,value)
+            value*=base
+    yield from walk(0,1)
+
+
+def _root_bracket(s,S,D,negative=False):
+    """Bracket the unique positive/negative-outer-branch real a root exactly.
+
+    The negative branch has a > sqrt(S/s), where s*a^3-S*a is increasing.
+    Return (floor-neighbour, ceiling-neighbour), equal at an integer root.
+    """
+    lower=isqrt(S//s)+1 if negative else 1
+    value=lambda a:s*a**3+(-S if negative else S)*a
+    if value(lower)>D:
+        return None,lower
+    if value(lower)==D:
+        return lower,lower
+    lo,hi=lower,max(lower+1,2*lower)
+    while value(hi)<D:
+        lo,hi=hi,2*hi
+    if value(hi)==D:
+        return hi,hi
+    while hi-lo>1:
+        mid=(lo+hi)//2
+        v=value(mid)
+        if v==D:
+            return mid,mid
+        if v<D:
+            lo=mid
+        else:
+            hi=mid
+    return lo,hi
+
+
+def _rational_pair_record(n,x,a,c,source_s,source_d,source_e,branch):
+    S,N=_global_coeffs(n)
+    T=S+x
+    if not x or not T:
+        return None
+    y=Fraction(c,a*abs(T))
+    t=y*T
+    R=x*(t*t-T*T)-N
+    exact=R==0
+    cubes=(Fraction(-x)-t,Fraction(-x)+t,Fraction(S+2*x))
+    lift=exact and t.denominator==1
+    cube_gcd=gcd(*(v.numerator for v in cubes)) if lift else None
+    primitive=lift and cube_gcd==1
+    return {
+        "n":n,"x":x,"y":y,"t":t,"residual":R,"exact":exact,
+        "integral_lift":lift,"primitive":primitive,"cube_triple":cubes,
+        "cube_gcd":cube_gcd,
+        "status":("primitive" if primitive else "cubes" if lift else
+                  "rational" if exact else "trial"),
+        "factor_s":source_s,"factor_d":source_d,"factor_e":source_e,
+        "parameter_a":a,"parameter_c":c,"branch":branch,
+    }
+
+
+def enumerate_rational_factor_pairs(n, factors, *, factorization_complete=False,
+                                     max_factor_pairs=200000, max_trials=2000,
+                                     progress=None, squarefree_prime_flags=None):
+    """Enumerate all-x exact rational points from full or partial factors of N.
+
+    factors maps integer atoms to positive integer exponents; their product must
+    be exactly N. Composite atoms are allowed for an explicitly partial search.
+    factorization_complete=True is a CALLER assertion that every atom is a
+    certified prime. No primality assertion is invented inside this function.
+
+    The return contains `records`, `points` (exact records), `trials`, and stats.
+    Completeness requires both factorization_complete and finishing all pairs.
+    A pair budget stops explicitly, retaining any already-verified exact hits.
+    Display budgets affect nonzero trials only; every exact point is retained.
+    """
+    S,N=_global_coeffs(n)
+    if max_factor_pairs < 1 or max_trials < 0:
+        raise ValueError("Require positive factor-pair budget and nonnegative trial budget")
+    atoms=sorted((int(p),int(e)) for p,e in factors.items())
+    if any(p<2 or e<1 for p,e in atoms):
+        raise ValueError("Factor atoms must be >=2, with positive exponents")
+    product_n=1
+    for p,e in atoms:
+        product_n*=p**e
+    if product_n!=N:
+        raise ValueError("Factorization atoms do not multiply exactly to N(n)")
+    points={}
+    trials={}
+    tested=0
+    parity_rejected=0
+    divisors_generated=0
+    s_choices=0
+    exhaustive=True
+    stop_reason=None
+    # A divisor-generation budget also prevents a huge mostly-skipped loop.
+    generation_budget=max(4*max_factor_pairs,1000)
+
+    def add(s,d,e,a,c,negative,branch):
+        if a is None or a<1:
+            return
+        x=(-1 if negative else 1)*s*a*a
+        rec=_rational_pair_record(n,x,a,c,s,d,e,branch)
+        if rec is None:
+            return
+        if rec["exact"]:
+            points[x]=rec
+        elif len(trials)<max_trials:
+            trials[(x,rec["y"])]=rec
+
+    choices=[(0,1) if factorization_complete or
+             (squarefree_prime_flags or {}).get(p,False) else (0,)
+             for p,e in atoms]
+    for selection in product(*choices):
+        s=1
+        remaining=[]
+        for (p,e),choose in zip(atoms,selection):
+            if choose:
+                s*=p
+            if e-choose:
+                remaining.append((p,e-choose))
+        s_choices+=1
+        M=N//s
+        for d in _divisors_from_atoms(remaining):
+            divisors_generated+=1
+            if divisors_generated>generation_budget:
+                exhaustive=False
+                stop_reason="divisor-generation budget"
+                break
+            e=M//d
+            if d*e!=M:
+                raise ArithmeticError("Internal divisor construction did not divide N/s exactly")
+            if d>e:
+                continue
+            if tested>=max_factor_pairs:
+                exhaustive=False
+                stop_reason="factor-pair budget"
+                break
+            tested+=1
+            if progress is not None and tested%1000==0:
+                progress({"n":n,"factor_pairs":tested,"exact_points":len(points)})
+            if (d+e)%2:
+                parity_rejected+=1
+                continue
+
+            # Positive x: c^2 - (a*T)^2 = M.
+            D=(e-d)//2
+            c=(e+d)//2
+            if D>0:
+                lo,hi=_root_bracket(s,S,D)
+                for a in set((lo,hi)):
+                    add(s,d,e,a,c,False,"positive")
+
+            # Negative outer branch: (a*T)^2 - c^2 = M and T<0.
+            D=(e+d)//2
+            c=(e-d)//2
+            lo,hi=_root_bracket(s,S,D,negative=True)
+            for a in set((lo,hi)):
+                add(s,d,e,a,c,True,"negative_outer")
+
+            # For n>2 there is no real negative inner branch. For n=1,2
+            # S<=15 and this exact tiny loop includes the n=2,x=-5,y=0 control.
+            if n<=2:
+                upper=isqrt((S-1)//s)
+                for a in range(1,upper+1):
+                    if S*a-s*a**3==D:
+                        add(s,d,e,a,c,True,"negative_inner")
+        if not exhaustive:
+            break
+
+    exact=sorted(points.values(),key=lambda r:(r["x"],r["y"]))
+    # Avoid retaining an approximate record at an x that also has a true point;
+    # there can be only one nonnegative exact y at a given (n,x).
+    nonzero=sorted((r for (x,_),r in trials.items() if x not in points),
+                   key=lambda r:(r["x"],r["y"]))
+    complete=bool(factorization_complete and exhaustive)
+    stats={
+        "n":n,"N":N,"factorization_complete":bool(factorization_complete),
+        "enumeration_complete":exhaustive,"complete":complete,
+        "factor_pairs":tested,"parity_rejected":parity_rejected,
+        "divisors_generated":divisors_generated,"s_choices":s_choices,
+        "exact_hits":len(exact),"rational_only_hits":sum(not r["integral_lift"] for r in exact),
+        "integral_hits":sum(r["integral_lift"] for r in exact),
+        "primitive_hits":sum(r["primitive"] for r in exact),
+        "trial_records":len(nonzero),"stop_reason":stop_reason,
+        "scope":"all integer x for this n" if complete else "tested factor-pair subset for this n",
+        "rational_x_bounds":rational_x_bounds(n),
+        "integer_cube_x_bounds":integer_cube_x_bounds(n),
+    }
+    return {"records":nonzero+exact,"points":exact,"trials":nonzero,"stats":stats}
+
+
+def rational_factor_pair_search(n, factors, proven_primes=None,
+                                max_pairs=200000, max_trials=80):
+    """Public adapter: only proven prime atoms enter the squarefree s choices.
+
+    Unknown composite/probable-prime atoms are still legitimate divisor blocks
+    in d*e=N/s. They yield verified points, but coverage remains incomplete.
+    """
+    factors={int(p):int(e) for p,e in factors.items()}
+    flags={int(p):bool(proven) for p,proven in (proven_primes or {}).items()}
+    all_proven=all(flags.get(p,False) for p in factors)
+    result=enumerate_rational_factor_pairs(
+        n,factors,factorization_complete=all_proven,
+        max_factor_pairs=max_pairs,max_trials=max_trials,
+        squarefree_prime_flags=flags,
+    )
+    result["stats"]["pairs_tested"]=result["stats"]["factor_pairs"]
+    return result
+
+
+def exact_check(n,x):
+    """Check a clicked integer (n,x) exactly; return None at poles/nonreal x.
+
+    Returns a verified exact record if H is square; otherwise a rational trial
+    from the nearer of the two adjacent integer square roots of H. The latter
+    always has nonzero residual and must not be drawn as a solution.
+    """
+    S,N=_global_coeffs(n)
+    if not isinstance(x,int):
+        raise ValueError("Exact point checking requires integer x")
+    T=S+x
+    if not x or not T:
+        return None
+    H=x*x*T*T+x*N
+    if H<0:
+        return None
+    lo=isqrt(H)
+    r=lo if H-lo*lo <= (lo+1)*(lo+1)-H else lo+1
+    record=_rational_pair_record(n,x,abs(x),r,None,None,None,"point_check")
+    record["square_test_H"]=H
+    record["square_test_r"]=r
+    record["square_test_residual"]=r*r-H
+    return record
+
+
+"""Bounded, proof-aware factorization for the rational-y global atlas.
+
+SymPy supplies factor discovery. Optional python-flint supplies proven
+primality through fmpz.is_prime(), without invoking FLINT's disk-based sieve.
+Otherwise SymPy supplies deterministic <2**64 tests,
+and the code below constructs exact Pocklington certificates where possible.
+A large probable prime is NEVER enough to mark a factorization complete.
+"""
+
+import copy
+import multiprocessing as _factor_mp
+import time as _factor_time
+from math import gcd as _factor_gcd, isqrt as _factor_isqrt, prod as _factor_prod
+
+
+def validate_factor_snapshot(value, expected_N=None):
+    """Validate multiplication and completeness claims, rejecting corrupt data."""
+    N = int(value["N"])
+    if N < 1 or (expected_N is not None and N != abs(int(expected_N))):
+        raise ValueError("Factor snapshot has the wrong positive integer N")
+    factors = {int(p): int(e) for p, e in value["factors"].items()}
+    if any(p < 2 or e < 1 for p, e in factors.items()):
+        raise ValueError("Factor atoms must be integers >=2 with positive exponents")
+    if _factor_prod(p**e for p, e in factors.items()) != N:
+        raise ValueError("Factor atoms do not multiply back to N")
+    proven = {int(p): bool(v) for p, v in value.get("prime_proven", {}).items()}
+    if any(p not in factors for p in proven):
+        raise ValueError("Primality status refers to an absent factor atom")
+    complete = bool(value.get("complete", False))
+    if complete and not all(proven.get(p, False) for p in factors):
+        raise ValueError("An unproved factor cannot be called complete")
+    value = dict(value)
+    value.update(N=N, factors=factors, prime_proven=proven,
+                 unresolved=[p for p in factors if not proven.get(p, False)])
+    return value
+
+
+def _factor_pocklington(p, factorint, isprime, limit, memo, certificates):
+    """A positive answer is a proof; False also means 'not proved here'."""
+    p = int(p)
+    if p in memo:
+        return True
+    if not isprime(p):
+        return False
+    if p < 2**64:
+        memo.add(p)
+        certificates[p] = {"kind": "deterministic-below-2^64"}
+        return True
+    factors = {int(q): int(e) for q, e in factorint(p - 1, limit=limit).items()}
+    if _factor_prod(q**e for q, e in factors.items()) != p - 1:
+        raise ValueError("Pocklington factorization does not multiply to p-1")
+    known, F = [], 1
+    for q, exponent in sorted(factors.items(), reverse=True):
+        if _factor_pocklington(q, factorint, isprime, limit, memo, certificates):
+            known.append((q, exponent))
+            F *= q**exponent
+            if F * F > p:
+                break
+    if F * F <= p:
+        return False
+    witnesses = {}
+    for q, exponent in known:
+        for a in range(2, 128):
+            if pow(a, p - 1, p) == 1 and _factor_gcd(pow(a, (p - 1) // q, p) - 1, p) == 1:
+                witnesses[q] = a
+                break
+        else:
+            return False
+    certificates[p] = {"kind": "pocklington", "F": F,
+                       "factors": known, "witnesses": witnesses}
+    memo.add(p)
+    return True
+
+
+def verify_pocklington_certificates(p, certificates):
+    """Independently recheck the exact certificate tree (SymPy fallback)."""
+    from sympy import isprime
+    checked = set()
+
+    def verify(q):
+        q = int(q)
+        if q in checked:
+            return True
+        cert = certificates.get(q, certificates.get(str(q)))
+        if not isinstance(cert, dict):
+            return False
+        if cert.get("kind") == "deterministic-below-2^64":
+            ok = 2 <= q < 2**64 and bool(isprime(q))
+        elif cert.get("kind") == "pocklington":
+            factors = [(int(r), int(e)) for r, e in cert.get("factors", [])]
+            if not factors or len({r for r, _ in factors}) != len(factors):
+                return False
+            if any(r >= q or r < 2 or e < 1 for r, e in factors):
+                return False
+            F = _factor_prod(r**e for r, e in factors)
+            if F != int(cert.get("F", 0)) or F * F <= q or (q - 1) % F:
+                return False
+            witnesses = cert.get("witnesses", {})
+            ok = all(verify(r) for r, _ in factors)
+            if ok:
+                for r, _ in factors:
+                    a = int(witnesses.get(r, witnesses.get(str(r), 0)))
+                    if a < 2 or pow(a, q - 1, q) != 1 or _factor_gcd(pow(a, (q - 1)//r, q) - 1, q) != 1:
+                        ok = False
+                        break
+        else:
+            return False
+        if ok:
+            checked.add(q)
+        return ok
+
+    return verify(p)
+
+
+def _factor_worker(N, backend, messages):
+    """Top-level target so multiprocessing 'spawn' also works on macOS."""
+    factors = {} if N == 1 else {N: 1}
+    proven, certificates, memo = {}, {}, set()
+    started = _factor_time.monotonic()
+    used_backend = "starting"
+
+    def emit(stage, error=None):
+        record = dict(N=N, factors=dict(factors), prime_proven=dict(proven),
+                      complete=all(proven.get(p, False) for p in factors),
+                      timed_out=False, backend=used_backend,
+                      elapsed=_factor_time.monotonic()-started, stage=stage,
+                      certificates=copy.deepcopy(certificates))
+        if error:
+            record["error"] = error
+            record["complete"] = False
+        # Synchronous checkpoints: native calls can hold the GIL and prevent a
+        # multiprocessing.Queue feeder thread from publishing before a timeout.
+        messages.send(validate_factor_snapshot(record, N))
+
+    def merge_refinement(atom, parts):
+        exponent = factors[atom]
+        parts = {int(p): int(e) for p, e in parts.items()}
+        if any(p < 2 or e < 1 for p, e in parts.items()) or _factor_prod(p**e for p, e in parts.items()) != atom:
+            raise ValueError("A factor refinement did not multiply back exactly")
+        del factors[atom]
+        for p, e in parts.items():
+            factors[p] = factors.get(p, 0) + e * exponent
+        for p in list(proven):
+            if p not in factors:
+                del proven[p]
+
+    try:
+        flint_fmpz = None
+        if backend in ("auto", "flint"):
+            try:
+                from flint import fmpz as flint_fmpz
+            except ImportError:
+                if backend == "flint":
+                    raise ImportError("python-flint is not installed; install it or choose backend auto/sympy")
+        from sympy import factorint, isprime
+        used_backend = "sympy+flint-proof" if flint_fmpz is not None else "sympy-pocklington"
+
+        def prove_atom(p, limit):
+            if flint_fmpz is not None:
+                verdict = bool(flint_fmpz(p).is_prime())
+                if verdict:
+                    certificates[p] = {"kind": "flint-proven-primality"}
+                return verdict
+            return _factor_pocklington(p, factorint, isprime, limit, memo, certificates)
+
+        emit("starting")
+        for limit in (1000, 10000, 100000, 1000000):
+            for atom in sorted(list(factors)):
+                if proven.get(atom, False):
+                    continue
+                parts = {int(p): int(e) for p, e in factorint(atom, limit=limit).items()}
+                merge_refinement(atom, parts)
+            emit("partial-factorization")
+            for p in list(factors):
+                if not proven.get(p, False):
+                    proven[p] = prove_atom(p, limit)
+                emit("prime-proof")
+            if all(proven.get(p, False) for p in factors):
+                return
+        # A user can increase the time budget to allow this deeper phase.
+        for atom in sorted(list(factors)):
+            if proven.get(atom, False):
+                continue
+            parts = {int(p): int(e) for p, e in factorint(atom).items()}
+            merge_refinement(atom, parts)
+            emit("refined-factors")
+            for p in parts:
+                if not proven.get(p, False):
+                    proven[p] = prove_atom(p, 1000000)
+                emit("prime-proof")
+        emit("finished")
+    except Exception as exc:
+        emit("error", f"{type(exc).__name__}: {exc}")
+
+
+def factor_bounded(N, seconds=3.0, backend="auto", progress=None):
+    """Factor abs(N), preserving exact partial results at a wall-clock deadline.
+
+    complete=True means every returned factor atom has proven primality.
+    It says nothing about whether a separate divisor/factor-pair enumeration
+    finished, or whether unselected n-values were searched.
+    """
+    N = abs(int(N))
+    if N < 1:
+        raise ValueError("N must be nonzero")
+    if backend not in ("auto", "flint", "sympy"):
+        raise ValueError("backend must be auto, flint, or sympy")
+    seconds = float(seconds)
+    if not 0 < seconds < float("inf"):
+        raise ValueError("Factor time budget must be finite and positive")
+    initial = dict(N=N, factors={} if N == 1 else {N: 1},
+                   prime_proven={}, complete=N == 1, timed_out=False,
+                   backend="not-started", elapsed=0.0, stage="not-started",
+                   certificates={})
+    latest = validate_factor_snapshot(initial, N)
+    if N == 1:
+        return latest
+    ctx = _factor_mp.get_context("spawn")
+    receiver, sender = ctx.Pipe(duplex=False)
+    process = ctx.Process(target=_factor_worker, args=(N, backend, sender))
+    started = _factor_time.monotonic()
+    process.start()
+    sender.close()
+    timed_out = False
+    terminated_by_parent = False
+    try:
+        while True:
+            remaining = seconds - (_factor_time.monotonic() - started)
+            if remaining <= 0:
+                timed_out = process.is_alive()
+                break
+            if receiver.poll(min(0.05, remaining)):
+                try:
+                    candidate = receiver.recv()
+                except (EOFError, OSError):
+                    break
+                latest = validate_factor_snapshot(candidate, N)
+                if progress is not None:
+                    progress(latest)
+                if latest["complete"] or latest.get("error"):
+                    break
+            elif not process.is_alive():
+                break
+        # Consume already-published refinements before terminating a timed-out worker.
+        while receiver.poll():
+            try:
+                latest = validate_factor_snapshot(receiver.recv(), N)
+                if progress is not None:
+                    progress(latest)
+            except (EOFError, OSError):
+                break
+    finally:
+        if process.is_alive():
+            terminated_by_parent = True
+            process.terminate()
+        process.join(timeout=1.0)
+        if process.is_alive():
+            process.kill()
+            process.join(timeout=1.0)
+        receiver.close()
+    latest["timed_out"] = bool(timed_out and not latest["complete"])
+    latest["elapsed"] = _factor_time.monotonic() - started
+    latest["worker_exit_code"] = process.exitcode
+    if process.exitcode not in (None, 0) and not terminated_by_parent and not latest["complete"]:
+        latest["error"] = f"Factor worker exited with code {process.exitcode}; partial factors retained"
+        latest["stage"] = "worker-failed-partial"
+    if latest["timed_out"]:
+        latest["stage"] = "budget-exhausted-partial"
+    return validate_factor_snapshot(latest, N)
+
+
+"""Display-only compactified geometry for the positive large-n rational-y lab.
+
+Every numerical value in this module is for drawing. Exact rationality,
+integrality, cube sums and primality must be tested by the search engine.
+For n>=3 the real x-domain has exactly two components: x/S>0 and
+x/S<=-w0, where w0>1 solves w0*(w0-1)^2=(1-375/S^3)/6.
+"""
+
+from fractions import Fraction
+import math
+
+
+def compact_ratio(numerator, denominator=1):
+    """(2/pi)*atan(numerator/denominator), avoiding integer float overflow.
+
+    Exact finite values extremely far into a tail can still round to +/-1
+    in drawing coordinates; callers retain exact integers for picking/CSV.
+    """
+    numerator, denominator = int(numerator), int(denominator)
+    if denominator == 0:
+        if numerator == 0:
+            raise ZeroDivisionError("Undefined 0/0 coordinate")
+        return 1.0 if numerator > 0 else -1.0
+    if denominator < 0:
+        numerator, denominator = -numerator, -denominator
+    sign = -1.0 if numerator < 0 else 1.0
+    absolute = abs(numerator)
+    if absolute > denominator:
+        return sign * (1.0 - 2.0 / math.pi * math.atan(float(Fraction(denominator, absolute))))
+    return sign * 2.0 / math.pi * math.atan(float(Fraction(absolute, denominator)))
+
+
+def compact_fraction(value):
+    value = Fraction(value)
+    return compact_ratio(value.numerator, value.denominator)
+
+
+def signed_log_ratio(numerator, denominator=1):
+    """sign(u)*log10(1+abs(u)) for a rational drawing coordinate u."""
+    numerator, denominator = int(numerator), int(denominator)
+    if denominator == 0:
+        raise ZeroDivisionError("A finite scale is required")
+    if denominator < 0:
+        numerator, denominator = -numerator, -denominator
+    sign = -1 if numerator < 0 else 1
+    absolute = abs(numerator)
+    if absolute == 0:
+        return 0.0
+    if absolute.bit_length() - denominator.bit_length() > 900:
+        return sign * (math.log10(absolute) - math.log10(denominator))
+    return sign * math.log1p(float(Fraction(absolute, denominator))) / math.log(10)
+
+
+def signed_log_integer(value):
+    value = int(value)
+    if not value:
+        return 0.0
+    return (-1 if value < 0 else 1) * math.log10(1 + abs(value))
+
+
+def negative_branch_root(c):
+    """Display-only w>1 solving w*(w-1)^2=c, for 4/27<c<=1/6."""
+    if not 4.0 / 27.0 < c <= 1.0 / 6.0:
+        raise ValueError("This large-n branch description requires 4/27 < c <= 1/6")
+    lo, hi = 1.0, 2.0
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        if mid * (mid - 1) ** 2 < c:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2
+
+
+def compact_geometry(n, points=480):
+    """All four real branches, with explicit endpoint limits.
+
+    q=(2/pi)*atan(x/S), v=(2/pi)*atan(y). Arrays include compactified
+    infinities as limiting endpoints, not integer solutions. The finite
+    negative-branch endpoint y=0 is also display-only until exactly checked.
+    """
+    import numpy as np
+
+    n = int(n)
+    if n < 3:
+        raise ValueError("The global large-n geometry requires n>=3")
+    if points < 16:
+        raise ValueError("Use at least16 drawing points")
+    s = 6 * n + 3
+    c = float(Fraction(s**3 - 375, 6 * s**3))
+    w0 = negative_branch_root(c)
+    q0 = -2 / math.pi * math.atan(w0)
+
+    # Quadratic spacing resolves the square-root-shaped endpoint behaviour.
+    a = np.linspace(0.0, 1.0, int(points))
+    qp = a*a
+    qn = (q0 - (q0 + 1.0) * a*a)[::-1]
+    up = np.empty_like(qp)
+    un = np.empty_like(qn)
+    up[0], up[-1] = 0.0, np.inf
+    un[0], un[-1] = -np.inf, -w0
+    up[1:-1] = np.tan(math.pi * qp[1:-1] / 2)
+    un[1:-1] = np.tan(math.pi * qn[1:-1] / 2)
+    yp = np.empty_like(qp)
+    yn = np.empty_like(qn)
+    yp[0], yp[-1] = np.inf, 1.0
+    yn[0], yn[-1] = 1.0, 0.0
+    yp[1:-1] = np.sqrt(1 + c / (up[1:-1] * (1 + up[1:-1])**2))
+    yn[1:-1] = np.sqrt(np.maximum(0.0, 1 + c / (un[1:-1] * (1 + un[1:-1])**2)))
+    vp = 2 / math.pi * np.arctan(yp)
+    vn = 2 / math.pi * np.arctan(yn)
+    branches = []
+    for name, q, u, y, v in (("x>0", qp, up, yp, vp), ("x<0", qn, un, yn, vn)):
+        for sign in (1, -1):
+            branches.append({"name": name, "sign": sign, "q": q.copy(),
+                             "u": u.copy(), "y": sign*y, "v": sign*v,
+                             "n": n, "S": s, "negative_endpoint_u": -w0,
+                             "negative_endpoint_q": q0})
+    return branches
+
+
+def configure_compact_axes(ax, three_dimensional=False):
+    """Tick positions are compactified; tick labels show x/S and y."""
+    from matplotlib.ticker import FixedLocator, FixedFormatter
+
+    xticks = [-1, compact_ratio(-2), compact_ratio(-1), 0,
+              compact_ratio(1), compact_ratio(2), 1]
+    xlabels = ["−∞", "−2", "−1", "0", "1", "2", "+∞"]
+    yticks = [-1, -.5, 0, .5, 1]
+    ylabels = ["−∞", "−1", "0", "1", "+∞"]
+    ax.set_xlim(-1.02, 1.02)
+    ax.xaxis.set_major_locator(FixedLocator(xticks))
+    ax.xaxis.set_major_formatter(FixedFormatter(xlabels))
+    ax.set_xlabel("x / (6n + 3), compactified")
+    axis = ax.zaxis if three_dimensional else ax.yaxis
+    axis.set_major_locator(FixedLocator(yticks))
+    axis.set_major_formatter(FixedFormatter(ylabels))
+    if three_dimensional:
+        ax.set_zlim(-1.04, 1.04)
+        ax.set_zlabel("y, compactified")
+    else:
+        ax.set_ylim(-1.04, 1.04)
+        ax.set_ylabel("y, compactified")
+
+
+
+
+"""Matplotlib views for a global real-geometry map plus exact per-n searches.
+
+Expects compact_geometry/configure_compact_axes/compact_ratio,
+compact_fraction/signed_log_ratio/signed_log_integer from the geometry
+component. Slice records use the dictionaries returned by the factor-pair
+search component. This file has no __main__ side effects.
+"""
+
+from fractions import Fraction
+from pathlib import Path
+import math
+import textwrap
+
+
+class GlobalExplorer:
+    """Global geometry, exact rational hits, diagnostics and coverage status."""
+
+    def __init__(self, slices, n_min=None, n_max=None, exact_check=None,
+                 max_trials=3000, geometry_points=480):
+        import matplotlib.pyplot as plt
+        from matplotlib.widgets import Button, TextBox
+
+        if not slices:
+            raise ValueError("At least one searched n-slice is required")
+        self.slices = sorted(slices, key=lambda item: int(item["n"]))
+        self.n_values = [int(item["n"]) for item in self.slices]
+        if len(set(self.n_values)) != len(self.n_values):
+            raise ValueError("The searched n-slices must be distinct")
+        if min(self.n_values) < 3:
+            raise ValueError("This large-n geometry view requires n>=3")
+        self.n_min = int(n_min if n_min is not None else self.n_values[0])
+        self.n_max = int(n_max if n_max is not None else self.n_values[-1])
+        if not 3 <= self.n_min <= min(self.n_values) <= max(self.n_values) <= self.n_max:
+            raise ValueError("Sampled n-values must lie within the displayed interval, with n>=3")
+        self.exact_check = exact_check
+        self.max_trials = max(1, int(max_trials))
+        self.geometry_points = max(64, int(geometry_points))
+        self.index = 0
+        self.plt = plt
+        self.pick_data = {}
+        self.widgets = []
+        self.textboxes = []
+        self._geometry_cache = {}
+        self._class_cache = {}
+        self._manual_checks = 0
+
+        self.fig2 = plt.figure(figsize=(13.4, 9.2))
+        self.ax2 = self.fig2.add_axes([.085, .455, .87, .34])
+        self.axr = self.fig2.add_axes([.085, .235, .87, .155])
+        self.fig3 = plt.figure(figsize=(13.4, 9.2))
+        self.ax3 = self.fig3.add_subplot(111, projection="3d")
+        self.fig3.subplots_adjust(left=.025, right=.94, bottom=.245, top=.805)
+        self.headers, self.summaries, self.details = [], [], []
+        for fig, name in ((self.fig2, "global branches and exact residuals"),
+                          (self.fig3, "global geometry across n")):
+            fig.canvas.manager.set_window_title("Rational-y global lab — " + name)
+            self.headers.append(fig.suptitle("", x=.045, y=.975, ha="left", fontsize=15))
+            self.summaries.append(fig.text(.045, .902, "", va="top", fontsize=9))
+            self.details.append(fig.text(.045, .084, "", va="bottom", fontsize=8.3,
+                                         family="monospace"))
+            for rect, label, amount in (([.045,.025,.14,.041], "Previous sample", -1),
+                                       ([.195,.025,.14,.041], "Next sample", 1)):
+                button = Button(fig.add_axes(rect), label)
+                button.on_clicked(lambda event, delta=amount: self.select(delta))
+                self.widgets.append(button)
+            entry = TextBox(fig.add_axes([.445,.025,.38,.041]), "Integer x: ", initial="")
+            check_button = Button(fig.add_axes([.845,.025,.11,.041]), "Check x")
+            check_button.on_clicked(lambda event, textbox=entry: self.check_x(textbox.text))
+            entry.on_submit(self.check_x)
+            self.widgets.extend((entry, check_button))
+            self.textboxes.append(entry)
+            fig.canvas.mpl_connect("pick_event", self.on_pick)
+            fig.canvas.mpl_connect("key_press_event", self.on_key)
+        self.draw()
+
+    @property
+    def all_records(self):
+        return [record for result in self.slices for record in result.get("records", [])]
+
+    def _coverage(self, result):
+        stats = result.get("stats", {})
+        if stats.get("complete", False):
+            return "complete"
+        if str(stats.get("status", "")).lower() in {"pending", "not_started", "unsearched",
+                                                    "not searched", "not_searched"}:
+            return "pending"
+        return "partial"
+
+    def _record_key(self, record):
+        return (int(record["n"]), int(record["x"]), Fraction(record["y"]),
+                Fraction(record.get("residual", 0)))
+
+    def _category(self, record):
+        """Reverify an exact marker before ever drawing it as a solution."""
+        key = self._record_key(record)
+        if key in self._class_cache:
+            return self._class_cache[key]
+        category = "trial"
+        n, x, y, residual = key
+        if record.get("exact", False) and residual == 0:
+            s = 6*n + 3
+            tbase = s + x
+            numerator = (s**3 - 375)//6
+            if x and tbase and y*y == 1 + Fraction(numerator, x*tbase*tbase):
+                t = y*tbase
+                if t.denominator != 1:
+                    category = "rational"
+                else:
+                    a, b, c = -x-int(t), -x+int(t), s+2*x
+                    if a**3+b**3+c**3 == 375:
+                        category = "primitive" if math.gcd(a,b,c) == 1 else "cubes"
+        self._class_cache[key] = category
+        return category
+
+    def _counts(self, records=None):
+        records = self.all_records if records is None else records
+        counts = {key: 0 for key in ("trial", "rational", "cubes", "primitive")}
+        for record in records:
+            counts[self._category(record)] += 1
+        return counts
+
+    def _visible_records(self, records, limit):
+        exact = [r for r in records if self._category(r) != "trial"]
+        trials = [r for r in records if self._category(r) == "trial"]
+        stride = max(1, (len(trials) + limit - 1)//limit)
+        return trials[::stride] + exact
+
+    def _geometry(self, n):
+        if n not in self._geometry_cache:
+            self._geometry_cache[n] = compact_geometry(n, self.geometry_points)
+        return self._geometry_cache[n]
+
+    def select(self, amount):
+        self.index = (self.index + amount) % len(self.slices)
+        self.draw()
+        result = self.slices[self.index]
+        print(f"\nSelected n={result['n']}; all-integer-x rational search coverage: "
+              f"{self._coverage(result)}. Other n samples remain in the 3D view.", flush=True)
+
+    def on_key(self, event):
+        # Avoid stealing cursor keys from an active exact-x input field.
+        if event.inaxes in [box.ax for box in self.textboxes]:
+            return
+        if event.key in ("left", "right"):
+            self.select(-1 if event.key == "left" else 1)
+
+    def record_detail(self, record):
+        category = self._category(record)
+        labels = {"trial": "NONZERO-RESIDUAL TRIAL; not a solution",
+                  "rational": "EXACT RATIONAL y; cube coordinates are not all integers",
+                  "cubes": "EXACT INTEGER CUBE SOLUTION; nonprimitive",
+                  "primitive": "EXACT PRIMITIVE INTEGER CUBE SOLUTION"}
+        n, x, y = int(record["n"]), int(record["x"]), Fraction(record["y"])
+        s, tbase = 6*n+3, 6*n+3+x
+        t = y*tbase
+        residual = Fraction(record.get("residual", 0))
+        ytext = "0" if not y else f"±{y}"
+        lines = [labels[category], f"n={n}; x={x}; y={ytext}",
+                 f"t=y(S+x)={t} for positive y; cleared-denominator residual R={residual}"]
+        if category != "trial":
+            triple = (-x-t, -x+t, Fraction(s+2*x))
+            cube_sum = sum(value**3 for value in triple)
+            lines.append("(a,b,c)=(" + ", ".join(map(str, triple)) + f"); cube sum={cube_sum}")
+            if category in {"cubes", "primitive"}:
+                lines.append("gcd=" + str(math.gcd(*(value.numerator for value in triple))))
+        elif x and tbase:
+            discrepancy = residual/Fraction(x*tbase*tbase)
+            lines.append(f"Direct y-squared equation discrepancy = R/[x(S+x)^2] = {discrepancy}")
+        lines.append("Drawing coordinates are compressed; these printed fractions/integers are exact.")
+        return "\n".join(lines)
+
+    def show_detail(self, message):
+        lines = []
+        for line in message.splitlines():
+            lines.extend(textwrap.wrap(line, width=139, break_long_words=True,
+                                       break_on_hyphens=False) or [""])
+        if len(lines) > 6:
+            lines = lines[:5] + ["Full exact values are printed in Terminal."]
+        for text in self.details:
+            text.set_text("\n".join(lines))
+        for figure in (self.fig2,self.fig3):
+            figure.canvas.draw_idle()
+
+    def on_pick(self, event):
+        records = self.pick_data.get(event.artist)
+        indices = getattr(event,"ind", [])
+        if not records or not len(indices):
+            return
+        record = records[int(indices[0])]
+        message = self.record_detail(record)
+        print(message, flush=True)
+        self.show_detail(message)
+
+    def check_x(self, text):
+        if self.exact_check is None:
+            self.show_detail("Manual exact checking is unavailable in this session.")
+            return
+        try:
+            x = int(str(text).strip().replace(",", "").replace("_", ""))
+        except ValueError:
+            self.show_detail("Enter an integer x, then press Check x or Return.\n"
+                             "The exact check uses the n shown in the selected 2D slice.")
+            return
+        result = self.slices[self.index]
+        n = int(result["n"])
+        try:
+            record = self.exact_check(n, x)
+        except (ValueError, ZeroDivisionError) as exc:
+            message = f"Exact check for n={n}, x={x}: {exc}"
+            print(message, flush=True)
+            self.show_detail(message)
+            return
+        self._manual_checks += 1
+        if record is None:
+            message = (f"Exact check for n={n}, x={x}: no real rational point returned.\n"
+                       "The equation may be undefined or have no real y at this x.\n"
+                       "A single check does not change the slice's overall coverage status.")
+            print(message, flush=True)
+            self.show_detail(message)
+            return
+        key = self._record_key(record)
+        if not any(self._record_key(existing) == key for existing in result.get("records", [])):
+            result.setdefault("records", []).append(record)
+        self.draw()
+        message = self.record_detail(record) + "\nManual point check; overall slice coverage is unchanged."
+        print(message, flush=True)
+        self.show_detail(message)
+
+    def _legend_handles(self, counts):
+        from matplotlib.lines import Line2D
+
+        return [
+            Line2D([],[],color="#41779c",lw=1.7,label="Real geometry (includes irrational y)"),
+            Line2D([],[],color="none",marker=".",markerfacecolor="#8a9098",markeredgecolor="#8a9098",
+                   markersize=6,label=f"Nonzero trials ({counts['trial']})"),
+            Line2D([],[],color="none",marker="D",markerfacecolor="#7b2cbf",markeredgecolor="#7b2cbf",
+                   markersize=6,label=f"Exact rational-only ({counts['rational']})"),
+            Line2D([],[],color="none",marker="o",markerfacecolor="#e07614",markeredgecolor="#e07614",
+                   markersize=6,label=f"Exact nonprimitive cubes ({counts['cubes']})"),
+            Line2D([],[],color="none",marker="*",markerfacecolor="#138a36",markeredgecolor="#08651f",
+                   markersize=12,label=f"Exact primitive cubes ({counts['primitive']})"),
+        ]
+
+    def _draw_scatter(self, ax, records, three_dimensional=False, residual=False):
+        specs = [("trial","#8a9098",".",9,.35),
+                 ("rational","#7b2cbf","D",53,.95),
+                 ("cubes","#e07614","o",65,.95),
+                 ("primitive","#138a36","*",190,1.0)]
+        for category,color,marker,size,alpha in specs:
+            group = [r for r in records if self._category(r)==category]
+            if not group:
+                continue
+            data = [(r, sign) for r in group for sign in
+                    ((1,-1) if not residual and Fraction(r["y"]) else (1,))]
+            if residual:
+                xx = [signed_log_integer(r["x"]) for r,sign in data]
+                yy = [signed_log_ratio(Fraction(r["residual"]).numerator,
+                                       Fraction(r["residual"]).denominator) for r,sign in data]
+                artist = ax.scatter(xx,yy,c=color,marker=marker,s=size,alpha=alpha,
+                                    linewidths=.6,picker=6,zorder=5 if category!="trial" else 2)
+            else:
+                xx = [compact_ratio(r["x"],6*r["n"]+3) for r,sign in data]
+                yy = [sign*compact_fraction(r["y"]) for r,sign in data]
+                if three_dimensional:
+                    nn = [math.log10(r["n"]) for r,sign in data]
+                    artist = ax.scatter(xx,nn,yy,c=color,marker=marker,s=size,alpha=alpha,
+                                        linewidths=.6,picker=6,depthshade=False)
+                else:
+                    artist = ax.scatter(xx,yy,c=color,marker=marker,s=size,alpha=alpha,
+                                        linewidths=.6,picker=6,zorder=5 if category!="trial" else 2)
+            self.pick_data[artist] = [r for r,sign in data]
+
+    def _draw_surface(self):
+        import numpy as np
+
+        geometric_ns = sorted(set([self.n_min, self.n_max] + self.n_values))
+        if len(geometric_ns)==1:
+            for branch in self._geometry(geometric_ns[0]):
+                self.ax3.plot(branch["q"], [math.log10(geometric_ns[0])]*len(branch["q"]),
+                              branch["v"],color="#648fae",alpha=.6,lw=1.5)
+            return
+        rows = [self._geometry(n) for n in geometric_ns]
+        for j in range(4):
+            q = np.array([row[j]["q"] for row in rows])
+            v = np.array([row[j]["v"] for row in rows])
+            nn = np.broadcast_to(np.array([math.log10(n) for n in geometric_ns])[:,None],q.shape)
+            self.ax3.plot_surface(q,nn,v,color="#7098b3",alpha=.18,linewidth=0,
+                                  rcount=min(len(geometric_ns),40),ccount=90,shade=False)
+        # Mark the selected slice geometrically without treating it as a solution.
+        selected_n = self.n_values[self.index]
+        for branch in self._geometry(selected_n):
+            self.ax3.plot(branch["q"], [math.log10(selected_n)]*len(branch["q"]),
+                          branch["v"],color="#28658d",alpha=.75,lw=1)
+
+    def draw(self):
+        from matplotlib.ticker import MaxNLocator, FixedLocator, FixedFormatter
+
+        viewpoint = self.ax3.elev,self.ax3.azim
+        self.ax2.clear(); self.axr.clear(); self.ax3.clear()
+        self.ax3.view_init(*viewpoint)
+        self.pick_data.clear()
+        selected = self.slices[self.index]
+        n = int(selected["n"])
+        all_counts = self._counts()
+        selected_counts = self._counts(selected.get("records", []))
+        coverage_counts = {status:sum(self._coverage(s)==status for s in self.slices)
+                           for status in ("complete","partial","pending")}
+        coverage = self._coverage(selected)
+        self.headers[0].set_text(f"Global real branches and exact search records\nSelected n = {n:,}")
+        self.headers[1].set_text(f"Global real geometry, with exact search records overlaid\n"
+                                f"Requested n interval: {self.n_min:,} to {self.n_max:,}")
+        summary = (f"Exact hits: {sum(all_counts[k] for k in ('rational','cubes','primitive')):,} · "
+                   f"rational-only: {all_counts['rational']:,} · nonprimitive cubes: {all_counts['cubes']:,} · "
+                   f"primitive cubes: {all_counts['primitive']:,}\n"
+                   f"All-integer-x coverage at sampled n: {coverage_counts['complete']} complete · "
+                   f"{coverage_counts['partial']} partial · {coverage_counts['pending']} pending. "
+                   "Other n values were not searched.\n"
+                   "Blue curves/surfaces show real geometry, including irrational y. "
+                   "Green stars require an exact primitive solution.\n"
+                   f"Selected sample {self.index+1}/{len(self.slices)}: {coverage.upper()}; "
+                   f"{selected_counts['trial']:,} retained trials, "
+                   f"{sum(selected_counts[k] for k in ('rational','cubes','primitive')):,} exact hits. "
+                   "Every ±y pair is counted once.")
+        for text in self.summaries:
+            text.set_text(summary)
+        geometry = self._geometry(n)
+        q0 = geometry[0]["negative_endpoint_q"]
+        self.ax2.axvspan(q0,0,color="#f0f0f0",zorder=0)
+        self.ax2.axvline(compact_ratio(-1),color=".65",ls=":",lw=.8)
+        self.ax2.axvline(0,color=".65",ls=":",lw=.8)
+        self.ax2.text((q0+0)/2,.91,"No real y",ha="center",va="top",fontsize=8,color=".45")
+        coverage_colors = {"complete":("#dcebf6", "#285d83"),
+                           "partial":("#fff0d8", "#98601c"),
+                           "pending":("#eeeeee", "#555555")}
+        background, foreground = coverage_colors[coverage]
+        badge = {"complete":"All integer x: complete", "partial":"Integer-x search: partial",
+                 "pending":"Integer-x search: not run"}[coverage]
+        self.ax2.text(.985,.965,badge,transform=self.ax2.transAxes,ha="right",va="top",
+                      fontsize=8,color=foreground,bbox=dict(boxstyle="round,pad=.35",
+                                                           facecolor=background,edgecolor="none"))
+        for branch in geometry:
+            self.ax2.plot(branch["q"],branch["v"],color="#41779c",lw=1.8,zorder=1)
+        configure_compact_axes(self.ax2)
+        self.ax2.grid(alpha=.13)
+        selected_records = self._visible_records(selected.get("records", []),self.max_trials)
+        self._draw_scatter(self.ax2,selected_records)
+        self._draw_scatter(self.axr,selected_records,residual=True)
+        self.ax2.legend(handles=self._legend_handles(selected_counts),loc="lower left",fontsize=7.7,ncol=2)
+        self.axr.axhline(0,color="#555555",lw=.9)
+        self.axr.set_xlabel("Integer x across all scales: sign(x) log10(1 + |x|)",fontsize=9)
+        self.axr.set_ylabel("sign(R) log10(1 + |R|)",fontsize=9)
+        self.axr.set_title("Exact residual diagnostic for retained trials and hits — zero is the target",fontsize=10)
+        self.axr.xaxis.set_major_locator(MaxNLocator(7))
+        self.axr.yaxis.set_major_locator(MaxNLocator(5))
+        self.axr.grid(alpha=.15)
+        if not selected_records:
+            self.axr.text(.5,.5,"No retained trials or exact hits in this slice.\n"
+                          "Coverage status is shown above; this empty panel is not a solution marker.",
+                          transform=self.axr.transAxes,ha="center",va="center",fontsize=9,color=".45")
+        self._draw_surface()
+        limit_per_slice = max(1,self.max_trials//len(self.slices))
+        records3 = [r for result in self.slices
+                    for r in self._visible_records(result.get("records",[]),limit_per_slice)]
+        self._draw_scatter(self.ax3,records3,three_dimensional=True)
+        configure_compact_axes(self.ax3,True)
+        self.ax3.set_xlabel("x / (6n + 3), compactified",labelpad=8)
+        self.ax3.set_zlabel("y, compactified",labelpad=8)
+        self.ax3.set_ylabel("n (logarithmic depth)",labelpad=9)
+        loglo,loghi = math.log10(self.n_min),math.log10(self.n_max)
+        ticklogs = list(range(math.ceil(loglo),math.floor(loghi)+1))
+        if len(ticklogs)>=2:
+            ticklabels = [f"$10^{{{value}}}$" for value in ticklogs]
+        else:
+            ticklogs = [loglo] if loglo==loghi else [loglo,loghi]
+            ticklabels = [str(self.n_min)] if loglo==loghi else [str(self.n_min),str(self.n_max)]
+        self.ax3.yaxis.set_major_locator(FixedLocator(ticklogs))
+        self.ax3.yaxis.set_major_formatter(FixedFormatter(ticklabels))
+        pad = max(.02,.025*(loghi-loglo))
+        self.ax3.set_ylim(loglo-pad,loghi+pad)
+        self.ax3.legend(handles=self._legend_handles(all_counts),loc="upper left",fontsize=8)
+        exact = [r for r in selected.get("records",[]) if self._category(r)!="trial"]
+        if exact:
+            self.show_detail(self.record_detail(exact[0]))
+        else:
+            completeness = ("The complete all-integer-x search found no exact rational point at this n."
+                            if coverage=="complete" else
+                            "This slice is not fully searched; absence of a hit is not a nonexistence result.")
+            self.show_detail(f"Selected n={n}. {completeness}\n"
+                             "Click a plotted point for exact values, or enter an integer x for an exact check.\n"
+                             "Compactified endpoints represent infinite limits; extreme finite points can visually merge there.\n"
+                             "The residual panel separates x by signed logarithmic magnitude; solution counts appear in the legends.")
+        for figure in (self.fig2,self.fig3):
+            figure.canvas.draw_idle()
+
+    def save(self, prefix):
+        prefix = Path(prefix)
+        prefix.parent.mkdir(parents=True,exist_ok=True)
+        paths = [prefix.with_name(prefix.name+"-"+kind+".png") for kind in ("2d","3d")]
+        for figure,path in zip((self.fig2,self.fig3),paths):
+            figure.savefig(path,dpi=150)
+        return paths
+
+
+import argparse
+import csv
+import importlib.util
+import sys
+from pathlib import Path
+from time import monotonic
+
+
+def _integer_floor_nth_root(value, degree):
+    if degree < 1 or value < 0:
+        raise ValueError("Invalid integer-root arguments")
+    if degree == 1 or value < 2:
+        return value
+    low, high = 0, 1 << ((value.bit_length() + degree - 1) // degree)
+    while high - low > 1:
+        middle = (low + high) // 2
+        if middle ** degree <= value:
+            low = middle
+        else:
+            high = middle
+    return low
+
+
+def global_n_samples(n_min, n_max, count, spacing="log", all_n=False):
+    """Choose finite samples without constructing large integers from floats."""
+    if not 3 <= n_min <= n_max:
+        raise ValueError("Global real-branch plotting requires 3 <= n-min <= n-max")
+    if not 1 <= count <= 128:
+        raise ValueError("--slices must be between 1 and 128")
+    if n_min == n_max:
+        # An explicit single-n experiment is useful even if its integer-cube
+        # congruence is impossible: it can still have rational-only points.
+        return [n_min]
+    if count < 2:
+        raise ValueError("Use at least two slices to sample an interval")
+    if spacing == "linear":
+        anchors = [n_min + i * (n_max - n_min) // (count - 1) for i in range(count)]
+    elif spacing == "log":
+        # floor(A^((m-1-i)/(m-1)) * B^(i/(m-1))), evaluated as an integer root.
+        anchors = [_integer_floor_nth_root(n_min ** (count - 1 - i) * n_max ** i,
+                                          count - 1) for i in range(count)]
+    else:
+        raise ValueError("spacing must be log or linear")
+    if all_n:
+        return sorted(set(anchors))
+    chosen = []
+    for anchor in anchors:
+        base = anchor - anchor % 9
+        options = [base + residue + shift
+                   for residue in (2, 5) for shift in (-9, 0, 9)
+                   if n_min <= base + residue + shift <= n_max]
+        if not options:
+            raise ValueError("No n = 2 or 5 (mod 9) in this interval; use --all-residues to explore rational-only points")
+        chosen.append(min(options, key=lambda n: (abs(n - anchor), n)))
+    return sorted(set(chosen))
+
+
+def _factor_string(factorization, include_status=False):
+    terms = []
+    for p, e in sorted(factorization["factors"].items()):
+        term = str(p) if e == 1 else f"{p}^{e}"
+        if include_status and not factorization["prime_proven"].get(p, False):
+            term += " [unresolved]"
+        terms.append(term)
+    return " * ".join(terms) or "1"
+
+
+def describe_global_record(record):
+    lines = [f"{record['status'].upper()}: n={record['n']}, x={record['x']}, y=+/-{record['y']}",
+             f"Cleared-denominator residual R={record['residual']}; t=y(S+x)={record['t']}"]
+    if record["exact"]:
+        cubes = record["cube_triple"]
+        lines.append("(a,b,c)=(" + ", ".join(str(v) for v in cubes) + "); cube sum=" + str(sum(v**3 for v in cubes)))
+        lines.append(f"Integer cube lift={record['integral_lift']}; gcd={record['cube_gcd']}; primitive={record['primitive']}")
+    else:
+        lines.append("R is nonzero: this rational trial is not a solution of the equation.")
+    return "\n".join(lines)
+
+
+def run_global_search(args):
+    ns = global_n_samples(args.n_min, args.n_max, args.slices, args.spacing, args.all_n)
+    print("\nGLOBAL GEOMETRY: every real x branch, with both signs of y.", flush=True)
+    print(f"Requested n interval: [{args.n_min}, {args.n_max}], inclusive.", flush=True)
+    print(f"Exact arithmetic search: {len(ns)} selected integer n values; no arbitrary x window.", flush=True)
+    print("Other integer n values in the interval are not searched.", flush=True)
+    if not args.all_n and args.n_min != args.n_max:
+        print("Samples are adjusted to n = 2 or 5 (mod 9), as required for integer cube lifts.", flush=True)
+    print("At each selected n, all rational y and integer x are covered only when both prime factorization and factor-pair enumeration finish.", flush=True)
+    slices = []
+    started = monotonic()
+    for index, n in enumerate(ns):
+        S, N = _global_coeffs(n)
+        if args.geometry_only:
+            stats = {"complete": False, "status": "not searched", "pairs_tested": 0,
+                     "factorization_complete": False, "enumeration_complete": False,
+                     "exact_hits": 0, "primitive_hits": 0,
+                     "rational_x_bounds": rational_x_bounds(n),
+                     "integer_cube_x_bounds": integer_cube_x_bounds(n)}
+            slices.append({"n": n, "records": [], "stats": stats, "factorization": None})
+            continue
+        print(f"[{index+1}/{len(ns)}] n={n}: factoring {len(str(N))}-digit N (budget {args.factor_seconds:g}s) ...", flush=True)
+        factorization = factor_bounded(N, seconds=args.factor_seconds, backend=args.backend)
+        checked = rational_factor_pair_search(
+            n, factorization["factors"], proven_primes=factorization["prime_proven"],
+            max_pairs=args.max_pairs, max_trials=args.max_trials,
+        )
+        stats = checked["stats"]
+        # A backend error is never allowed to turn into a complete-search claim.
+        stats["complete"] = bool(stats["complete"] and factorization["complete"] and not factorization.get("error"))
+        if stats["complete"]:
+            status = "complete: all integer x"
+        elif not factorization["complete"]:
+            status = "partial: unresolved factorization"
+        else:
+            status = "partial: " + (stats.get("stop_reason") or "enumeration unfinished")
+        stats.update(status=status, factor_seconds=factorization["elapsed"],
+                     factor_backend=factorization["backend"],
+                     factor_error=factorization.get("error"))
+        item = {"n": n, "records": checked["records"], "stats": stats,
+                "factorization": factorization}
+        slices.append(item)
+        print(f"  {status}; factor pairs={stats['pairs_tested']:,}; exact rational points={stats['exact_hits']}; primitive={stats['primitive_hits']}", flush=True)
+        if factorization.get("error"):
+            print("  Factor worker: " + factorization["error"], flush=True)
+        if args.verbose:
+            print("  N = " + _factor_string(factorization, include_status=True), flush=True)
+            print(f"  Proven all-rational x bounds: {stats['rational_x_bounds']}", flush=True)
+        for record in checked["points"]:
+            print(describe_global_record(record), flush=True)
+    exact = [r for item in slices for r in item["records"] if r["exact"]]
+    complete = sum(bool(item["stats"]["complete"]) for item in slices)
+    print(f"\nCoverage: {complete}/{len(slices)} selected n-slices completely searched over ALL integer x.", flush=True)
+    if args.geometry_only:
+        print("Geometry-only mode: no exact search was requested. A zero marker count makes no existence claim.", flush=True)
+    else:
+        print(f"Exact rational points: {len(exact)}; integer cube lifts: {sum(r['integral_lift'] for r in exact)}; primitive green stars: {sum(r['primitive'] for r in exact)}.", flush=True)
+        if complete < len(slices):
+            print("Partial slices remain unresolved. Increase --factor-seconds to allow more factoring work, or --max-pairs for an enumeration limit.", flush=True)
+    print("Continuous curves are real geometry. Grey candidates are not solutions. Green stars require exact primitive cube solutions.", flush=True)
+    print(f"Elapsed search time: {monotonic()-started:.2f}s.", flush=True)
+    return slices
+
+
+def export_global_csv(path, slices, args):
+    """Preserve exact decimal/fraction strings and explicit coverage metadata."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fields = ["n", "x", "y_numerator", "y_denominator", "y_abs_exact", "t_exact",
+              "residual_R_exact", "exact", "integral_lift", "primitive", "cube_gcd",
+              "a", "b", "c", "cube_sum", "status", "source_branch"]
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(fields)
+        for item in slices:
+            for r in item["records"]:
+                cubes = r["cube_triple"]
+                writer.writerow([str(r["n"]), str(r["x"]), str(r["y"].numerator),
+                                 str(r["y"].denominator), str(r["y"]), str(r["t"]),
+                                 str(r["residual"]), r["exact"], r["integral_lift"],
+                                 r["primitive"], r["cube_gcd"],
+                                 *(str(v) for v in cubes), str(sum(v**3 for v in cubes)),
+                                 r["status"], r["branch"]])
+    coverage = path.with_name(path.stem + "-coverage.csv")
+    with coverage.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["sample_index", "n", "status", "all_integer_x_complete",
+                         "factorization_complete", "enumeration_complete", "factor_pairs_tested",
+                         "rational_x_min", "rational_x_max", "integer_cube_x_min", "integer_cube_x_max",
+                         "N_factorization", "unresolved_atoms", "factor_backend", "factor_seconds",
+                         "requested_n_min", "requested_n_max"])
+        for index, item in enumerate(slices):
+            s, f = item["stats"], item.get("factorization")
+            writer.writerow([index, str(item["n"]), s["status"], s["complete"],
+                             s.get("factorization_complete", False), s.get("enumeration_complete", False),
+                             s.get("pairs_tested", 0), *map(str, s["rational_x_bounds"]),
+                             *map(str, s["integer_cube_x_bounds"]),
+                             _factor_string(f) if f else "not searched",
+                             ";".join(map(str, f["unresolved"])) if f else "",
+                             f["backend"] if f else "", f["elapsed"] if f else "",
+                             str(args.n_min), str(args.n_max)])
+    return path, coverage
+
+
+def parse_global_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Global Matplotlib map and all-x factor-pair search for rational y and primitive cube sums of 375.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Examples:
+  python3 rational_y_global_lab.py
+  python3 rational_y_global_lab.py --factor-seconds 15
+  python3 rational_y_global_lab.py --n-min 10000000000000000 --n-max 1000000000000000000 --slices 48
+  python3 rational_y_global_lab.py --n 13
+  python3 rational_y_global_lab.py --all-residues --search-only --csv global_points.csv
+  python3 rational_y_global_lab.py --geometry-only
+
+Green stars: exact primitive integer cube solutions (sum 375, gcd 1).
+Purple diamonds: exact rational y, without an integer cube lift.
+Orange circles: exact integer cube lifts with gcd 5.
+Grey marks: nonzero-residual trials, not solutions.
+
+The graph displays the full real x geometry; the exact search uses selected
+integer n samples. A fully factored/completely enumerated sample covers ALL
+integer x and rational y at that n. Unfinished samples are marked partial.
+There is no arbitrary x-centre or x-window parameter in this global method.
+""")
+    parser.add_argument("--n", type=int, help="A single exact n slice")
+    parser.add_argument("--n-min", type=int, help="Start of displayed/sampled n interval; default 10^16")
+    parser.add_argument("--n-max", type=int, help="End of displayed/sampled n interval; default 10^18")
+    parser.add_argument("--slices", type=int, default=24, help="Number of n samples, 1..128; default 24")
+    parser.add_argument("--spacing", choices=("log", "linear"), default="log",
+                        help="Exact integer construction of nominal samples; default log")
+    parser.add_argument("--all-residues", dest="all_n", action="store_true",
+                        help="Keep unrestricted nominal n samples, including n classes without integer cube lifts; does NOT scan every n")
+    parser.add_argument("--factor-seconds", type=float, default=3.0,
+                        help="Wall-clock budget per selected n for factoring/proving primes; default 3s")
+    parser.add_argument("--backend", choices=("auto", "flint", "sympy"), default="auto",
+                        help="Factor discovery uses SymPy; flint adds proven primality; auto uses it when available")
+    parser.add_argument("--max-pairs", type=int, default=200000,
+                        help="Maximum factor pairs per n; hitting this limit is explicitly partial")
+    parser.add_argument("--max-trials", type=int, default=60,
+                        help="Nonzero trial records retained per n; all exact hits remain")
+    parser.add_argument("--geometry-only", action="store_true",
+                        help="Draw all real branches immediately; perform no exact solution search")
+    parser.add_argument("--search-only", action="store_true", help="Run exact arithmetic without plotting")
+    parser.add_argument("--csv", type=Path, help="Export exact point/trial data and companion coverage CSV")
+    parser.add_argument("--save-prefix", type=Path, help="Save PREFIX-2d.png and PREFIX-3d.png without windows")
+    parser.add_argument("--verbose", action="store_true", help="Print exact factors and proven x bounds for each slice")
+    args = parser.parse_args(argv)
+    if args.n is not None:
+        if args.n_min is not None or args.n_max is not None:
+            parser.error("Use --n for one slice OR --n-min/--n-max for an interval")
+        args.n_min = args.n_max = args.n
+        args.slices = 1
+    else:
+        args.n_min = 10**16 if args.n_min is None else args.n_min
+        args.n_max = 10**18 if args.n_max is None else args.n_max
+    if not 3 <= args.n_min <= args.n_max:
+        parser.error("Require 3 <= n-min <= n-max for the global real-branch view")
+    if not 1 <= args.slices <= 128:
+        parser.error("--slices must be 1..128")
+    if args.n_min < args.n_max and args.slices < 2:
+        parser.error("An interval requires at least two slices")
+    if not 0 < args.factor_seconds < float("inf"):
+        parser.error("--factor-seconds must be finite and positive")
+    if args.max_pairs < 1 or args.max_trials < 0:
+        parser.error("Require --max-pairs > 0 and --max-trials >= 0")
+    if args.search_only and args.save_prefix:
+        parser.error("Choose --search-only OR --save-prefix")
+    if not args.geometry_only:
+        if importlib.util.find_spec("sympy") is None:
+            parser.error("Exact searching requires SymPy. Install with: python3 -m pip install sympy python-flint")
+        if args.backend == "flint" and importlib.util.find_spec("flint") is None:
+            parser.error("--backend flint requires python-flint. Install it or use --backend auto")
+    return args
+
+
+def main(argv=None):
+    args = parse_global_args(argv)
+    try:
+        slices = run_global_search(args)
+    except (ValueError, ArithmeticError) as exc:
+        print("Search could not finish: " + str(exc), file=sys.stderr)
+        return 2
+    if args.csv:
+        for path in export_global_csv(args.csv, slices, args):
+            print(f"Saved {path}")
+    if args.search_only:
+        return 0
+    if args.save_prefix:
+        import matplotlib
+        matplotlib.use("Agg")
+    try:
+        explorer = GlobalExplorer(slices, n_min=args.n_min, n_max=args.n_max,
+                                  exact_check=exact_check)
+    except ImportError:
+        print("Plotting needs Matplotlib and NumPy: python3 -m pip install matplotlib numpy", file=sys.stderr)
+        return 2
+    if args.save_prefix:
+        for path in explorer.save(args.save_prefix):
+            print(f"Saved {path}")
+        explorer.plt.close("all")
+    else:
+        print("Previous/Next selects n samples. Click a point for exact details; use the x box to check a chosen integer x.")
+        print("The green-star legend may show 0; a green point appears only for an exact primitive solution.")
+        explorer.plt.show()
+        if args.csv:
+            # Check x appends exact records to these same slice dictionaries.
+            # Save again after the windows close so manual discoveries persist.
+            for path in export_global_csv(args.csv, slices, args):
+                print(f"Updated {path} with any manual x checks")
+    return 0
+
+
+if __name__ == "__main__":
+    _factor_mp.freeze_support()
+    try:
+        raise SystemExit(main())
+    except KeyboardInterrupt:
+        print("\nStopped. An interrupted run does not certify the uncompleted search.", file=sys.stderr)
+        raise SystemExit(130)
