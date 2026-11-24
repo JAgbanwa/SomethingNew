@@ -1,0 +1,1706 @@
+#!/usr/bin/env python3
+"""Rational-y Slice Lab for k=375 (Python 3.10+).
+
+Equation:
+    y^2 = 1 + (36*n^3 + 54*n^2 + 27*n - 58) / [x*(6*n+3+x)^2]
+n,x are integers; y is allowed to be rational.
+
+RUN WITH THE SAME MATPLOTLIB SETUP AS THE EARLIER EXPERIMENT
+    python3 rational_y_lab.py
+    python3 rational_y_lab.py --engine lattice --target cubes --mode tiles
+    python3 rational_y_lab.py --engine lattice --target primitive --mode tiles
+    python3 rational_y_lab.py --preset control
+    python3 rational_y_lab.py --preset control --search-only
+    python3 rational_y_lab.py --search-only --csv rational-points.csv
+
+Matplotlib and NumPy are the only third-party dependencies for plots:
+    python3 -m pip install matplotlib numpy
+Search-only mode needs only Python's standard library.
+
+LARGE-n VISUALIZATION: 10^15 <= n <= 10^16
+    python3 rational_y_lab.py --preset large
+    python3 rational_y_lab.py --preset large --slices 24 --mode residual
+    python3 rational_y_lab.py --preset local-large --n 5000000000000000
+    python3 rational_y_lab.py --preset large --engine scan --target rational --mode residual
+
+The large preset selects 12 distinct admissible n values across this inclusive
+interval using exact integer interpolation, followed by nearest n=2 or5 mod9.
+It does NOT sweep all n: the interval contains 9,000,000,000,000,001 integers.
+Each chosen n gets its own integer x window around
+    x_center(n) = floor((6*n+3)/10), x_center +/- 5,000,000.
+The default target is primitive, engine lattice, mode tiles, and tile width
+1,000,000. Every integer x in each selected window is covered by the search.
+CLI output and the companion -windows.csv name the exact searched windows.
+No result is a claim about unselected n or about x outside these windows.
+
+--n-stop makes --slices an integer sample count across [n,n-stop]. Without
+--n-stop, n slices remain consecutive. Use --preset local-large for a local
+consecutive window near a chosen large n. In sampled overviews, Previous/Next
+sample changes the displayed 2D slices while retaining the full 3D stack.
+In local windows, Previous/Next n shifts the window as before.
+
+--x-center-ratio accepts exact fractions such as 1/10 or -3/2; the integer
+centre is recomputed for each n. --x-half-width controls local search width.
+Explicit --x-min and --x-max instead choose one fixed x interval for all n.
+In large presets, --engine scan uses a smaller default half-width of5,000
+to keep exact all-rational searches within the direct scan pair budget.
+
+Offset axes subtract each slice's exact x and t origins BEFORE float conversion.
+Overview depth is the sample index; exact n remains available in Terminal and
+on point/tile selection. Normalized real curves almost coincide at this scale:
+    y^2 = 1 + (1-375/S^3) / [6*u*(1+u)^2], u=x/S, S=6*n+3.
+The correction 375/S^3 is about1.74e-45 down to1.74e-48 across this interval.
+This visual coalescence does not weaken any exact arithmetic test.
+
+
+TWO SEARCH ENGINES, THREE TARGETS
+    scan + rational: every rational y at the integer n,x pairs in the window.
+    scan + cubes/primitive: exact reference scan for integer cube lifts.
+    lattice + cubes/primitive: certified tangent strips and exact 2D Gauss
+        reduction in each fixed-n slice, followed by exact verification.
+
+The lattice engine is a slice-wise ADAPTATION of the geometric idea in
+Elkies / Elsenhans-Jahnel / Huisman. It uses genuine basis reduction and
+enumeration of thin tangent strips. It is not the original optimized 3D
+LLL + Fincke-Pohst program, nor a reproduction of a global 10^15 search.
+Its finite n,x windows do not constitute a bound on all cubic triples.
+
+EXACT RATIONAL TEST
+    S=6n+3, T=S+x, N=(S^3-375)/6.
+    H=x^2*T^2+x*N.
+For x*T != 0:
+    rational y <=> H>=0 is an integer square r^2;
+    y=+/-r/abs(x*T), reduced exactly with Fraction.
+There is no arbitrary denominator cutoff. We do NOT round a floating
+square root or treat a near-square as an exact solution.
+
+For the cubic goal additionally require t=y*T to be an integer.
+At an exact rational point this is equivalent to x|N (or denominator(y)|T).
+Then M=T^2+N/x must be a nonnegative INTEGER square t^2.
+
+    a=-x-t, b=-x+t, c=S+2x
+    a^3+b^3+c^3 = 375 - 6*[x*(t^2-T^2)-N].
+
+Only zero residual is a solution. At a true integer-cube solution, a common
+divisor g has g^3|375, so g is 1 or5. Primitive means gcd(a,b,c)=1.
+Rational-only hits can give rational a,b,c and are not integer cube solutions.
+
+MODULAR CONDITIONS
+Integer-cube targets use necessary conditions:
+    n mod9 in {2,5}; x mod3=1; t mod3=0.
+More precisely t mod9=0 for n mod9=2, and t mod9 in{3,6} for n mod9=5.
+There is NO restriction that n must be even.
+Projected tables modulo8,5,7,13,19 are generated from
+    x*t^2 = x*(S+x)^2+N (mod m).
+They do not divide by x modulo m, so noninvertible residues are safe.
+
+Allowed x mod8, indexed by n mod8:
+    0:{2}, 1:{3}, 2:{1,3,4,5,7}, 3:{5},
+    4:{6}, 5:{7}, 6:{0,1,2,3,4,5,6,7}, 7:{1}.
+Modulo5, when n!=2 mod5, x=+/- (n+3) mod5 is necessary.
+When n=2 mod5, all x residues survive this projected mod5 test.
+If also 5|x, primitivity requires v5(x)=v5(N); x divisible by5 cannot
+simply be banned. The final gcd check is always applied to exact hits.
+
+These integer-lift filters are deliberately NOT applied to all-rational
+mode. That mode only uses safe square-residue tests on H, followed by isqrt.
+
+WHY THE LATTICE STRIPS ARE CERTIFIED
+For a fixed n, t=f(x)=sqrt(g(x)), g(x)=(S+x)^2+N/x.
+On I=[a,b] away from0, use interval bounds on g,g',g'' to bound |f''|.
+A rational enclosure of f at the midpoint gives a rational tangent
+approximation and a rigorous error width w. The full graph over I lies in
+    |t-[t0+alpha*(x-x0)]| <= w.
+Reduce the affine lattice (x,t)=(1,0)+Z*(3,0)+Z*(0,3), using the exact norm
+    dx^2/h^2 + (dt-alpha*dx)^2/w^2.
+Map strip corners through the reduced basis inverse, enumerate the integer
+coefficient box, and verify candidates exactly. Unsafe or overly broad
+tiles are subdivided; small pieces use an exact per-x fallback. This also
+retains isolated real points. Work limits abort explicitly; no region is
+silently skipped and then reported complete.
+
+READING THE PLOTS
+Points view: rational trial y-values (faint) and exact rational y hits.
+Residual view: zero is the exact-hit target. The residual units differ:
+    scan/rational uses E=r^2-H; integer-cube modes use R=x*(t^2-T^2)-N.
+    E=x*R, so their numerical heights must not be compared as one scale.
+Tiles view (lattice): certified parallelograms for the nonnegative |t| branch, with
+normalized or exact-offset drawing coordinates and integer candidates.
+Every displayed +/- pair is stored once with nonnegative |y|.
+
+Previous/Next selects samples in an overview or shifts a local n window. View cycles the available views.
+Clicking a point prints its full exact details in Terminal.
+Drag the 3D axes to rotate; use Matplotlib's toolbar to zoom/save.
+Large-coordinate drawing is approximate; --axis offset subtracts per-slice origins
+before float conversion when using sampled or ratio-centred windows. Exact decisions and CSV values retain full integers.
+Drawing limits only downsample nonexact points; every exact hit is retained.
+
+EXAMPLES / CONTROLS
+    n=2,x=16: y=+/-63/62, but t=+/-63/2: rational cubes only.
+    n=2,x=-36: y=+/-62/63: rational cubes only.
+    n=2,x=-20 and -5: y=0: integer cubes, gcd5, nonprimitive.
+
+The control preset searches a window around a known NONPRIMITIVE large
+point obtained by scaling Booker-Sutherland's cubic-3 solution by5.
+It is a validation control, not a new discovery. The point is found by
+the search; it is not injected into the output or accepted without checks.
+
+COVERAGE
+Every integer cubic375 triple can be permuted to choose same-parity a,b.
+Then n=(a+b+c-3)/6 and x=-(a+b)/2 are integers, and
+    y=(b-a)/(a+b+2c)
+is rational. Cubes mod9 force a,b,c=-1 mod3, so x and S+x cannot be0.
+Thus rational y with integral t covers the integer cubic problem up to
+permutation, but any finite window still searches only that window.
+Both positive and negative n must be considered in a broader investigation.
+
+REFERENCES (PRIMARY SOURCES)
+S. G. Huisman, Newer sums of three cubes (2016), section2:
+    https://arxiv.org/pdf/1604.07746
+A.-S. Elsenhans and J. Jahnel, New sums of three cubes (2009):
+    https://wwwuser.gwdguser.de/~jjahnel/Arbeiten/elk_ants6c.pdf
+N. D. Elkies, Rational points near curves ... via lattice reduction (2000):
+    https://arxiv.org/pdf/math/0005139
+A. R. Booker and A. V. Sutherland, On a question of Mordell (2021),
+source of the cubic3 solution used only for the nonprimitive control:
+    https://arxiv.org/pdf/2007.01209
+"""
+
+from __future__ import annotations
+
+
+# Rational Core
+
+"""Exact arithmetic for rational-y slices of the k=375 equation.
+
+This module has no third-party dependencies. There are deliberately two
+different residuals: kind='r' uses E=r^2-H; kind='t' uses the original
+R=x(t^2-(S+x)^2)-N. E=x*R. Do not compare their numerical heights.
+
+Integer-cube filters must not be used for all rational points. In particular
+n need not be even, and rational y alone does not make the cube triple integral.
+"""
+
+import csv
+from dataclasses import dataclass
+from fractions import Fraction
+from math import gcd, isqrt
+from pathlib import Path
+
+
+def coeffs(n: int) -> tuple[int, int]:
+    return 6 * n + 3, 36 * n**3 + 54 * n**2 + 27 * n - 58
+
+
+@dataclass(frozen=True)
+class Record:
+    n: int
+    x: int
+    y: Fraction
+    aux: int
+    residual: int
+    kind: str
+
+    @property
+    def exact(self) -> bool:
+        return self.residual == 0
+
+    @property
+    def t(self) -> Fraction:
+        return self.y * (6 * self.n + 3 + self.x)
+
+    @property
+    def cube_triple(self) -> tuple[Fraction, Fraction, Fraction]:
+        s = 6 * self.n + 3
+        return Fraction(-self.x) - self.t, Fraction(-self.x) + self.t, Fraction(s + 2 * self.x)
+
+    @property
+    def integral_lift(self) -> bool:
+        return self.exact and self.t.denominator == 1
+
+    @property
+    def cube_gcd(self) -> int | None:
+        if not self.integral_lift:
+            return None
+        return gcd(*(v.numerator for v in self.cube_triple))
+
+    @property
+    def primitive(self) -> bool:
+        return self.integral_lift and self.cube_gcd == 1
+
+    @property
+    def original_residual(self) -> Fraction:
+        return Fraction(self.residual, self.x) if self.kind == "r" else Fraction(self.residual)
+
+    @property
+    def status(self) -> str:
+        if not self.exact:
+            return "candidate"
+        if not self.integral_lift:
+            return "rational_only"
+        return "primitive_cubes" if self.primitive else "nonprimitive_cubes"
+
+    def detail(self) -> str:
+        labels = {
+            "candidate": "NEARBY CANDIDATE; not a solution",
+            "rational_only": "EXACT RATIONAL y; cube triple is not integral",
+            "nonprimitive_cubes": "EXACT INTEGER-CUBE LIFT; nonprimitive",
+            "primitive_cubes": "EXACT PRIMITIVE INTEGER-CUBE SOLUTION",
+        }
+        y_label = "0" if self.y == 0 else f"±{self.y}"
+        residual_label = "E = r² − H" if self.kind == "r" else "R = x(t² − T²) − N"
+        lines = [f"{labels[self.status]}: n={self.n}, x={self.x}, y={y_label}",
+                 f"{residual_label} = {self.residual}; t=yT={self.t} for the positive-y branch"]
+        if self.kind == "t":
+            lines.append(f"Lattice view uses |t|={self.aux}; changing the sign exchanges the first two cubes.")
+        if self.exact:
+            triple = ", ".join(str(v) for v in self.cube_triple)
+            suffix = f"; gcd={self.cube_gcd}" if self.integral_lift else "; rational cubes only"
+            lines.append(f"(a,b,c)=({triple}); a³+b³+c³=375{suffix}")
+        else:
+            lines.append(f"Original equation residual R={self.original_residual}; exact acceptance requires zero.")
+        return "\n".join(lines)
+
+
+def make_r_record(n: int, x: int, r: int) -> Record:
+    """Use r>=0 on the denominator grid y=r/|xT|, retaining exact integers."""
+    s, numerator = coeffs(n)
+    tbase = s + x
+    if x == 0 or tbase == 0:
+        raise ValueError("The original equation excludes x=0 and x=-(6n+3).")
+    if r < 0:
+        raise ValueError("r must be nonnegative; each record represents both signs of y.")
+    h = x * x * tbase * tbase + x * numerator
+    return Record(n, x, Fraction(r, abs(x * tbase)), r, r * r - h, "r")
+
+
+def make_t_record(n: int, x: int, t: int) -> Record:
+    """Use |t|>=0 with y=|t/T|; the two signs swap the first two cubes."""
+    s, numerator = coeffs(n)
+    tbase = s + x
+    if x == 0 or tbase == 0:
+        raise ValueError("The original equation excludes x=0 and x=-(6n+3).")
+    if t < 0:
+        raise ValueError("t must be nonnegative.")
+    return Record(n, x, abs(Fraction(t, tbase)), t, x * (t * t - tbase * tbase) - numerator, "t")
+
+
+def square_residues(modulus: int) -> frozenset[int]:
+    return frozenset(t * t % modulus for t in range(modulus))
+
+
+def projected_lift_table(modulus: int) -> tuple[int, ...]:
+    """Bitset of x residues admitting some t modulo modulus, for each n.
+
+    This uses multiplication, never modular division, so nonunits are safe.
+    A bit x is set exactly when x*t² == x*(S+x)²+N has a local solution.
+    """
+    squares = square_residues(modulus)
+    table = []
+    for n in range(modulus):
+        s, numerator = coeffs(n)
+        row = 0
+        for x in range(modulus):
+            required = (x * (s + x)**2 + numerator) % modulus
+            if any(x * q % modulus == required for q in squares):
+                row |= 1 << x
+        table.append(row)
+    return tuple(table)
+
+
+LIFT_MODULI = (8, 5, 7, 13, 19)
+LIFT_TABLES = {m: projected_lift_table(m) for m in LIFT_MODULI}
+RATIONAL_MODULI = (16, 27, 25, 7, 11, 13)
+RATIONAL_SQUARES = {m: square_residues(m) for m in RATIONAL_MODULI}
+
+
+def valuation5(value: int) -> int:
+    """5-adic valuation of a nonzero integer."""
+    value = abs(value)
+    if value == 0:
+        raise ValueError("valuation5 requires a nonzero integer")
+    result = 0
+    while value % 5 == 0:
+        value //= 5
+        result += 1
+    return result
+
+
+def cheap_lift_allowed(n: int, x: int, primitive: bool = False) -> bool:
+    """Necessary local conditions only; this deliberately does NOT test x|N.
+
+    Modulo 27 implies n=2 or5 mod9, x=1 mod3 and t=0 mod3.
+    Additional tables project the exact congruence to (n,x).
+    For a primitive solution with 5|S and 5|x, t must be a 5-adic unit,
+    forcing v5(x)=v5(N). No n-even restriction is valid here.
+    """
+    s, numerator = coeffs(n)
+    if x == 0 or s + x == 0:
+        return False
+    if n % 9 not in (2, 5) or x % 3 != 1:
+        return False
+    for modulus, table in LIFT_TABLES.items():
+        if not (table[n % modulus] >> (x % modulus)) & 1:
+            return False
+    if primitive and s % 5 == 0 and x % 5 == 0:
+        if valuation5(x) != valuation5(numerator):
+            return False
+    return True
+
+
+def rational_hit(n: int, x: int) -> Record | None:
+    """All rational y: H must be an exact nonnegative integer square."""
+    s, numerator = coeffs(n)
+    if x == 0 or s + x == 0:
+        return None
+    h = x * x * (s + x)**2 + x * numerator
+    if h < 0:
+        return None
+    r = isqrt(h)
+    return make_r_record(n, x, r) if r * r == h else None
+
+
+def admissible_hit(n: int, x: int, primitive: bool = False) -> Record | None:
+    """Exact integral-cube lift, optionally primitive; local tests are necessary."""
+    if not cheap_lift_allowed(n, x, primitive):
+        return None
+    s, numerator = coeffs(n)
+    if numerator % x:
+        return None
+    m = (s + x)**2 + numerator // x
+    if m < 0:
+        return None
+    t = isqrt(m)
+    if t * t != m:
+        return None
+    record = make_t_record(n, x, t)
+    if primitive and not record.primitive:
+        return None
+    return record
+
+
+def scan_window(n_start: int, slices: int, x_min: int, x_max: int,
+                target: str = "rational", max_pairs: int = 300000) -> dict:
+    """Exhaustive finite (n,x) rectangle, with safely sieved visual candidates.
+
+    Rational mode uses adjacent integer r to sqrt(H); exact points cover ALL
+    rational y in the rectangle. Cubes/primitive use x|N, then adjacent
+    multiples of 3 to sqrt(M), since every exact integral lift has 3|t.
+    Nonzero candidates are included only to visualize the zero-residual test.
+    """
+    if target not in {"rational", "cubes", "primitive"}:
+        raise ValueError("target must be rational, cubes, or primitive")
+    if slices < 1 or x_min > x_max:
+        raise ValueError("Require positive slices and x_min <= x_max")
+    count = slices * (x_max - x_min + 1)
+    if count > max_pairs:
+        raise ValueError(f"This finite sample has {count:,} pairs; limit is {max_pairs:,}.")
+    stats = dict(tested_pairs=0, poles=0, modular_rejected=0, modular_pass=0,
+                 divisibility_rejected=0, divisor_pass=0, nonreal=0,
+                 nonprimitive_rejected=0, exact_hits=0, rational_only_hits=0,
+                 integral_hits=0, primitive_hits=0)
+    records = []
+    for n in range(n_start, n_start + slices):
+        s, numerator = coeffs(n)
+        for x in range(x_min, x_max + 1):
+            stats["tested_pairs"] += 1
+            tbase = s + x
+            if x == 0 or tbase == 0:
+                stats["poles"] += 1
+                continue
+            if target == "rational":
+                h = x * x * tbase * tbase + x * numerator
+                if h < 0:
+                    stats["nonreal"] += 1
+                    continue
+                if any(h % modulus not in squares for modulus, squares in RATIONAL_SQUARES.items()):
+                    stats["modular_rejected"] += 1
+                    continue
+                stats["modular_pass"] += 1
+                lower = isqrt(h)
+                roots = (lower,) if lower * lower == h else (lower, lower + 1)
+                selected = [make_r_record(n, x, r) for r in roots]
+            else:
+                if not cheap_lift_allowed(n, x, target == "primitive"):
+                    stats["modular_rejected"] += 1
+                    continue
+                stats["modular_pass"] += 1
+                if numerator % x:
+                    stats["divisibility_rejected"] += 1
+                    continue
+                stats["divisor_pass"] += 1
+                m = tbase * tbase + numerator // x
+                if m < 0:
+                    stats["nonreal"] += 1
+                    continue
+                lower = 3 * (isqrt(m) // 3)
+                roots = (lower,) if lower * lower == m else (lower, lower + 3)
+                selected = [make_t_record(n, x, t) for t in roots]
+            for record in selected:
+                if target == "primitive" and record.exact and not record.primitive:
+                    stats["nonprimitive_rejected"] += 1
+                    continue
+                records.append(record)
+                if record.exact:
+                    stats["exact_hits"] += 1
+                    stats["integral_hits"] += int(record.integral_lift)
+                    stats["primitive_hits"] += int(record.primitive)
+                    stats["rational_only_hits"] += int(not record.integral_lift)
+    stats["records"] = len(records)
+    stats["target"] = target
+    return {"records": records, "stats": stats, "tiles": []}
+
+
+def export_csv(path: str | Path, records) -> None:
+    """Write exact rational strings; each row represents both signs of y."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["n", "x", "y_numerator", "y_denominator", "y_abs_exact",
+                         "t_numerator", "t_denominator", "aux", "residual_kind",
+                         "residual", "original_residual", "exact", "integral_lift",
+                         "primitive", "status", "a", "b", "c", "cube_sum", "gcd"])
+        for record in records:
+            triple = record.cube_triple if record.exact else ("", "", "")
+            total = sum(v**3 for v in triple) if record.exact else ""
+            writer.writerow([record.n, record.x, record.y.numerator, record.y.denominator,
+                             str(record.y), record.t.numerator, record.t.denominator,
+                             record.aux, "r_squared_minus_H" if record.kind == "r" else "original_R",
+                             record.residual, str(record.original_residual), record.exact,
+                             record.integral_lift, record.primitive, record.status,
+                             *map(str, triple), str(total), record.cube_gcd if record.integral_lift else ""])
+
+
+# Rational Lattice
+
+"""Certified two-dimensional tangent tiles for the cubic-375 slices.
+
+The output points are integer candidates (x,t), t>=0, in the necessary
+affine sublattice x=1 mod 3, t=0 mod 3. They are NOT all exact solutions.
+Every exact integral-cube lift in the requested finite interval is retained.
+All geometry and acceptance decisions use integers and Fraction.
+
+This is a slice-wise adaptation of the tangent-tile/lattice-reduction idea
+of Elkies / Elsenhans--Jahnel / Huisman, not their original 3D implementation.
+"""
+
+from fractions import Fraction
+from math import gcd, isqrt
+
+
+class WorkLimitError(RuntimeError):
+    """The finite search was stopped; it must not be reported as complete."""
+
+    def __init__(self, message, stats=None):
+        super().__init__(message)
+        self.stats = dict(stats or {})
+        self.stats["complete"] = False
+
+
+def _floor(q):
+    return q.numerator // q.denominator
+
+
+def _ceil(q):
+    return -((-q.numerator) // q.denominator)
+
+
+def _nearest_ratio(num, den):
+    """Nearest integer, ties toward +infinity; den must be positive."""
+    return (2 * num + den) // (2 * den)
+
+
+def _sqrt_interval(q, bits):
+    """Certified rational enclosure of sqrt(q), including exact squares."""
+    if q < 0:
+        raise ValueError("Cannot enclose a negative square root")
+    if q == 0:
+        return Fraction(0), Fraction(0)
+    pn, qn = isqrt(q.numerator), isqrt(q.denominator)
+    if pn * pn == q.numerator and qn * qn == q.denominator:
+        exact = Fraction(pn, qn)
+        return exact, exact
+    scale = 1 << bits
+    k = isqrt((q.numerator * scale * scale) // q.denominator)
+    return Fraction(k, scale), Fraction(k + 1, scale)
+
+
+def _gauss_basis(alpha, halfwidth, stripwidth):
+    """Reduce the affine sublattice's basis in an exact weighted metric.
+
+    The metric is proportional to
+        dx^2 / halfwidth^2 + (dt-alpha*dx)^2 / stripwidth^2.
+    Clearing denominators gives integer dot products, avoiding repeated
+    Fraction normalization during the reduction.
+    """
+    an, ad = alpha.numerator, alpha.denominator
+    hn, hd = halfwidth.numerator, halfwidth.denominator
+    wn, wd = stripwidth.numerator, stripwidth.denominator
+    p = wn * wn * hd * hd * ad * ad
+    q = hn * hn * wd * wd
+    common = gcd(p, q)
+    p //= common
+    q //= common
+
+    def dot(v, z):
+        return p * v[0] * z[0] + q * (ad * v[1] - an * v[0]) * (ad * z[1] - an * z[0])
+
+    b1, b2 = (3, 0), (0, 3)
+    for iteration in range(1024):
+        norm1, norm2 = dot(b1, b1), dot(b2, b2)
+        if norm2 < norm1:
+            b1, b2 = b2, b1
+            norm1 = norm2
+        mu = _nearest_ratio(dot(b1, b2), norm1)
+        if mu == 0:
+            return b1, b2, iteration + 1
+        b2 = (b2[0] - mu * b1[0], b2[1] - mu * b1[1])
+    raise WorkLimitError("Lattice reduction iteration limit reached; search incomplete.")
+
+
+def _make_tile(n, s, numerator, a, b, sqrt_bits):
+    """Return a certified tangent strip, or None if subdivision is needed."""
+    if a >= b or a <= 0 <= b:
+        return None
+    aa, bb = Fraction(a), Fraction(b)
+    center = (aa + bb) / 2
+    halfwidth = (bb - aa) / 2
+    sa, sb = s + aa, s + bb
+    min_square = Fraction(0) if sa <= 0 <= sb else min(sa * sa, sb * sb)
+    g_lower = min_square + min(Fraction(numerator, a), Fraction(numerator, b))
+    if g_lower <= 0:
+        return None
+    root_lower, _ = _sqrt_interval(g_lower, sqrt_bits)
+    if root_lower <= 0:
+        return None
+    distance = min(abs(aa), abs(bb))
+    amplitude = max(abs(sa), abs(sb))
+    g1_bound = 2 * amplitude + Fraction(abs(numerator), 1) / distance**2
+    g2_bound = 2 + 2 * Fraction(abs(numerator), 1) / distance**3
+    curvature = g2_bound / (2 * root_lower) + g1_bound**2 / (4 * root_lower**3)
+    g_center = (s + center)**2 + numerator / center
+    root_lo, root_hi = _sqrt_interval(g_center, sqrt_bits)
+    if root_lo <= 0:
+        return None
+    t_center = (root_lo + root_hi) / 2
+    e0 = (root_hi - root_lo) / 2
+    g1_center = 2 * (s + center) - numerator / center**2
+    alpha = g1_center / (2 * t_center)
+    e1 = abs(g1_center) * e0 / (2 * root_lo * t_center)
+    width = e0 + halfwidth * e1 + curvature * halfwidth**2 / 2
+    if width <= 0:
+        return None
+    b1, b2, iterations = _gauss_basis(alpha, halfwidth, width)
+    determinant = b1[0] * b2[1] - b2[0] * b1[1]
+    if abs(determinant) != 9:
+        raise ArithmeticError("Reduction changed the lattice determinant")
+    corners = []
+    for x_corner in (aa, bb):
+        line = t_center + alpha * (x_corner - center)
+        for t_corner in (line - width, line + width):
+            shifted_x = x_corner - 1
+            k1 = (b2[1] * shifted_x - b2[0] * t_corner) / determinant
+            k2 = (-b1[1] * shifted_x + b1[0] * t_corner) / determinant
+            corners.append((k1, k2))
+    k1_lo, k1_hi = _ceil(min(v[0] for v in corners)), _floor(max(v[0] for v in corners))
+    k2_lo, k2_hi = _ceil(min(v[1] for v in corners)), _floor(max(v[1] for v in corners))
+    box_nodes = max(0, k1_hi - k1_lo + 1) * max(0, k2_hi - k2_lo + 1)
+    return {
+        "n": n, "a": a, "b": b, "x0": center, "t0": t_center,
+        "alpha": alpha, "w": width, "h": halfwidth,
+        "basis": [b1, b2], "offset": (1, 0),
+        "k1_min": k1_lo, "k1_max": k1_hi,
+        "k2_min": k2_lo, "k2_max": k2_hi,
+        "box_nodes": box_nodes, "reduction_steps": iterations,
+        "curvature_bound": curvature, "kind": "certified_tangent",
+    }
+
+
+def lattice_slice(n, x_min, x_max, tile_width=64, max_nodes=200000, sqrt_bits=48):
+    """Return certified finite-window integral-lift candidates for one n.
+
+    Output:
+        points: sorted unique (x,t) candidates, t>=0.
+        tiles: certified tangent-strip dictionaries, all geometry exact.
+        stats: work counts, exact-root count, and complete=True on success.
+        fallback_points: candidates generated by exact per-x fallback.
+
+    Tiles use x=1 (mod3), t=0 (mod3). n not congruent to2 (mod3) is
+    rejected by a necessary condition for ANY integer cubic375 lift.
+    No stronger modular or primitive filters are applied here.
+
+    Fallback includes the neighboring multiples of3 around sqrt(g(x)).
+    Those points are only visualization candidates. Every exact target
+    root survives this choice. Work limits raise WorkLimitError rather
+    than returning a misleading partial result.
+    """
+    if x_min > x_max:
+        raise ValueError("Require x_min <= x_max")
+    if tile_width < 1:
+        raise ValueError("tile_width must be positive")
+    if max_nodes < 1:
+        raise ValueError("max_nodes must be positive")
+    if not 8 <= sqrt_bits <= 256:
+        raise ValueError("sqrt_bits must be between8 and256")
+    s = 6 * n + 3
+    numerator = 36 * n**3 + 54 * n**2 + 27 * n - 58
+    stats = {
+        "complete": True, "n_mod3_rejected": n % 3 != 2,
+        "requested_x": x_max - x_min + 1, "nodes": 0,
+        "lattice_nodes": 0, "fallback_x": 0, "fallback_blocks": 0,
+        "tile_attempts": 0, "certified_tiles": 0, "subdivisions": 0,
+        "gauss_steps": 0, "candidate_points": 0, "exact_roots": 0,
+        "nonreal_fallback_x": 0, "pole_fallback_x": 0,
+    }
+    if n % 3 != 2:
+        return {"points": [], "tiles": [], "stats": stats, "fallback_points": []}
+    max_tiles = min(20000, max(1000, max_nodes))
+    initial_tiles = (x_max - x_min + tile_width) // tile_width
+    if initial_tiles > max_tiles:
+        raise WorkLimitError(
+            f"Requested interval needs {initial_tiles:,} initial tiles, above the "
+            f"{max_tiles:,} limit. Increase tile_width or narrow the interval; search incomplete.",
+            stats,
+        )
+    points, fallback_points, exact_roots = set(), set(), set()
+    tiles = []
+
+    def consume(count, kind):
+        if stats["nodes"] + count > max_nodes:
+            raise WorkLimitError(
+                f"Work limit of {max_nodes:,} nodes reached; search incomplete. "
+                "Narrow the range or increase max_nodes.", stats,
+            )
+        stats["nodes"] += count
+        stats[kind] += count
+
+    def record(x, t, fallback=False):
+        if x == 0 or s + x == 0 or t < 0:
+            return
+        if x % 3 != 1 or t % 3:
+            raise ArithmeticError("Candidate escaped the necessary sublattice")
+        point = (x, t)
+        points.add(point)
+        if fallback:
+            fallback_points.add(point)
+        if x * (t * t - (s + x)**2) == numerator:
+            exact_roots.add(point)
+
+    def fallback(a, b):
+        stats["fallback_blocks"] += 1
+        first = a + ((1 - a) % 3)
+        for x in range(first, b + 1, 3):
+            consume(1, "fallback_x")
+            if x == 0 or s + x == 0:
+                stats["pole_fallback_x"] += 1
+                continue
+            g = Fraction(x * (s + x)**2 + numerator, x)
+            if g < 0:
+                stats["nonreal_fallback_x"] += 1
+                continue
+            lower = 3 * (isqrt(g.numerator // g.denominator) // 3)
+            record(x, lower, True)
+            if lower * lower * g.denominator != g.numerator:
+                record(x, lower + 3, True)
+
+    cursor = x_min
+    while cursor <= x_max:
+        stop = min(cursor + tile_width - 1, x_max)
+        stack = [(cursor, stop)]
+        cursor = stop + 1
+        while stack:
+            a, b = stack.pop()
+            stats["tile_attempts"] += 1
+            if stats["tile_attempts"] > max_tiles:
+                raise WorkLimitError(
+                    f"Tile limit of {max_tiles:,} reached; search incomplete. Narrow the range.",
+                    stats,
+                )
+            count = b - a + 1
+            if count <= 4:
+                fallback(a, b)
+                continue
+            tile = _make_tile(n, s, numerator, a, b, sqrt_bits)
+            tile_budget = max(32, min(4096, max_nodes - stats["nodes"]))
+            if tile is None or tile["box_nodes"] > tile_budget:
+                # Exact fallback is cheaper near poles or real-domain boundaries.
+                # At larger scales subdividing keeps the geometric enumeration useful.
+                if count <= 12:
+                    fallback(a, b)
+                else:
+                    mid = (a + b) // 2
+                    stack.extend(((mid + 1, b), (a, mid)))
+                    stats["subdivisions"] += 1
+                continue
+            tiles.append(tile)
+            stats["certified_tiles"] += 1
+            stats["gauss_steps"] += tile["reduction_steps"]
+            b1, b2 = tile["basis"]
+            for k1 in range(tile["k1_min"], tile["k1_max"] + 1):
+                for k2 in range(tile["k2_min"], tile["k2_max"] + 1):
+                    consume(1, "lattice_nodes")
+                    x = 1 + b1[0] * k1 + b2[0] * k2
+                    t = b1[1] * k1 + b2[1] * k2
+                    if not a <= x <= b or t < 0:
+                        continue
+                    line = tile["t0"] + tile["alpha"] * (x - tile["x0"])
+                    if abs(t - line) <= tile["w"]:
+                        record(x, t)
+    stats["candidate_points"] = len(points)
+    stats["exact_roots"] = len(exact_roots)
+    return {
+        "points": sorted(points), "tiles": tiles, "stats": stats,
+        "fallback_points": sorted(fallback_points),
+    }
+
+
+def _lattice_self_check():
+    """Targeted oracle checks; run this module directly to execute them."""
+    def brute(n, lo, hi):
+        s = 6 * n + 3
+        numerator = 36 * n**3 + 54 * n**2 + 27 * n - 58
+        answer = set()
+        for x in range(lo, hi + 1):
+            if x == 0 or s + x == 0:
+                continue
+            if numerator % x:
+                continue
+            value = (s + x)**2 + numerator // x
+            if value < 0:
+                continue
+            t = isqrt(value)
+            if t * t == value:
+                answer.add((x, t))
+        return answer
+
+    for n in range(-10, 15):
+        lo, hi = -220, 220
+        result = lattice_slice(n, lo, hi, tile_width=43)
+        s = 6 * n + 3
+        numerator = 36 * n**3 + 54 * n**2 + 27 * n - 58
+        found = {
+            (x, t) for x, t in result["points"]
+            if x * (t * t - (s + x)**2) == numerator
+        }
+        assert found == brute(n, lo, hi), (n, found, brute(n, lo, hi))
+        for tile in result["tiles"]:
+            b1, b2 = tile["basis"]
+            assert abs(b1[0] * b2[1] - b2[0] * b1[1]) == 9
+            # Integer samples must lie inside their certified strip whenever real.
+            for x in range(tile["a"], tile["b"] + 1):
+                if x == 0:
+                    continue
+                g = Fraction(x * (s + x)**2 + numerator, x)
+                if g < 0:
+                    continue
+                l, u = _sqrt_interval(g, 96)
+                line = tile["t0"] + tile["alpha"] * (x - tile["x0"])
+                assert l >= line - tile["w"] and u <= line + tile["w"]
+    result = lattice_slice(2, -25, -1)
+    assert (2, 0) not in result["points"]
+    assert {(-20, 0), (-5, 0)} <= set(result["points"])
+    n = 10**13 + 1  # 2 mod3
+    lo, hi = 6 * 10**12, 6 * 10**12 + 3000
+    result = lattice_slice(n, lo, hi, tile_width=256)
+    s, numerator = 6 * n + 3, 36 * n**3 + 54 * n**2 + 27 * n - 58
+    found = {(x, t) for x, t in result["points"] if x * (t*t - (s+x)**2) == numerator}
+    assert found == brute(n, lo, hi)
+    assert result["stats"]["certified_tiles"] > 0
+    # A verified large nonprimitive control. The unscaled triple sums to3;
+    # scaling by5 gives375, and choosing its same-parity pair gives rational y.
+    u, v, w = 569936821221962380720, -569936821113563493509, -472715493453327032
+    assert u**3 + v**3 + w**3 == 3
+    a_cube, b_cube, c_cube = 5*u, 5*w, 5*v
+    total = a_cube + b_cube + c_cube
+    control_n = (total - 3) // 6
+    control_x = -(a_cube + b_cube) // 2
+    control_t = abs((b_cube - a_cube) // 2)
+    control = lattice_slice(control_n, control_x - 128, control_x + 128, tile_width=64)
+    assert (control_x, control_t) in control["points"]
+    assert (control_x, control_t) not in control["fallback_points"]
+    try:
+        lattice_slice(2, -100, 100, max_nodes=1)
+    except WorkLimitError as exc:
+        assert exc.stats["complete"] is False
+    else:
+        raise AssertionError("Expected an explicit work-limit error")
+    print("Certified lattice checks passed.")
+    print("Large-coordinate stats:", result["stats"])
+
+
+
+
+# Rational Ui
+
+# Matplotlib interface and CLI for the combined rational_y_lab.py.
+import argparse
+import sys
+import textwrap
+from dataclasses import dataclass, replace
+from fractions import Fraction
+from pathlib import Path
+
+
+@dataclass(frozen=True)
+class LabSettings:
+    preset: str = "demo"
+    n: int = 2
+    slices: int = 12
+    x_min: int = -100
+    x_max: int = 100
+    engine: str = "scan"
+    target: str = "rational"
+    axis: str = "ratio"
+    tile_width: int = 64
+    max_nodes: int = 200000
+    max_pairs: int = 300000
+    max_display: int = 10000
+    n_stop: int | None = None
+    x_center_ratio: Fraction | None = None
+    x_half_width: int = 5000
+
+
+def selected_n_values(settings):
+    """Choose exact integer slices, never a floating-point interpolation.
+
+    A bounded overview samples its n interval; it does not exhaust it.
+    Integer-cube targets snap each anchor to the nearest admissible residue
+    within the requested interval. Ties prefer the smaller n. Rational-only
+    searches must not apply this integer-lift restriction.
+    """
+    s = settings
+    if s.target not in ("rational", "cubes", "primitive"):
+        raise ValueError("target must be rational, cubes, or primitive")
+    if s.slices < 1:
+        raise ValueError("--slices must be positive")
+    if s.n_stop is None:
+        return list(range(s.n, s.n + s.slices))
+    if s.n_stop < s.n:
+        raise ValueError("Require n <= n-stop")
+    if s.n_stop > s.n and s.slices < 2:
+        raise ValueError("A sampled n range requires at least two slices")
+    if s.n_stop == s.n:
+        anchors = [s.n]
+    else:
+        anchors = [s.n + i * (s.n_stop - s.n) // (s.slices - 1)
+                   for i in range(s.slices)]
+    if s.target == "rational":
+        return sorted(set(anchors))
+    chosen = []
+    for anchor in anchors:
+        base = anchor - anchor % 9
+        candidates = [base + residue + shift
+                      for residue in (2, 5) for shift in (-9, 0, 9)
+                      if s.n <= base + residue + shift <= s.n_stop]
+        if not candidates:
+            raise ValueError(
+                "The requested n interval contains no n congruent to 2 or 5 modulo 9; "
+                "no integer-cube slice is admissible. Widen the interval or use "
+                "--engine scan --target rational to examine all rational points."
+            )
+        chosen.append(min(candidates, key=lambda value: (abs(value - anchor), value)))
+    return sorted(set(chosen))
+
+
+def sample_window_specs(settings):
+    """Exact per-slice windows, including the origin used for offset plots."""
+    s = settings
+    if s.x_center_ratio is None and s.x_min > s.x_max:
+        raise ValueError("Require x-min <= x-max")
+    if s.x_center_ratio is not None and s.x_half_width < 0:
+        raise ValueError("--x-half-width must be nonnegative")
+    windows = []
+    for n in selected_n_values(s):
+        if s.x_center_ratio is None:
+            lo, hi, origin = s.x_min, s.x_max, s.x_min
+        else:
+            center = Fraction(s.x_center_ratio) * (6 * n + 3)
+            origin = center.numerator // center.denominator
+            lo, hi = origin - s.x_half_width, origin + s.x_half_width
+        windows.append({
+            "n": n, "x_min": lo, "x_max": hi, "x_origin": origin,
+            "sieve_rejected": s.target != "rational" and n % 9 not in (2, 5),
+        })
+    return windows
+
+
+def run_search(settings):
+    """Complete the selected finite windows, or raise without partial success.
+
+    With n_stop set, completeness applies only to the reported sampled n
+    values and their integer x windows, not to every n between the bounds.
+    """
+    s = settings
+    if s.engine not in ("scan", "lattice"):
+        raise ValueError("engine must be scan or lattice")
+    if s.engine == "lattice" and s.target == "rational":
+        raise ValueError("The lattice engine searches integer cube lifts. Choose --target cubes or primitive.")
+    if s.max_pairs < 1 or s.max_nodes < 1 or s.tile_width < 1:
+        raise ValueError("Search budgets and tile width must be positive")
+    windows = sample_window_specs(s)
+    pair_count = sum(w["x_max"] - w["x_min"] + 1 for w in windows)
+    if s.engine == "scan" and pair_count > s.max_pairs:
+        raise ValueError(
+            f"These {len(windows):,} selected n slices contain {pair_count:,} integer pairs; "
+            f"the scan limit is {s.max_pairs:,}. Reduce --x-half-width or --slices, "
+            "or increase --max-pairs."
+        )
+    remaining = s.max_nodes
+    records, tiles, fallback = [], [], []
+    stats = {
+        "target": s.target, "complete": False,
+        "scope": "selected_n_windows" if s.n_stop is not None else "consecutive_n_windows",
+        "window_pairs": pair_count, "requested_slices": s.slices,
+        "selected_slices": len(windows), "n_sieve_rejected": 0,
+        "candidate_sieve_rejected": 0, "nonprimitive_rejected": 0,
+    }
+    seen = set()
+
+    def accumulate(part_stats):
+        for key, value in part_stats.items():
+            if isinstance(value, int) and not isinstance(value, bool):
+                stats[key] = stats.get(key, 0) + value
+
+    for window in windows:
+        n, lo, hi = window["n"], window["x_min"], window["x_max"]
+        if window["sieve_rejected"]:
+            stats["n_sieve_rejected"] += 1
+        if s.engine == "scan":
+            # The total budget was checked above, across all per-n windows.
+            part = scan_window(n, 1, lo, hi, target=s.target, max_pairs=s.max_pairs)
+            accumulate(part["stats"])
+            records.extend(part["records"])
+            continue
+        if window["sieve_rejected"]:
+            continue
+        if remaining <= 0:
+            raise WorkLimitError(
+                "Global lattice node budget exhausted; increase --max-nodes "
+                "or narrow the selected windows."
+            )
+        part = lattice_slice(n, lo, hi, tile_width=s.tile_width, max_nodes=remaining)
+        remaining -= part["stats"]["nodes"]
+        accumulate(part["stats"])
+        tiles.extend(part["tiles"])
+        fallback.extend((n, x, t) for x, t in part.get("fallback_points", []))
+        for x, t in part["points"]:
+            if not cheap_lift_allowed(n, x, primitive=s.target == "primitive"):
+                stats["candidate_sieve_rejected"] += 1
+                continue
+            key = n, x, t
+            if key in seen:
+                continue
+            seen.add(key)
+            rec = make_t_record(n, x, t)
+            if rec.exact and s.target == "primitive" and not rec.primitive:
+                stats["nonprimitive_rejected"] += 1
+                continue
+            records.append(rec)
+    records.sort(key=lambda r: (r.n, r.x, r.y))
+    exact = [r for r in records if r.exact]
+    stats.update(
+        complete=True, records=len(records), exact_hits=len(exact),
+        rational_only_hits=sum(not r.integral_lift for r in exact),
+        integral_hits=sum(r.integral_lift for r in exact),
+        primitive_hits=sum(r.primitive for r in exact),
+    )
+    return {
+        "records": records, "tiles": tiles, "stats": stats,
+        "fallback_points": fallback, "sample_n_values": [w["n"] for w in windows],
+        "windows": windows, "sampled_overview": s.n_stop is not None,
+    }
+
+
+
+
+def _exact_records(result):
+    return [r for r in result["records"] if r.exact]
+
+
+def print_run_summary(result, settings):
+    s = settings
+    exact = _exact_records(result)
+    ns = result["sample_n_values"]
+    print("\nEquation: y^2 = 1 + (36n^3+54n^2+27n-58) / [x(6n+3+x)^2]")
+    print(f"Engine={s.engine}; target={s.target}")
+    if result["sampled_overview"]:
+        print(f"SAMPLED OVERVIEW: requested n interval [{s.n}, {s.n_stop}], inclusive.")
+        print(f"Selected {len(ns)} distinct integer n values from {s.slices} nominal samples.")
+        if s.target in ("cubes", "primitive"):
+            print("Samples are moved to the nearest admissible n = 2 or 5 (mod 9) inside the interval.")
+        print("Unselected n values have NOT been searched; this is not an exhaustive interval sweep.")
+    else:
+        print(f"Consecutive n slices: {ns[0]}..{ns[-1]} inclusive.")
+    if s.x_center_ratio is not None:
+        print(f"Per-slice x centre = floor((6n+3)*({s.x_center_ratio})); half-width = {s.x_half_width:,}.")
+    print("Exact selected windows (inclusive bounds):")
+    for index, window in enumerate(result["windows"]):
+        flag = " [n rejected by necessary cube congruence]" if window["sieve_rejected"] else ""
+        print(f"  sample {index:2d}: n={window['n']}; x=[{window['x_min']}, {window['x_max']}]; "
+              f"x origin={window['x_origin']}{flag}")
+    if s.preset == "control":
+        print("KNOWN NONPRIMITIVE CONTROL: scaled cube-3 solution of Booker/Sutherland; not a discovery.")
+    print(f"Complete for target={s.target} in these {len(ns)} selected n/x windows "
+          f"({result['stats']['window_pairs']:,} integer (n,x) pairs).")
+    print(f"Retained trial records: {len(result['records']):,}.")
+    print(f"Exact target points (signs combined): {len(exact):,}; "
+          f"integer cube lifts: {sum(r.integral_lift for r in exact):,}; "
+          f"primitive lifts: {sum(r.primitive for r in exact):,}.")
+    if s.engine == "lattice":
+        print("Slice-wise certified tangent tiles + exact 2D Gauss reduction.")
+    keys = (
+        "tested_pairs", "poles", "modular_rejected", "divisibility_rejected",
+        "n_sieve_rejected", "candidate_sieve_rejected", "nonreal",
+        "certified_tiles", "tile_attempts", "gauss_steps", "nodes", "fallback_x",
+    )
+    counters = [f"{k}={result['stats'][k]:,}" for k in keys if result["stats"].get(k)]
+    if counters:
+        print("Counters: " + "; ".join(counters))
+    for rec in exact[:100]:
+        print(rec.detail())
+    if len(exact) > 100:
+        print("Only the first 100 hits are printed; --csv preserves every retained trial and hit.")
+    if not exact:
+        print("No exact target point in the selected windows. This does not settle existence elsewhere.")
+    print("Nonzero-residual trials are not solutions. Each nonzero |y| represents both signs.")
+    if result["sampled_overview"] and max(abs(s.n), abs(s.n_stop)) >= 10**15:
+        print("At this scale normalized real curves nearly coincide. Offset axes retain local x/t detail.")
+
+
+def export_window_manifest(records_path, result, settings):
+    """Keep exact search coverage even when the candidate CSV has no rows."""
+    path = Path(records_path)
+    coverage_path = path.with_name(path.stem + "-windows.csv")
+    coverage_path.parent.mkdir(parents=True, exist_ok=True)
+    columns = ["sample_index", "n", "x_min", "x_max", "x_origin",
+               "n_sieve_rejected", "engine", "target", "sampled_overview",
+               "requested_n_start", "requested_n_stop", "complete_for_this_window"]
+    with coverage_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(columns)
+        for index, window in enumerate(result["windows"]):
+            writer.writerow([
+                index, window["n"], window["x_min"], window["x_max"], window["x_origin"],
+                window["sieve_rejected"], settings.engine, settings.target,
+                result["sampled_overview"], settings.n,
+                settings.n_stop if settings.n_stop is not None else settings.n + settings.slices - 1,
+                result["stats"]["complete"],
+            ])
+    return coverage_path
+
+
+def _fraction_label(value, limit=72):
+    value = str(value)
+    if len(value) <= limit:
+        return value
+    return value[:limit - 20] + " ... " + value[-15:]
+
+
+class RationalYExplorer:
+    """Two linked figures; exact record data are never read back from floats."""
+    def __init__(self, settings, result=None, mode="points"):
+        import matplotlib.pyplot as plt
+        from matplotlib.widgets import Button
+
+        self.plt = plt
+        self.settings = settings
+        self.result = result if result is not None else run_search(settings)
+        self.mode = mode
+        self.sample_cursor = 0
+        self.pick_data = {}
+        self.mode_buttons = []
+        self.buttons = []
+        self.headers, self.summaries, self.details = [], [], []
+        self.fig2, self.ax2 = plt.subplots(figsize=(12.6, 9.3))
+        self.fig3 = plt.figure(figsize=(12.6, 9.3))
+        self.ax3 = self.fig3.add_subplot(111, projection="3d")
+        self.fig2.subplots_adjust(left=0.105, right=0.96, bottom=0.32, top=0.77)
+        self.fig3.subplots_adjust(left=0.03, right=0.93, bottom=0.30, top=0.78)
+        self.overview = bool(self.result.get("sampled_overview", getattr(settings, "n_stop", None) is not None))
+        for fig, name in ((self.fig2, "two slices"), (self.fig3, "stacked slices")):
+            fig.canvas.manager.set_window_title(f"Rational y / lattice lab — {name}")
+            self.headers.append(fig.suptitle("", x=0.045, y=0.975, ha="left", fontsize=14))
+            self.summaries.append(fig.text(0.045, 0.895, "", va="top", fontsize=8.8))
+            self.details.append(fig.text(0.045, 0.091, "", va="bottom", fontsize=8.3, family="monospace"))
+            for rect, label, callback in (
+                ([0.045, 0.025, 0.14, 0.043], "Previous sample" if self.overview else "Previous n", lambda event: self.shift(-1)),
+                ([0.195, 0.025, 0.14, 0.043], "Next sample" if self.overview else "Next n", lambda event: self.shift(1)),
+                ([0.35, 0.025, 0.25, 0.043], "", self.cycle_view),
+            ):
+                button = Button(fig.add_axes(rect), label)
+                button.on_clicked(callback)
+                self.buttons.append(button)
+                if not label:
+                    self.mode_buttons.append(button)
+            fig.canvas.mpl_connect("pick_event", self.on_pick)
+            fig.canvas.mpl_connect("key_press_event", self.on_key)
+        self.draw()
+
+    def shift(self, amount):
+        if self.overview:
+            count = len(self.sample_values)
+            self.sample_cursor = (self.sample_cursor + amount) % max(1, count - 1)
+            self.draw()
+            print("\nDisplayed 2D samples: " + ", ".join(map(str, self.selected_slices)) +
+                  ". The full sampled 3D stack is unchanged.", flush=True)
+            return
+        proposed = replace(self.settings, n=self.settings.n + amount)
+        print(f"\nSearching n={proposed.n}..{proposed.n+proposed.slices-1} ...", flush=True)
+        try:
+            result = run_search(proposed)
+        except (ValueError, WorkLimitError, OverflowError) as exc:
+            message = "The next window was not completed; the displayed result is unchanged.\n" + str(exc)
+            print(message, flush=True)
+            self.show_detail(message)
+            return
+        self.settings, self.result = proposed, result
+        print_run_summary(result, proposed)
+        self.draw()
+
+    def on_key(self, event):
+        if event.key in ("left", "right"):
+            self.shift(-1 if event.key == "left" else 1)
+
+    def view_order(self):
+        return ("tiles", "residual", "points") if self.settings.engine == "lattice" else ("points", "residual")
+
+    def cycle_view(self, event=None):
+        order = self.view_order()
+        self.mode = order[(order.index(self.mode) + 1) % len(order)]
+        self.draw()
+
+    def show_detail(self, message):
+        lines = []
+        for line in message.splitlines():
+            lines.extend(textwrap.wrap(line, width=132, break_long_words=True, break_on_hyphens=False) or [""])
+        if len(lines) > 7:
+            lines = lines[:6] + ["Full exact values are printed in Terminal when you click."]
+        for text in self.details:
+            text.set_text("\n".join(lines))
+        for fig in (self.fig2, self.fig3):
+            fig.canvas.draw_idle()
+
+    def on_pick(self, event):
+        data = self.pick_data.get(event.artist)
+        if data is None:
+            return
+        kind, items = data
+        if kind == "tile":
+            tile = items
+            message = (
+                f"CERTIFIED TANGENT TILE: n={tile['n']}, x in [{tile['a']}, {tile['b']}]\n"
+                f"t0={tile['t0']}; alpha={tile['alpha']}; half-width w={tile['w']}\n"
+                f"Reduced integer basis: {tile['basis']}; offset={tile.get('offset', (1,0))}\n"
+                "The exact curve is enclosed. Integer lattice points still require the exact residual test."
+            )
+            if self.settings.axis == "offset":
+                n = tile["n"]
+                message += (f"\nExact plot origins for this slice: x={self.x_origins[n]}; "
+                            f"|t|={self.t_origins[n]}.")
+        else:
+            indices = getattr(event, "ind", [])
+            if not len(indices):
+                return
+            message = items[int(indices[0])].detail()
+        print(message, flush=True)
+        self.show_detail(message)
+
+    def horizontal(self, x, n):
+        if self.settings.axis == "ratio":
+            return float(Fraction(x, 6*n+3))
+        if self.settings.axis == "offset":
+            return float(Fraction(x) - self.x_origins[n])
+        return float(x)
+
+    def _geometry_height(self, t, n):
+        if self.settings.axis == "ratio":
+            return float(Fraction(t, 6*n+3))
+        if self.settings.axis == "offset":
+            return float(Fraction(t) - self.t_origins[n])
+        return float(t)
+
+    def _depth(self, n):
+        return self.sample_indices[n] if self.overview else n - self.settings.n
+
+    def _slice_label(self, n):
+        return f"sample {self.sample_indices[n]}" if self.overview else f"n={n}"
+
+    def _prepare_coordinates(self):
+        """Choose every large origin in exact arithmetic before float plotting."""
+        s = self.settings
+        self.sample_values = list(self.result.get("sample_n_values", range(s.n, s.n + s.slices)))
+        self.sample_indices = {n: i for i, n in enumerate(self.sample_values)}
+        windows = self.result.get("windows") or [
+            {"n": n, "x_min": s.x_min, "x_max": s.x_max, "x_origin": s.x_min}
+            for n in self.sample_values
+        ]
+        self.windows_by_n = {w["n"]: w for w in windows}
+        self.x_origins = {n: self.windows_by_n[n]["x_origin"] for n in self.sample_values}
+        self.per_slice_offsets = self.overview or getattr(s, "x_center_ratio", None) is not None
+        tiles = self.result.get("tiles", [])
+        first_tiles = {}
+        first_records = {}
+        for tile in tiles:
+            first_tiles.setdefault(tile["n"], tile)
+        for record in self.result["records"]:
+            first_records.setdefault(record.n, record)
+        if tiles:
+            first = tiles[0]["t0"]
+            self.t_origin = first.numerator // first.denominator
+        elif self.result["records"]:
+            self.t_origin = abs(self.result["records"][0].t) // 1
+        else:
+            self.t_origin = 0
+        self.t_origins = {}
+        for n in self.sample_values:
+            origin = self.t_origin
+            if self.per_slice_offsets:
+                x = self.x_origins[n]
+                s_n, numerator = coeffs(n)
+                value = Fraction((s_n + x)**2) + Fraction(numerator, x) if x else None
+                if value is not None and value >= 0:
+                    origin = isqrt(value.numerator // value.denominator)
+                elif n in first_tiles:
+                    midpoint = first_tiles[n]["t0"]
+                    origin = midpoint.numerator // midpoint.denominator
+                elif n in first_records:
+                    origin = abs(first_records[n].t) // 1
+                else:
+                    origin = 0
+            self.t_origins[n] = origin
+
+    def _display_records(self):
+        all_records = self.result["records"]
+        exact = [r for r in all_records if r.exact]
+        trials = [r for r in all_records if not r.exact]
+        if len(trials) > self.settings.max_display:
+            stride = (len(trials) + self.settings.max_display - 1) // self.settings.max_display
+            trials = trials[::stride]
+        return trials + exact, len(trials)
+
+    def _selected_slices(self):
+        if self.overview:
+            return self.sample_values[self.sample_cursor:self.sample_cursor + 2]
+        available = sorted({r.n for r in self.result["records"]} |
+                           {tile["n"] for tile in self.result.get("tiles", [])})
+        if not available:
+            return self.sample_values[:2]
+        return available[:2]
+
+    def _category(self, record):
+        if not record.exact:
+            return "trial"
+        if record.primitive:
+            return "primitive"
+        if record.integral_lift:
+            return "cubes"
+        return "rational"
+
+    def draw(self):
+        from matplotlib.ticker import FuncFormatter, MaxNLocator, ScalarFormatter
+
+        view = self.ax3.elev, self.ax3.azim
+        self.ax2.clear()
+        self.ax3.clear()
+        self.ax3.view_init(*view)
+        self.pick_data.clear()
+        self._prepare_coordinates()
+        self.selected_slices = self._selected_slices()
+        s = self.settings
+        modes = {"points": "Rational y values and trials",
+                 "residual": "Exact residuals of retained trials",
+                 "tiles": "Certified tangent tiles for the nonnegative |t| branch"}
+        selected = ", ".join(map(str, self.selected_slices))
+        self.headers[0].set_text(f"{modes[self.mode]}\nDisplayed slices: n = {selected}")
+        window_text = (f"Sampled interval: n = {s.n}…{s.n_stop}" if self.overview else
+                       f"Window: n = {s.n}…{s.n+s.slices-1}")
+        self.headers[1].set_text(f"{modes[self.mode]}\n{window_text}")
+        exact = _exact_records(self.result)
+        records, n_trials_drawn = self._display_records()
+        summary = (
+            f"Engine: {s.engine} · target: {s.target} · exact points: {len(exact):,} · "
+            f"integer cube lifts: {sum(r.integral_lift for r in exact):,} · "
+            f"primitive: {sum(r.primitive for r in exact):,}\n"
+            f"Drawing {n_trials_drawn:,} / {sum(not r.exact for r in self.result['records']):,} nonzero trials; "
+            "all exact hits are drawn in 3D. Each ±y pair is counted once."
+        )
+        if self.overview:
+            summary += f"\n{len(self.sample_values)} selected n values; other n values in the interval were not sampled."
+        if s.engine == "lattice":
+            summary += (f"\nCertified tiles: {len(self.result['tiles']):,} · "
+                        f"enumeration/fallback nodes: {self.result['stats'].get('nodes',0):,}")
+        if s.preset == "control":
+            summary += "\nKnown nonprimitive control from a scaled cube-3 solution; not a discovery."
+        elif self.per_slice_offsets and s.axis == "offset":
+            summary += "\nPer-slice x and |t| origins are subtracted exactly before plotting; click for full values."
+        elif self.overview or max(map(abs, self.sample_values)) > 2**53:
+            summary += "\nNormalized/absolute curves can visually merge. Use --axis offset for local coordinate differences."
+        if len(self.selected_slices) > 1:
+            labels = [self._slice_label(n) for n in self.selected_slices]
+            summary += (f"\n2D markers: {labels[0]} filled / dots; "
+                        f"{labels[1]} outline / crosses.")
+        for text in self.summaries:
+            text.set_text(summary)
+        order = self.view_order()
+        next_mode = order[(order.index(self.mode)+1) % len(order)]
+        next_label = {"points": "Show rational y", "residual": "Show residuals", "tiles": "Show tangent tiles"}[next_mode]
+        for button in self.mode_buttons:
+            button.label.set_text(next_label)
+        offset_label = "Local x offset: x − x_origin(n)" if self.per_slice_offsets else f"x − ({s.x_min})"
+        xlabel = {"ratio": "Normalized x / (6n + 3)", "x": "x", "offset": offset_label}[s.axis]
+        for ax in (self.ax2, self.ax3):
+            ax.set_xlabel(xlabel, labelpad=10)
+            ax.xaxis.set_major_locator(MaxNLocator(6))
+            ax.xaxis.set_major_formatter(ScalarFormatter(useOffset=True))
+        if s.axis == "offset":
+            self.ax3.set_xlabel("Local x offset", labelpad=10)
+            self.ax3.xaxis.set_major_formatter(FuncFormatter(lambda value, pos: f"{value:.3g}"))
+        self.ax2.grid(alpha=0.15)
+        self.ax3.set_ylabel("Sample index" if self.overview else
+                            f"Slice depth n − ({s.n})", labelpad=10)
+        self.ax3.yaxis.set_major_locator(MaxNLocator(nbins=6, integer=True))
+        if self.mode == "tiles":
+            self.draw_tiles(records)
+        else:
+            self.draw_records(records)
+        if self.mode == "residual" or (self.mode == "tiles" and s.axis == "offset"):
+            # Inline scientific tick labels avoid 3D offset-text/axis-label collisions.
+            self.ax3.zaxis.set_major_formatter(FuncFormatter(lambda value, pos: f"{value:.3g}"))
+        # Retain the full requested n window, including slices with no survivors.
+        if len(self.sample_values) > 1:
+            self.ax3.set_ylim(-0.25, len(self.sample_values) - 1 + 0.25)
+        else:
+            self.ax3.set_ylim(-0.5, 0.5)
+        for ax in (self.ax2, self.ax3):
+            if ax.get_legend_handles_labels()[0]:
+                ax.legend(loc="best" if ax is self.ax2 else "upper left", fontsize=8)
+        if exact:
+            self.show_detail(exact[0].detail())
+        elif records:
+            self.show_detail("No exact target hit in the selected n slices and x windows.\n" + records[0].detail())
+        else:
+            message = "No retained trial or exact hit in the selected n slices and x windows.\n"
+            message += ("Certified tiles show the searched geometry; fallback portions are counted in Terminal."
+                        if self.mode == "tiles" else
+                        "Necessary filters can reject a small window completely. Change n/x ranges to explore.")
+            self.show_detail(message)
+        for fig in (self.fig2, self.fig3):
+            fig.canvas.draw_idle()
+
+    def _scatter_group(self, records, label, color, marker, size, alpha, height, signs=False):
+        if not records:
+            return
+        data = [(r, sign) for r in records for sign in
+                ((1, -1) if signs and r.y else (1,))]
+        for index, n in enumerate(self.selected_slices):
+            nearby = [(r, sign) for r, sign in data if r.n == n]
+            if not nearby:
+                continue
+            shape = "x" if marker == "." and index else marker
+            styling = ({"facecolors": "none", "edgecolors": color}
+                       if index and marker != "." else {"c": color})
+            artist = self.ax2.scatter(
+                [self.horizontal(r.x, r.n) for r, sign in nearby],
+                [height(r)*sign for r, sign in nearby],
+                marker=shape, s=size, alpha=alpha, **styling,
+                linewidths=0.5, picker=5 if size < 10 else 7,
+                label=f"{self._slice_label(n)}; {label}" if len(self.selected_slices)>1 else label,
+                zorder=2 if marker == "." else 5,
+            )
+            self.pick_data[artist] = ("record", [r for r, _ in nearby])
+        artist = self.ax3.scatter(
+            [self.horizontal(r.x, r.n) for r, sign in data],
+            [self._depth(r.n) for r, sign in data],
+            [height(r)*sign for r, sign in data],
+            c=color, marker=marker, s=size, alpha=alpha, linewidths=0.5,
+            depthshade=False, picker=5 if size < 10 else 7, label=label,
+        )
+        self.pick_data[artist] = ("record", [r for r, _ in data])
+
+    def draw_records(self, records):
+        import numpy as np
+
+        if self.mode == "points":
+            ylabel = "Rational y (gray trials need not satisfy the equation)"
+            height = lambda r: float(r.y)
+        else:
+            kind = "r" if self.settings.target == "rational" else "t"
+            ylabel = "E = r² − H" if kind == "r" else "R = x[t² − (S+x)²] − N"
+            height = lambda r: float(r.residual)
+            self.ax2.axhline(0, color="0.45", linewidth=0.8)
+            if records and len(self.sample_values) > 1:
+                xs = [self.horizontal(r.x, r.n) for r in records]
+                lo, hi = min(xs), max(xs)
+                if lo == hi:
+                    lo, hi = lo-0.01, hi+0.01
+                xx, nn = np.meshgrid([lo, hi], [0, len(self.sample_values)-1])
+                self.ax3.plot_surface(xx, nn, np.zeros_like(xx), alpha=0.07, color="0.5", shade=False)
+        self.ax2.set_ylabel(ylabel, labelpad=10)
+        self.ax3.set_zlabel("Rational y" if self.mode == "points" else ylabel, labelpad=10)
+        groups = [
+            ("trial", "Nonzero-residual trials", "#7c8795", ".", 18, 0.65),
+            ("rational", "Exact rational y; no integer cube lift", "#7b2cbf", "D", 52, 0.95),
+            ("cubes", "Exact integer cube lift; nonprimitive", "#e07614", "o", 65, 0.95),
+            ("primitive", "Primitive integer cube lift", "#238b45", "*", 150, 1.0),
+        ]
+        for category, label, color, marker, size, alpha in groups:
+            subset = [r for r in records if self._category(r) == category]
+            self._scatter_group(subset, label, color, marker, size, alpha, height,
+                                signs=self.mode == "points")
+
+    def draw_tiles(self, records):
+        from matplotlib.colors import to_rgba
+        from matplotlib.patches import Polygon
+        from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
+        ratio = self.settings.axis == "ratio"
+        offset_label = "Local |t| offset: |t| − t_origin(n)" if self.per_slice_offsets else f"|t| − ({self.t_origin})"
+        ylabel = ("Normalized |t| / (6n + 3)" if ratio else
+                  offset_label if self.settings.axis == "offset" else
+                  "|t| = |y(6n + 3 + x)|")
+        self.ax2.set_ylabel(ylabel, labelpad=10)
+        self.ax3.set_zlabel("Local |t| offset" if self.settings.axis == "offset" else ylabel, labelpad=10)
+        tiles = self.result.get("tiles", [])
+        # Share the drawing budget across slices so no sampled slice disappears.
+        by_slice = {}
+        for tile in tiles:
+            by_slice.setdefault(tile["n"], []).append(tile)
+        if len(tiles) <= 300:
+            drawn_tiles = tiles
+        else:
+            quota = max(1, 300 // max(1, len(by_slice)))
+            drawn_tiles = []
+            for group in by_slice.values():
+                count = min(quota, len(group))
+                indices = ([0] if count == 1 else
+                           [i*(len(group)-1)//(count-1) for i in range(count)])
+                drawn_tiles.extend(group[i] for i in indices)
+        labeled_slices = set()
+        for tile in drawn_tiles:
+            n, a, b = tile["n"], tile["a"], tile["b"]
+            line = lambda x: tile["t0"] + tile["alpha"]*(x-tile["x0"])
+            corners = [(a, line(a)-tile["w"]), (b, line(b)-tile["w"]),
+                       (b, line(b)+tile["w"]), (a, line(a)+tile["w"])]
+            vertices = [(self.horizontal(x,n), self._geometry_height(t,n)) for x,t in corners]
+            color = f"C{self.sample_indices[n]%10}"
+            if n in self.selected_slices:
+                label = f"{self._slice_label(n)}; certified tiles" if n not in labeled_slices else None
+                patch = Polygon(vertices, closed=True, facecolor=to_rgba(color, 0.10),
+                                edgecolor=to_rgba(color, 0.80), linewidth=0.9, picker=True,
+                                label=label)
+                labeled_slices.add(n)
+                self.ax2.add_patch(patch)
+                self.pick_data[patch] = ("tile", tile)
+                self.ax2.update_datalim(vertices)
+            vertices3 = [(x,self._depth(n),t) for x,t in vertices]
+            patch3 = Poly3DCollection([vertices3], facecolors=to_rgba(color, 0.08),
+                                     edgecolors=to_rgba(color, 0.65), linewidths=0.8, picker=True)
+            self.ax3.add_collection3d(patch3)
+            self.pick_data[patch3] = ("tile", tile)
+        self.ax2.autoscale_view()
+        if tiles:
+            corners3 = []
+            for tile in tiles:
+                for x in (tile["a"], tile["b"]):
+                    center = tile["t0"]+tile["alpha"]*(x-tile["x0"])
+                    for sign in (-1,1):
+                        corners3.append((self.horizontal(x,tile["n"]),
+                                         self._depth(tile["n"]),
+                                         self._geometry_height(center+sign*tile["w"], tile["n"])))
+            self.ax3.auto_scale_xyz([p[0] for p in corners3], [p[1] for p in corners3], [p[2] for p in corners3])
+        groups = [
+            ("trial", "Integer lattice / fallback trials", "#7b8490", ".", 20, 0.65),
+            ("cubes", "Exact integer cube lift; nonprimitive", "#e07614", "o", 65, 0.95),
+            ("primitive", "Primitive integer cube lift", "#238b45", "*", 150, 1.0),
+        ]
+        for category, label, color, marker, size, alpha in groups:
+            subset = [r for r in records if self._category(r) == category]
+            self._scatter_group(subset, label, color, marker, size, alpha,
+                                lambda r: self._geometry_height(r.aux, r.n))
+        if len(drawn_tiles) < len(tiles):
+            self.ax2.text(0.02,0.02,
+                          f"Drawing {len(drawn_tiles)} / {len(tiles)} tile outlines across all slices; every tile was searched.",
+                          transform=self.ax2.transAxes, va="bottom", fontsize=7.5)
+
+    def save(self, prefix):
+        prefix = Path(prefix)
+        prefix.parent.mkdir(parents=True, exist_ok=True)
+        paths = [prefix.with_name(prefix.name+"-"+kind+".png") for kind in ("2d", "3d")]
+        for figure, path in zip((self.fig2,self.fig3),paths):
+            figure.savefig(path, dpi=150)
+        return paths
+
+
+
+def _parse_exact_ratio(value):
+    try:
+        return Fraction(value)
+    except (ValueError, ZeroDivisionError) as exc:
+        raise argparse.ArgumentTypeError("Use a finite exact ratio such as 1/10 or -3/2") from exc
+
+
+def parse_lab_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Exact rational-y search and certified lattice visualization, including sampled n=10^15..10^16 windows.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Examples:
+  python3 rational_y_lab.py --preset large
+  python3 rational_y_lab.py --preset large --slices 24 --mode residual
+  python3 rational_y_lab.py --preset local-large --n 5000000000000000
+  python3 rational_y_lab.py --preset large --engine scan --target rational --mode residual
+  python3 rational_y_lab.py --preset large --search-only --csv large-results.csv
+  python3 rational_y_lab.py --preset demo
+  python3 rational_y_lab.py --preset control
+
+--n-stop makes --slices an EXACT INTEGER sample count across an inclusive
+interval, not an exhaustive sweep. Cube targets select nearby admissible
+n=2 or5 mod9. Rational mode retains unrestricted n samples.
+Without --n-stop, --slices means consecutive n values.
+
+Large presets use a separate x window in each slice, centred at
+floor((6n+3)*x-center-ratio), with every integer x in centre +/- half-width
+covered by the chosen engine. Offset axes subtract each slice's exact origin
+before float conversion. The large presets do not bound all cube coordinates.
+""")
+    parser.add_argument("--preset", choices=("demo", "large", "local-large", "control"),
+                        default="demo", help="large samples 10^15..10^16; local-large inspects consecutive large n")
+    parser.add_argument("--engine", choices=("scan", "lattice"))
+    parser.add_argument("--target", choices=("rational", "cubes", "primitive"),
+                        help="Large lattice presets default to primitive; scan defaults to rational")
+    parser.add_argument("--n", "--n-start", dest="n", type=int,
+                        help="First integer n, or start of sampled interval")
+    parser.add_argument("--n-stop", type=int,
+                        help="Inclusive endpoint of sampled n interval; does not request an exhaustive sweep")
+    parser.add_argument("--slices", type=int,
+                        help="Number of sampled n values with n-stop, otherwise consecutive slices; 1..100")
+    parser.add_argument("--x-min", type=int)
+    parser.add_argument("--x-max", type=int)
+    parser.add_argument("--x-center-ratio", type=_parse_exact_ratio,
+                        help="Exact per-n centre ratio x/(6n+3), e.g. 1/10; replaces fixed x bounds")
+    parser.add_argument("--x-half-width", type=int,
+                        help="Integer half-width around each per-n x centre (large lattice default 5000000)")
+    parser.add_argument("--mode", choices=("points", "residual", "tiles"))
+    parser.add_argument("--axis", choices=("ratio", "x", "offset"),
+                        help="offset subtracts exact per-slice origins before plotting")
+    parser.add_argument("--tile-width", type=int,
+                        help="Initial integer-x tile width; large default 1000000, other presets 64")
+    parser.add_argument("--max-nodes", type=int, default=200000,
+                        help="Global lattice enumeration/fallback work budget")
+    parser.add_argument("--max-pairs", type=int, default=300000,
+                        help="Global exact-scan integer-pair budget")
+    parser.add_argument("--max-display", type=int, default=10000,
+                        help="Maximum nonzero trials drawn; all exact hits remain")
+    parser.add_argument("--csv", type=Path,
+                        help="Export exact trial/hit records plus a companion -windows.csv coverage file")
+    parser.add_argument("--search-only", action="store_true",
+                        help="Exact search without importing Matplotlib")
+    parser.add_argument("--save-prefix", type=Path,
+                        help="Export PREFIX-2d.png and PREFIX-3d.png without windows")
+    args = parser.parse_args(argv)
+    large = args.preset in ("large", "local-large")
+    fixed_requested = args.x_min is not None or args.x_max is not None
+    ratio_requested = args.x_center_ratio is not None or args.x_half_width is not None
+    if fixed_requested and (args.x_min is None or args.x_max is None):
+        parser.error("Supply both --x-min and --x-max for a fixed x window")
+    if fixed_requested and ratio_requested:
+        parser.error("Choose fixed --x-min/--x-max OR --x-center-ratio/--x-half-width")
+    defaults = dict(n=2, n_stop=None, slices=12, x_min=-100, x_max=100,
+                    engine="scan", mode="points", axis="ratio", tile_width=64,
+                    x_center_ratio=None, x_half_width=5000)
+    if large:
+        defaults.update(n=10**15 if args.preset == "large" else 10**15+1,
+                        n_stop=10**16 if args.preset == "large" else None,
+                        engine="lattice", mode="tiles", axis="offset",
+                        tile_width=1000000, x_center_ratio=Fraction(1, 10),
+                        x_half_width=5000000)
+        # A direct scan needs a smaller initial x window than the lattice engine.
+        if args.engine == "scan":
+            defaults.update(mode="points", x_half_width=5000)
+    elif args.preset == "control":
+        center = -1423660264321272634220
+        defaults.update(n=-393929487545366518, slices=1,
+                        x_min=center-128, x_max=center+128,
+                        engine="lattice", mode="tiles", axis="offset")
+    for name, default in defaults.items():
+        if getattr(args, name) is None:
+            setattr(args, name, default)
+    if fixed_requested:
+        args.x_center_ratio = None
+    elif ratio_requested and args.x_center_ratio is None:
+        parser.error("--x-half-width needs --x-center-ratio outside a large preset")
+    target = args.target or ("rational" if args.engine == "scan" else
+                             "primitive" if large else "cubes")
+    if not 1 <= args.slices <= 100:
+        parser.error("--slices must be between 1 and 100")
+    if args.n_stop is not None:
+        if args.n_stop < args.n:
+            parser.error("Require --n-stop >= --n")
+        if args.n_stop > args.n and args.slices < 2:
+            parser.error("A sampled interval needs at least two --slices")
+    if args.x_min > args.x_max:
+        parser.error("Require x-min <= x-max")
+    if args.x_half_width < 0:
+        parser.error("--x-half-width must be nonnegative")
+    if min(args.tile_width, args.max_nodes, args.max_pairs, args.max_display) <= 0:
+        parser.error("Tile width and all budgets must be positive")
+    if args.engine == "lattice" and target == "rational":
+        parser.error("Use --engine scan for all rational y; lattice targets cubes or primitive")
+    if args.mode == "tiles" and args.engine != "lattice":
+        parser.error("--mode tiles requires --engine lattice")
+    if args.search_only and args.save_prefix:
+        parser.error("Choose either --search-only or --save-prefix")
+    settings = LabSettings(
+        preset=args.preset, n=args.n, n_stop=args.n_stop, slices=args.slices,
+        x_min=args.x_min, x_max=args.x_max,
+        x_center_ratio=args.x_center_ratio, x_half_width=args.x_half_width,
+        engine=args.engine, target=target, axis=args.axis,
+        tile_width=args.tile_width, max_nodes=args.max_nodes,
+        max_pairs=args.max_pairs, max_display=args.max_display,
+    )
+    return args, settings
+
+
+def main(argv=None):
+    args, settings = parse_lab_args(argv)
+    print("Searching the selected finite n/x windows ...", flush=True)
+    try:
+        result = run_search(settings)
+    except (ValueError, WorkLimitError) as exc:
+        print(f"Search NOT completed: {exc}", file=sys.stderr)
+        return 2
+    print_run_summary(result, settings)
+    if args.csv:
+        export_csv(args.csv, result["records"])
+        manifest_path = export_window_manifest(args.csv, result, settings)
+        print(f"Saved exact records to {args.csv}")
+        print(f"Saved exact searched n/x windows to {manifest_path}")
+    if args.search_only:
+        return 0
+    if args.save_prefix:
+        import matplotlib
+        matplotlib.use("Agg")
+    try:
+        explorer = RationalYExplorer(settings, result, mode=args.mode)
+    except (ValueError, OverflowError) as exc:
+        print(f"The exact search completed, but plotting failed: {exc}\n"
+              "Use --search-only --csv OUTPUT.csv, or --axis offset for large coordinates.",
+              file=sys.stderr)
+        return 2
+    if args.save_prefix:
+        for path in explorer.save(args.save_prefix):
+            print(f"Saved {path}")
+        explorer.plt.close("all")
+    else:
+        print("Click points or tiles for exact values; drag the 3D view to rotate.")
+        print("Left/Right or buttons select samples in an overview, or shift n in a local window.")
+        explorer.plt.show()
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except KeyboardInterrupt:
+        print("\nStopped by user. An interrupted search is not a completed search.", file=sys.stderr)
+        raise SystemExit(130)
