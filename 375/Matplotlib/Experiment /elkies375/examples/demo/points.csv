@@ -1,0 +1,3 @@
+n,x,y,t,residual,status,cube_gcd,cube_A,cube_B,cube_C
+2,-20,0,0,0,cubes,5,20,20,-25
+2,-5,0,0,0,cubes,5,5,5,5

@@ -1,0 +1,2 @@
+sample_index,n,status,all_integer_x_complete,factorization_complete,enumeration_complete,factor_pairs_tested,rational_x_min,rational_x_max,integer_cube_x_min,integer_cube_x_max,N_factorization,unresolved_atoms,factor_backend,factor_seconds,requested_n_min,requested_n_max
+0,13,complete: all integer x,True,True,True,5,-1305,1197,-255,173,61 * 1451,,sympy-pocklington,0.2819429979990673,13,13

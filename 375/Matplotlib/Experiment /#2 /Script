@@ -1699,6 +1699,20 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
+    # Explicit route to the actual rank-three Elkies/EJ implementation.
+    # Without --engine elkies this historical experiment keeps its original CLI.
+    import sys as _ej_sys
+    if any(arg == "--engine=elkies" or
+           (arg == "--engine" and index+1 < len(_ej_sys.argv) and
+            _ej_sys.argv[index+1] == "elkies")
+           for index, arg in enumerate(_ej_sys.argv)):
+        from pathlib import Path as _EjPath
+        _ej_root = _EjPath(__file__).resolve().parent.parent / "elkies375"
+        if not (_ej_root / "elkies375_lab.py").is_file():
+            raise SystemExit("Download the sibling elkies375 folder to use --engine elkies. See this experiment's README.")
+        _ej_sys.path.insert(0, str(_ej_root))
+        from elkies375_lab import entry as _ej_main
+        raise SystemExit(_ej_main(_ej_sys.argv[1:]))
     try:
         raise SystemExit(main())
     except KeyboardInterrupt:

@@ -1,0 +1,58 @@
+[
+  {
+    "N": "500",
+    "S": "15",
+    "cube_gcd": "5",
+    "cube_sum": "375",
+    "cube_triple": [
+      "20",
+      "20",
+      "-25"
+    ],
+    "direct_discrepancy": "0",
+    "exact": true,
+    "integral_lift": true,
+    "n": "2",
+    "primitive": false,
+    "residual": "0",
+    "source": "elkies-integer-cube-lift",
+    "source_cube_triple": [
+      "20",
+      "20",
+      "-25"
+    ],
+    "square_integer_H": "0",
+    "status": "cubes",
+    "t": "0",
+    "x": "-20",
+    "y": "0"
+  },
+  {
+    "N": "500",
+    "S": "15",
+    "cube_gcd": "5",
+    "cube_sum": "375",
+    "cube_triple": [
+      "5",
+      "5",
+      "5"
+    ],
+    "direct_discrepancy": "0",
+    "exact": true,
+    "integral_lift": true,
+    "n": "2",
+    "primitive": false,
+    "residual": "0",
+    "source": "elkies-integer-cube-lift",
+    "source_cube_triple": [
+      "5",
+      "5",
+      "5"
+    ],
+    "square_integer_H": "0",
+    "status": "cubes",
+    "t": "0",
+    "x": "-5",
+    "y": "0"
+  }
+]

@@ -1,0 +1,20 @@
+Engine: fixed-n exact rational factor pairs (separate from the 3D Elkies integer-cube lattice).
+
+GLOBAL GEOMETRY: every real x branch, with both signs of y.
+Requested n interval: [13, 13], inclusive.
+Exact arithmetic search: 1 selected integer n values; no arbitrary x window.
+Other integer n values in the interval are not searched.
+At each selected n, all rational y and integer x are covered only when both prime factorization and factor-pair enumeration finish.
+[1/1] n=13: factoring 5-digit N (budget 10s) ...
+  complete: all integer x; factor pairs=5; exact rational points=1; primitive=0
+RATIONAL: n=13, x=-144, y=+/-695/756
+Cleared-denominator residual R=0; t=y(S+x)=-695/12
+(a,b,c)=(2423/12, 1033/12, -207); cube sum=375
+Integer cube lift=False; gcd=None; primitive=False
+
+Coverage: 1/1 selected n-slices completely searched over ALL integer x.
+Exact rational points: 1; integer cube lifts: 0; primitive green stars: 0.
+Continuous curves are real geometry. Grey candidates are not solutions. Green stars require exact primitive cube solutions.
+Elapsed search time: 0.28s.
+Saved examples/rational-control/points.csv
+Saved examples/rational-control/points-coverage.csv

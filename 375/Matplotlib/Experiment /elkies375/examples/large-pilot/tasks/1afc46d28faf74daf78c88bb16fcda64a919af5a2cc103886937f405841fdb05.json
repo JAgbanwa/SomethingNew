@@ -1,0 +1,48 @@
+{
+  "attempts": [
+    {
+      "elapsed_seconds": 0.011725657001079526,
+      "index_stop": "2095998486198131653192",
+      "max_tiles": 64,
+      "status": "validated",
+      "terminal": {
+        "complete": true,
+        "lattice_points": "0",
+        "next_index": "2095998486198131652192",
+        "reason": "complete",
+        "tiles": 1,
+        "type": "end"
+      }
+    }
+  ],
+  "cube_triples": [],
+  "lattice_points": "0",
+  "next_index": "2095998486198131652192",
+  "points": [],
+  "schema_version": 1,
+  "status": "complete",
+  "task": {
+    "band_index": "904001513801868347",
+    "c_max": "6000000000000000000075000000001",
+    "c_min": "3961408125713216879677197516800",
+    "height": "3961408125713216879677197516800",
+    "include_right_endpoint": false,
+    "index_start": "2095998486198131652192",
+    "index_stop": "2095998486198131653192",
+    "logical_index": "99859243610777545971",
+    "shell_index": "42",
+    "sum_max": "600000000000000000003",
+    "sum_min": "600000000000000003",
+    "task_id": "8652e7fa5628a179-h3961408125713216879677197516800-i2095998486198131652192-2095998486198131653192"
+  },
+  "tiles": [
+    {
+      "height": "3961408125713216879677197516800",
+      "lattice_points_delta": "0",
+      "left": "2095998486198131652192",
+      "right": "2095998486198131653192"
+    }
+  ],
+  "tiles_count": "1",
+  "updated_utc": "2026-11-24T23:48:02.369418+00:00"
+}

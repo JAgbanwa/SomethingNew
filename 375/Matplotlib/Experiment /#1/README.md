@@ -1,5 +1,20 @@
 # Experiment #1: Squared Equation Slice Lab
 
+
+> **Algorithm clarification (25 November 2026).** This is a historical
+> experiment. The attached `Elkies_allg.tar` uses a projective **3D** Elkies /
+> Elsenhans–Jahnel lattice search. The algorithm originally used by this
+> experiment is described below; its saved figures have not been relabelled as
+> results from that 3D search. The equation-specific implementation of the
+> actual method is now in [../elkies375](../elkies375/README.md), with an
+> [implementation comparison](../elkies375/SOURCE_AUDIT.md), exact verification,
+> resumable coverage and separate rational-only mode.
+>
+> With the complete experiment folder downloaded, `python3 Script --engine elkies
+> --preset demo` runs the new implementation. Without `--engine elkies`, this
+> file retains its original behavior and options. Run the new entry point
+> directly for the documented large-range workflow.
+
 A Python and Matplotlib experiment for visualizing nearby slices of
 
 $$

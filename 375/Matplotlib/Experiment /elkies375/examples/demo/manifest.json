@@ -1,0 +1,76 @@
+{
+  "band_width": "1000",
+  "coverage_note": "Native tasks cover height/ratio regions and all n values encountered there; unscheduled/unfinished regions remain unsearched. General rational-only points are outside this integer-cube lattice.",
+  "created_utc": "2026-11-24T23:47:50.495346+00:00",
+  "engine": "elkies-ej-3d",
+  "equation": "y^2 = 1 + (36n^3+54n^2+27n-58)/(x*(6n+3+x)^2)",
+  "n_max": "5",
+  "n_min": "1",
+  "planned_task_count": "2",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "point_count_note": "Each (n,x,+/-y) pair is counted once; one canonical cube triple can give several equation points.",
+  "python": "3.12.14",
+  "region": {
+    "admissible_n_count": "2",
+    "band_width": "1000",
+    "canonical_height_max": "85",
+    "canonical_height_min": "16",
+    "complete_height_scope": true,
+    "coverage_status": "planned; no search is established by this descriptor",
+    "height_max": "85",
+    "height_min": "0",
+    "integer_n_count": "5",
+    "logical_native_tasks": "2",
+    "n_max": "5",
+    "n_min": "1",
+    "native_shell_count": 2,
+    "necessary_n_modulus": 27,
+    "necessary_n_residues": [
+      2,
+      5,
+      14,
+      20,
+      23
+    ],
+    "proven_height_max": "85",
+    "region_version": 1,
+    "scope_id": "d85e3c943f29e451",
+    "scope_note": "Native tasks cover integer cube lifts across all n in the requested sum strip, subject to their height and ratio bounds. General rational-only y points require the separate factor-pair engine.",
+    "shells": [
+      {
+        "c_max": "49",
+        "c_min": "25",
+        "height": "25",
+        "include_right_endpoint": true,
+        "index_start": "30",
+        "index_stop": "100",
+        "logical_tasks": "1"
+      },
+      {
+        "c_max": "85",
+        "c_min": "50",
+        "height": "50",
+        "include_right_endpoint": true,
+        "index_start": "58",
+        "index_stop": "200",
+        "logical_tasks": "1"
+      }
+    ],
+    "small_height_max": "24",
+    "small_height_min": "0",
+    "small_height_required": true,
+    "sum_max": "33",
+    "sum_min": "9",
+    "target": 375
+  },
+  "schema_version": 1,
+  "source_sha256": {
+    "campaign.py": "7e89ffd1434f6e59e9720f1c3de88734daddf10067029526a2d9248848643ffb",
+    "ej_backend.py": "56fb014ba06e7a6fce20c7b5dffa8028082855633854f87af093f91ac98611cd",
+    "ej_worker.cpp": "8753652ce3d725022ca49ab9825e496c3d9d7b189568a78394a58987cbd2e51a",
+    "equation.py": "5964c2d3940308a78a69c597bf3af4782fad8b0e0c9df761b685520c56655372",
+    "region.py": "20f42ce75e595a00aad5d05bb2a5d62250c9d6e1e8e0383738aec1d97ba7e2e5"
+  },
+  "target": "cubes",
+  "tile_scale": "11/2"
+}
