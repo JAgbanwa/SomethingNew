@@ -1,0 +1,15 @@
+n,x,y_numerator,y_denominator,y_abs_exact,t_exact,residual_R_exact,exact,integral_lift,primitive,cube_gcd,a,b,c,cube_sum,status,source_branch
+13,-88511,0,1,0,0,692144062075389,False,False,False,,88511,88511,-176941,-4152864372451959,trial,negative_outer
+13,-1451,3,137,3/137,-30,2721987489,False,False,False,,1481,1421,-2821,-16331924559,trial,negative_outer
+13,-1369,44255,47656,44255/47656,-44255/37,312500800,False,False,False,,94908/37,6398/37,-2657,-1875004425,trial,negative_outer
+13,-1296,8851,8748,8851/8748,-44255/36,-45405936,False,False,False,,90911/36,2401/36,-2511,272435991,trial,negative_outer
+13,-549,725,1404,725/1404,-725/3,88092540,False,False,False,,2372/3,922/3,-1017,-528554865,trial,negative_outer
+13,-244,725,326,725/326,-725/2,-25668800,False,False,False,,1213/2,-237/2,-407,154013175,trial,negative_outer
+13,25,378,265,378/265,756/5,202125,False,False,False,,-881/5,631/5,131,-1212375,trial,positive
+13,36,14,13,14/13,126,-9779,False,False,False,,-162,90,153,59049,trial,positive
+13,244,363,325,363/325,363,6290625,False,False,False,,-607,119,569,-37743375,trial,positive
+13,549,121,315,121/315,242,-185834975,False,False,False,,-791,-307,1179,1115010225,trial,positive
+13,1156,22128,21029,22128/21029,22128/17,189629661,False,False,False,,-41780/17,2476/17,2393,-1137777591,trial,positive
+13,1225,22128,22855,22128/22855,44256/35,-130899075,False,False,False,,-87131/35,1381/35,2531,785394825,trial,positive
+13,1451,31,1532,31/1532,31,-3404225924,False,False,False,,-1482,-1420,2983,20425355919,trial,positive
+13,-144,695,756,695/756,-695/12,0,True,False,False,,2423/12,1033/12,-207,375,rational,negative_outer

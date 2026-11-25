@@ -1,0 +1,445 @@
+{
+  "band_width": "1000",
+  "coverage_note": "Native tasks cover height/ratio regions and all n values encountered there; unscheduled/unfinished regions remain unsearched. General rational-only points are outside this integer-cube lattice.",
+  "created_utc": "2026-11-24T23:47:56.810135+00:00",
+  "engine": "elkies-ej-3d",
+  "equation": "y^2 = 1 + (36n^3+54n^2+27n-58)/(x*(6n+3+x)^2)",
+  "n_max": "100000000000000000000",
+  "n_min": "100000000000000000",
+  "planned_task_count": "100763245124579414319",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "point_count_note": "Each (n,x,+/-y) pair is counted once; one canonical cube triple can give several equation points.",
+  "python": "3.12.14",
+  "region": {
+    "admissible_n_count": "18500000000000000000",
+    "band_width": "1000",
+    "canonical_height_max": "6000000000000000000075000000001",
+    "canonical_height_min": "1021448630351589166",
+    "complete_height_scope": true,
+    "coverage_status": "planned; no search is established by this descriptor",
+    "height_max": "6000000000000000000075000000001",
+    "height_min": "0",
+    "integer_n_count": "99900000000000000001",
+    "logical_native_tasks": "100763245124579414319",
+    "n_max": "100000000000000000000",
+    "n_min": "100000000000000000",
+    "native_shell_count": 43,
+    "necessary_n_modulus": 27,
+    "necessary_n_residues": [
+      2,
+      5,
+      14,
+      20,
+      23
+    ],
+    "proven_height_max": "6000000000000000000075000000001",
+    "region_version": 1,
+    "scope_id": "8652e7fa5628a179",
+    "scope_note": "Native tasks cover integer cube lifts across all n in the requested sum strip, subject to their height and ratio bounds. General rational-only y points require the separate factor-pair engine.",
+    "shells": [
+      {
+        "c_max": "1801439850948198399",
+        "c_min": "1021448630351589166",
+        "height": "900719925474099200",
+        "include_right_endpoint": true,
+        "index_start": "1563740322115163611",
+        "index_stop": "3602879701896396800",
+        "logical_tasks": "2039139379781234"
+      },
+      {
+        "c_max": "3602879701896396799",
+        "c_min": "1801439850948198400",
+        "height": "1801439850948198400",
+        "include_right_endpoint": true,
+        "index_start": "1514289434714359618",
+        "index_stop": "7205759403792793600",
+        "logical_tasks": "5691469969078434"
+      },
+      {
+        "c_max": "7205759403792793599",
+        "c_min": "3602879701896396800",
+        "height": "3602879701896396800",
+        "include_right_endpoint": true,
+        "index_start": "1503491615594085380",
+        "index_stop": "14411518807585587200",
+        "logical_tasks": "12908027191991502"
+      },
+      {
+        "c_max": "14411518807585587199",
+        "c_min": "7205759403792793600",
+        "height": "7205759403792793600",
+        "include_right_endpoint": true,
+        "index_start": "1500868195141830488",
+        "index_stop": "28823037615171174400",
+        "logical_tasks": "27322169420029344"
+      },
+      {
+        "c_max": "28823037615171174399",
+        "c_min": "14411518807585587200",
+        "height": "14411518807585587200",
+        "include_right_endpoint": true,
+        "index_start": "1500216761714646317",
+        "index_stop": "57646075230342348800",
+        "logical_tasks": "56145858468627703"
+      },
+      {
+        "c_max": "57646075230342348799",
+        "c_min": "28823037615171174400",
+        "height": "28823037615171174400",
+        "include_right_endpoint": true,
+        "index_start": "1500054172668979318",
+        "index_stop": "115292150460684697600",
+        "logical_tasks": "113792096288015719"
+      },
+      {
+        "c_max": "115292150460684697599",
+        "c_min": "57646075230342348800",
+        "height": "57646075230342348800",
+        "include_right_endpoint": true,
+        "index_start": "1500013542062325997",
+        "index_stop": "230584300921369395200",
+        "logical_tasks": "229084287379307070"
+      },
+      {
+        "c_max": "230584300921369395199",
+        "c_min": "115292150460684697600",
+        "height": "115292150460684697600",
+        "include_right_endpoint": true,
+        "index_start": "1500003385446672652",
+        "index_stop": "461168601842738790400",
+        "logical_tasks": "459668598457292118"
+      },
+      {
+        "c_max": "461168601842738790399",
+        "c_min": "230584300921369395200",
+        "height": "230584300921369395200",
+        "include_right_endpoint": true,
+        "index_start": "1500000846357365860",
+        "index_stop": "922337203685477580800",
+        "logical_tasks": "920837202839120215"
+      },
+      {
+        "c_max": "922337203685477580799",
+        "c_min": "461168601842738790400",
+        "height": "461168601842738790400",
+        "include_right_endpoint": true,
+        "index_start": "1500000211589072714",
+        "index_stop": "1844674407370955161600",
+        "logical_tasks": "1843174407159366089"
+      },
+      {
+        "c_max": "1844674407370955161599",
+        "c_min": "922337203685477580800",
+        "height": "922337203685477580800",
+        "include_right_endpoint": true,
+        "index_start": "1500000052897251391",
+        "index_stop": "3689348814741910323200",
+        "logical_tasks": "3687848814689013072"
+      },
+      {
+        "c_max": "3689348814741910323199",
+        "c_min": "1844674407370955161600",
+        "height": "1844674407370955161600",
+        "include_right_endpoint": false,
+        "index_start": "1500000013224311804",
+        "index_stop": "3120650159673362642165",
+        "logical_tasks": "3119150159660138331"
+      },
+      {
+        "c_max": "7378697629483820646399",
+        "c_min": "3689348814741910323200",
+        "height": "3689348814741910323200",
+        "include_right_endpoint": false,
+        "index_start": "1500000003306077891",
+        "index_stop": "3027215106171330853892",
+        "logical_tasks": "3025715106168024777"
+      },
+      {
+        "c_max": "14757395258967641292799",
+        "c_min": "7378697629483820646400",
+        "height": "7378697629483820646400",
+        "include_right_endpoint": false,
+        "index_start": "1500000000826519474",
+        "index_stop": "3006657475022382117398",
+        "logical_tasks": "3005157475021555598"
+      },
+      {
+        "c_max": "29514790517935282585599",
+        "c_min": "14757395258967641292800",
+        "height": "14757395258967641292800",
+        "include_right_endpoint": false,
+        "index_start": "1500000000206629873",
+        "index_stop": "3001655814725038548568",
+        "logical_tasks": "3000155814724831919"
+      },
+      {
+        "c_max": "59029581035870565171199",
+        "c_min": "29514790517935282585600",
+        "height": "29514790517935282585600",
+        "include_right_endpoint": false,
+        "index_start": "1500000000051657474",
+        "index_stop": "3000413431769197441865",
+        "logical_tasks": "2998913431769145785"
+      },
+      {
+        "c_max": "118059162071741130342399",
+        "c_min": "59029581035870565171200",
+        "height": "59029581035870565171200",
+        "include_right_endpoint": false,
+        "index_start": "1500000000012914374",
+        "index_stop": "3000103325644799832991",
+        "logical_tasks": "2998603325644786919"
+      },
+      {
+        "c_max": "236118324143482260684799",
+        "c_min": "118059162071741130342400",
+        "height": "118059162071741130342400",
+        "include_right_endpoint": false,
+        "index_start": "1500000000003228599",
+        "index_stop": "3000025829401571112917",
+        "logical_tasks": "2998525829401567885"
+      },
+      {
+        "c_max": "472236648286964521369599",
+        "c_min": "236118324143482260684800",
+        "height": "236118324143482260684800",
+        "include_right_endpoint": false,
+        "index_start": "1500000000000807155",
+        "index_stop": "3000006457225054502136",
+        "logical_tasks": "2998506457225053695"
+      },
+      {
+        "c_max": "944473296573929042739199",
+        "c_min": "472236648286964521369600",
+        "height": "472236648286964521369600",
+        "include_right_endpoint": false,
+        "index_start": "1500000000000201794",
+        "index_stop": "3000001614298437962512",
+        "logical_tasks": "2998501614298437761"
+      },
+      {
+        "c_max": "1888946593147858085478399",
+        "c_min": "944473296573929042739200",
+        "height": "944473296573929042739200",
+        "include_right_endpoint": false,
+        "index_start": "1500000000000050454",
+        "index_stop": "3000000403574120632079",
+        "logical_tasks": "2998500403574120582"
+      },
+      {
+        "c_max": "3777893186295716170956799",
+        "c_min": "1888946593147858085478400",
+        "height": "1888946593147858085478400",
+        "include_right_endpoint": false,
+        "index_start": "1500000000000012619",
+        "index_stop": "3000000100893499611978",
+        "logical_tasks": "2998500100893499600"
+      },
+      {
+        "c_max": "7555786372591432341913599",
+        "c_min": "3777893186295716170956800",
+        "height": "3777893186295716170956800",
+        "include_right_endpoint": false,
+        "index_start": "1500000000000003160",
+        "index_stop": "3000000025223372994114",
+        "logical_tasks": "2998500025223372991"
+      },
+      {
+        "c_max": "15111572745182864683827199",
+        "c_min": "7555786372591432341913600",
+        "height": "7555786372591432341913600",
+        "include_right_endpoint": false,
+        "index_start": "1500000000000000795",
+        "index_stop": "3000000006305843129242",
+        "logical_tasks": "2998500006305843129"
+      },
+      {
+        "c_max": "30223145490365729367654399",
+        "c_min": "15111572745182864683827200",
+        "height": "15111572745182864683827200",
+        "include_right_endpoint": false,
+        "index_start": "1500000000000000204",
+        "index_stop": "3000000001576460774866",
+        "logical_tasks": "2998500001576460775"
+      },
+      {
+        "c_max": "60446290980731458735308799",
+        "c_min": "30223145490365729367654400",
+        "height": "30223145490365729367654400",
+        "include_right_endpoint": false,
+        "index_start": "1500000000000000056",
+        "index_stop": "3000000000394115193262",
+        "logical_tasks": "2998500000394115194"
+      },
+      {
+        "c_max": "120892581961462917470617599",
+        "c_min": "60446290980731458735308800",
+        "height": "60446290980731458735308800",
+        "include_right_endpoint": false,
+        "index_start": "1500000000000000019",
+        "index_stop": "3000000000098528798298",
+        "logical_tasks": "2998500000098528799"
+      },
+      {
+        "c_max": "241785163922925834941235199",
+        "c_min": "120892581961462917470617600",
+        "height": "120892581961462917470617600",
+        "include_right_endpoint": false,
+        "index_start": "1500000000000000012",
+        "index_stop": "3000000000024632199584",
+        "logical_tasks": "2998500000024632200"
+      },
+      {
+        "c_max": "483570327845851669882470399",
+        "c_min": "241785163922925834941235200",
+        "height": "241785163922925834941235200",
+        "include_right_endpoint": false,
+        "index_start": "1500000000000000012",
+        "index_stop": "3000000000006158049908",
+        "logical_tasks": "2998500000006158050"
+      },
+      {
+        "c_max": "967140655691703339764940799",
+        "c_min": "483570327845851669882470400",
+        "height": "483570327845851669882470400",
+        "include_right_endpoint": false,
+        "index_start": "2221366355794264627",
+        "index_stop": "3000000000001539512489",
+        "logical_tasks": "2997778633645745248"
+      },
+      {
+        "c_max": "1934281311383406679529881599",
+        "c_min": "967140655691703339764940800",
+        "height": "967140655691703339764940800",
+        "include_right_endpoint": false,
+        "index_start": "3526199289994581347",
+        "index_stop": "3000000000000384878134",
+        "logical_tasks": "2996473800710390297"
+      },
+      {
+        "c_max": "3868562622766813359059763199",
+        "c_min": "1934281311383406679529881600",
+        "height": "1934281311383406679529881600",
+        "include_right_endpoint": false,
+        "index_start": "5597492462386916515",
+        "index_stop": "3000000000000096219545",
+        "logical_tasks": "2994402507537709304"
+      },
+      {
+        "c_max": "7737125245533626718119526399",
+        "c_min": "3868562622766813359059763200",
+        "height": "3868562622766813359059763200",
+        "include_right_endpoint": false,
+        "index_start": "8885465423177058507",
+        "index_stop": "3000000000000024054898",
+        "logical_tasks": "2991114534576846997"
+      },
+      {
+        "c_max": "15474250491067253436239052799",
+        "c_min": "7737125245533626718119526400",
+        "height": "7737125245533626718119526400",
+        "include_right_endpoint": false,
+        "index_start": "14104797159978325387",
+        "index_stop": "3000000000000006013736",
+        "logical_tasks": "2985895202840027689"
+      },
+      {
+        "c_max": "30948500982134506872478105599",
+        "c_min": "15474250491067253436239052800",
+        "height": "15474250491067253436239052800",
+        "include_right_endpoint": false,
+        "index_start": "22389969849547666060",
+        "index_stop": "3000000000000001503446",
+        "logical_tasks": "2977610030150453838"
+      },
+      {
+        "c_max": "61897001964269013744956211199",
+        "c_min": "30948500982134506872478105600",
+        "height": "30948500982134506872478105600",
+        "include_right_endpoint": false,
+        "index_start": "35541861692708234025",
+        "index_stop": "3000000000000000375873",
+        "logical_tasks": "2964458138307292142"
+      },
+      {
+        "c_max": "123794003928538027489912422399",
+        "c_min": "61897001964269013744956211200",
+        "height": "61897001964269013744956211200",
+        "include_right_endpoint": false,
+        "index_start": "56419188639913301550",
+        "index_stop": "3000000000000000093980",
+        "logical_tasks": "2943580811360086793"
+      },
+      {
+        "c_max": "247588007857076054979824844799",
+        "c_min": "123794003928538027489912422400",
+        "height": "123794003928538027489912422400",
+        "include_right_endpoint": false,
+        "index_start": "89559879398190664235",
+        "index_stop": "3000000000000000023507",
+        "logical_tasks": "2910440120601809360"
+      },
+      {
+        "c_max": "495176015714152109959649689599",
+        "c_min": "247588007857076054979824844800",
+        "height": "247588007857076054979824844800",
+        "include_right_endpoint": false,
+        "index_start": "142167446770832936097",
+        "index_stop": "3000000000000000005888",
+        "logical_tasks": "2857832553229167070"
+      },
+      {
+        "c_max": "990352031428304219919299379199",
+        "c_min": "495176015714152109959649689600",
+        "height": "495176015714152109959649689600",
+        "include_right_endpoint": false,
+        "index_start": "225676754559653206195",
+        "index_stop": "3000000000000000001484",
+        "logical_tasks": "2774323245440346796"
+      },
+      {
+        "c_max": "1980704062856608439838598758399",
+        "c_min": "990352031428304219919299379200",
+        "height": "990352031428304219919299379200",
+        "include_right_endpoint": false,
+        "index_start": "358239517592762656937",
+        "index_stop": "3000000000000000000383",
+        "logical_tasks": "2641760482407237344"
+      },
+      {
+        "c_max": "3961408125713216879677197516799",
+        "c_min": "1980704062856608439838598758400",
+        "height": "1980704062856608439838598758400",
+        "include_right_endpoint": false,
+        "index_start": "568669787083331744385",
+        "index_stop": "3000000000000000000107",
+        "logical_tasks": "2431330212916668256"
+      },
+      {
+        "c_max": "6000000000000000000075000000001",
+        "c_min": "3961408125713216879677197516800",
+        "height": "3961408125713216879677197516800",
+        "include_right_endpoint": false,
+        "index_start": "1191996972396263305192",
+        "index_stop": "3000000000000000000038",
+        "logical_tasks": "1808003027603736695"
+      }
+    ],
+    "small_height_max": "-1",
+    "small_height_min": "0",
+    "small_height_required": false,
+    "sum_max": "600000000000000000003",
+    "sum_min": "600000000000000003",
+    "target": 375
+  },
+  "schema_version": 1,
+  "source_sha256": {
+    "campaign.py": "7e89ffd1434f6e59e9720f1c3de88734daddf10067029526a2d9248848643ffb",
+    "ej_backend.py": "56fb014ba06e7a6fce20c7b5dffa8028082855633854f87af093f91ac98611cd",
+    "ej_worker.cpp": "8753652ce3d725022ca49ab9825e496c3d9d7b189568a78394a58987cbd2e51a",
+    "equation.py": "5964c2d3940308a78a69c597bf3af4782fad8b0e0c9df761b685520c56655372",
+    "region.py": "20f42ce75e595a00aad5d05bb2a5d62250c9d6e1e8e0383738aec1d97ba7e2e5"
+  },
+  "target": "primitive",
+  "tile_scale": "11/2"
+}

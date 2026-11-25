@@ -1,0 +1,21 @@
+{
+  "geometry_only_n_values": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5"
+  ],
+  "geometry_only_n_count": 5,
+  "geometry_is_not_search_coverage": true,
+  "mapped_cube_triples": 2,
+  "equation_representations": 2,
+  "primitive_equation_representations": 0,
+  "saved_tasks": 2,
+  "complete_tasks": 2,
+  "partial_tasks": 0,
+  "error_tasks": 0,
+  "completed_tiles": "11",
+  "lattice_points_covered": "647",
+  "manual_point_checks_saved": false
+}

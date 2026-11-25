@@ -1,0 +1,82 @@
+Requested integer n interval: 100000000000000000 .. 100000000000000000000
+Derived canonical coordinate height bound: 6000000000000000000075000000001
+Logical height/ratio tasks in the plan: 100763245124579414319
+Assigned 43 native height/ratio tasks from a plan of 100763245124579414319 tasks.
+The n interval is swept collectively inside those regions; displayed n slices are geometry only.
+[1/43] H=900719925474099200; complete; tiles=44; exact equation points=0
+[2/43] H=1801439850948198400; complete; tiles=39; exact equation points=0
+[3/43] H=3602879701896396800; complete; tiles=38; exact equation points=0
+[4/43] H=7205759403792793600; complete; tiles=38; exact equation points=0
+[5/43] H=14411518807585587200; complete; tiles=36; exact equation points=0
+[6/43] H=28823037615171174400; complete; tiles=36; exact equation points=0
+[7/43] H=57646075230342348800; complete; tiles=36; exact equation points=0
+[8/43] H=115292150460684697600; complete; tiles=36; exact equation points=0
+[9/43] H=230584300921369395200; complete; tiles=36; exact equation points=0
+[10/43] H=461168601842738790400; complete; tiles=36; exact equation points=0
+[11/43] H=922337203685477580800; complete; tiles=36; exact equation points=0
+[12/43] H=1844674407370955161600; complete; tiles=26; exact equation points=0
+[13/43] H=3689348814741910323200; complete; tiles=20; exact equation points=0
+[14/43] H=7378697629483820646400; complete; tiles=16; exact equation points=0
+[15/43] H=14757395258967641292800; complete; tiles=13; exact equation points=0
+[16/43] H=29514790517935282585600; complete; tiles=10; exact equation points=0
+[17/43] H=59029581035870565171200; complete; tiles=8; exact equation points=0
+[18/43] H=118059162071741130342400; complete; tiles=7; exact equation points=0
+[19/43] H=236118324143482260684800; complete; tiles=5; exact equation points=0
+[20/43] H=472236648286964521369600; complete; tiles=4; exact equation points=0
+[21/43] H=944473296573929042739200; complete; tiles=4; exact equation points=0
+[22/43] H=1888946593147858085478400; complete; tiles=3; exact equation points=0
+[23/43] H=3777893186295716170956800; complete; tiles=2; exact equation points=0
+[24/43] H=7555786372591432341913600; complete; tiles=2; exact equation points=0
+[25/43] H=15111572745182864683827200; complete; tiles=2; exact equation points=0
+[26/43] H=30223145490365729367654400; complete; tiles=1; exact equation points=0
+[27/43] H=60446290980731458735308800; complete; tiles=1; exact equation points=0
+[28/43] H=120892581961462917470617600; complete; tiles=1; exact equation points=0
+[29/43] H=241785163922925834941235200; complete; tiles=1; exact equation points=0
+[30/43] H=483570327845851669882470400; complete; tiles=1; exact equation points=0
+[31/43] H=967140655691703339764940800; complete; tiles=1; exact equation points=0
+[32/43] H=1934281311383406679529881600; complete; tiles=1; exact equation points=0
+[33/43] H=3868562622766813359059763200; complete; tiles=1; exact equation points=0
+[34/43] H=7737125245533626718119526400; complete; tiles=1; exact equation points=0
+[35/43] H=15474250491067253436239052800; complete; tiles=1; exact equation points=0
+[36/43] H=30948500982134506872478105600; complete; tiles=1; exact equation points=0
+[37/43] H=61897001964269013744956211200; complete; tiles=1; exact equation points=0
+[38/43] H=123794003928538027489912422400; complete; tiles=1; exact equation points=0
+[39/43] H=247588007857076054979824844800; complete; tiles=1; exact equation points=0
+[40/43] H=495176015714152109959649689600; complete; tiles=1; exact equation points=0
+[41/43] H=990352031428304219919299379200; complete; tiles=1; exact equation points=0
+[42/43] H=1980704062856608439838598758400; complete; tiles=1; exact equation points=0
+[43/43] H=3961408125713216879677197516800; complete; tiles=1; exact equation points=0
+{
+  "schema_version": 1,
+  "engine": "elkies-ej-3d",
+  "target": "primitive",
+  "n_min": "100000000000000000",
+  "n_max": "100000000000000000000",
+  "planned_tasks": "100763245124579414319",
+  "materialized_tasks": 43,
+  "complete_tasks": 43,
+  "partial_tasks": 0,
+  "error_tasks": 0,
+  "unstarted_tasks": "100763245124579414276",
+  "completed_ratio_index_units": "43000",
+  "completed_tiles": "551",
+  "covered_lattice_points": "12571",
+  "small_height_complete": true,
+  "all_planned_regions_complete": false,
+  "full_height_scope": true,
+  "complete_target_search_in_n_interval": false,
+  "general_rational_y_search_complete": false,
+  "canonical_cube_hits": 0,
+  "equation_points": 0,
+  "primitive_equation_points": 0,
+  "nonprimitive_equation_points": 0,
+  "coverage_note": "Native tasks cover height/ratio regions and all n values encountered there; unscheduled/unfinished regions remain unsearched. General rational-only points are outside this integer-cube lattice.",
+  "updated_utc": "2026-11-24T23:48:02.543430+00:00"
+}
+Only the recorded completed height/ratio regions were searched; the full n-interval search is unfinished.
+General rational-only points require --engine rational or an exact individual --check.
+Saved figures:
+  equation-2d: examples/large-pilot/large-equation-2d.png
+  equation-3d: examples/large-pilot/large-equation-3d.png
+  coverage: examples/large-pilot/large-coverage.png
+  metadata: examples/large-pilot/large-plot-summary.json

@@ -1,0 +1,41 @@
+Requested integer n interval: 1 .. 5
+Derived canonical coordinate height bound: 85
+Logical height/ratio tasks in the plan: 2
+Assigned 2 native height/ratio tasks from a plan of 2 tasks.
+The n interval is swept collectively inside those regions; displayed n slices are geometry only.
+[1/2] H=25; complete; tiles=4; exact equation points=1
+[2/2] H=50; complete; tiles=7; exact equation points=0
+{
+  "schema_version": 1,
+  "engine": "elkies-ej-3d",
+  "target": "cubes",
+  "n_min": "1",
+  "n_max": "5",
+  "planned_tasks": "2",
+  "materialized_tasks": 2,
+  "complete_tasks": 2,
+  "partial_tasks": 0,
+  "error_tasks": 0,
+  "unstarted_tasks": "0",
+  "completed_ratio_index_units": "212",
+  "completed_tiles": "11",
+  "covered_lattice_points": "647",
+  "small_height_complete": true,
+  "all_planned_regions_complete": true,
+  "full_height_scope": true,
+  "complete_target_search_in_n_interval": true,
+  "general_rational_y_search_complete": false,
+  "canonical_cube_hits": 2,
+  "equation_points": 2,
+  "primitive_equation_points": 0,
+  "nonprimitive_equation_points": 2,
+  "coverage_note": "Native tasks cover height/ratio regions and all n values encountered there; unscheduled/unfinished regions remain unsearched. General rational-only points are outside this integer-cube lattice.",
+  "updated_utc": "2026-11-24T23:47:50.512388+00:00"
+}
+The complete finite region for the requested integer-cube target was searched.
+General rational-only points require --engine rational or an exact individual --check.
+Saved figures:
+  equation-2d: examples/demo/demo-equation-2d.png
+  equation-3d: examples/demo/demo-equation-3d.png
+  coverage: examples/demo/demo-coverage.png
+  metadata: examples/demo/demo-plot-summary.json

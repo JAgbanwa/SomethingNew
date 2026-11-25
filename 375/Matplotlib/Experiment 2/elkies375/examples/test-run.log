@@ -1,0 +1,83 @@
+test_arbitrary_precision_height (test_backend.ExactLatticeMath.test_arbitrary_precision_height) ... ok
+test_empty_completed_interval (test_backend.ExactLatticeMath.test_empty_completed_interval) ... ok
+test_full_small_shells_against_independent_brute_force (test_backend.ExactLatticeMath.test_full_small_shells_against_independent_brute_force) ... ok
+test_global_top_endpoint_and_adjacent_ratio_partition (test_backend.ExactLatticeMath.test_global_top_endpoint_and_adjacent_ratio_partition) ... ok
+test_height_shell_endpoints (test_backend.ExactLatticeMath.test_height_shell_endpoints) ... ok
+test_invalid_scope_is_rejected (test_backend.ExactLatticeMath.test_invalid_scope_is_rejected) ... ok
+test_known_huge_scaled375_solution_is_not_primitive (test_backend.ExactLatticeMath.test_known_huge_scaled375_solution_is_not_primitive) ... ok
+test_primitive_negative_and_positive_controls (test_backend.ExactLatticeMath.test_primitive_negative_and_positive_controls) ... ok
+test_true_tile_boundary_continuation (test_backend.ExactLatticeMath.test_true_tile_boundary_continuation) ... ok
+test_width_invariance_and_long_inner_interval_shortcut (test_backend.ExactLatticeMath.test_width_invariance_and_long_inner_interval_shortcut) ... ok
+test_small_exhaustive_and_large_constructed_roots (test_backend.IntegerPolynomialRoots.test_small_exhaustive_and_large_constructed_roots) ... ok
+test_contradictory_completion_is_rejected (test_backend_contract.InvalidNativeOutput.test_contradictory_completion_is_rejected) ... ok
+test_missing_terminal_and_wrong_scope_are_errors (test_backend_contract.InvalidNativeOutput.test_missing_terminal_and_wrong_scope_are_errors) ... ok
+test_no_completion_on_nonzero_exit_or_trailing_output (test_backend_contract.InvalidNativeOutput.test_no_completion_on_nonzero_exit_or_trailing_output) ... ok
+test_wrong_hit_is_rejected (test_backend_contract.InvalidNativeOutput.test_wrong_hit_is_rejected) ... ok
+test_invalid_inputs_are_rejected_before_worker_launch (test_backend_contract.NativeInterface.test_invalid_inputs_are_rejected_before_worker_launch) ... ok
+test_nonempty_control_and_partial_resume (test_backend_contract.NativeInterface.test_nonempty_control_and_partial_resume) ... ok
+test_nonprimitive_375_never_passes_primitive_worker (test_backend_contract.NativeInterface.test_nonprimitive_375_never_passes_primitive_worker) ... ok
+test_zero_width_band_cannot_skip_included_global_endpoint (test_backend_contract.NativeInterface.test_zero_width_band_cannot_skip_included_global_endpoint) ... ok
+test_empty_clipped_height_region_round_trips_without_claiming_full_search (test_campaign.CampaignControls.test_empty_clipped_height_region_round_trips_without_claiming_full_search) ... ok
+test_every_exact_point_field_and_source_are_rechecked (test_campaign.CampaignControls.test_every_exact_point_field_and_source_are_rechecked) ... ok
+test_forged_completion_gaps_and_attempt_counter_changes_rejected (test_campaign.CampaignControls.test_forged_completion_gaps_and_attempt_counter_changes_rejected) ... ok
+test_full_n2_cubes_control_and_integer_only_completeness (test_campaign.CampaignControls.test_full_n2_cubes_control_and_integer_only_completeness) ... ok
+test_huge_task_offset_is_exact_and_lazily_paged (test_campaign.CampaignControls.test_huge_task_offset_is_exact_and_lazily_paged) ... ok
+test_manifest_source_region_and_exact_metadata_tampering_rejected (test_campaign.CampaignControls.test_manifest_source_region_and_exact_metadata_tampering_rejected) ... ok
+test_primitive_target_and_restricted_height_scope_are_distinct (test_campaign.CampaignControls.test_primitive_target_and_restricted_height_scope_are_distinct) ... ok
+test_resume_uses_exact_contiguous_remaining_interval (test_campaign.CampaignControls.test_resume_uses_exact_contiguous_remaining_interval) ... ok
+test_small_height_scope_counter_and_missing_solution_rejected (test_campaign.CampaignControls.test_small_height_scope_counter_and_missing_solution_rejected) ... ok
+test_unstarted_regions_and_missing_small_region_never_claim_complete (test_campaign.CampaignControls.test_unstarted_regions_and_missing_small_region_never_claim_complete) ... ok
+test_valid_point_in_wrong_height_or_target_is_rejected (test_campaign.CampaignControls.test_valid_point_in_wrong_height_or_target_is_rejected) ... ok
+test_worker_failure_discards_unvalidated_coverage_and_hits (test_campaign.CampaignControls.test_worker_failure_discards_unvalidated_coverage_and_hits) ... ok
+test_375_nonprimitive_controls (test_equation.EquationAdapter.test_375_nonprimitive_controls) ... ok
+test_all_same_parity_pairs_are_preserved (test_equation.EquationAdapter.test_all_same_parity_pairs_are_preserved) ... ok
+test_every_input_permutation_produces_same_distinct_points (test_equation.EquationAdapter.test_every_input_permutation_produces_same_distinct_points) ... ok
+test_huge_integer_cube_control_and_exact_n_filter (test_equation.EquationAdapter.test_huge_integer_cube_control_and_exact_n_filter) ... ok
+test_poles_invalid_numbers_and_wrong_cube_identity (test_equation.EquationAdapter.test_poles_invalid_numbers_and_wrong_cube_identity) ... ok
+test_rational_only_point_is_not_integer_or_primitive (test_equation.EquationAdapter.test_rational_only_point_is_not_integer_or_primitive) ... ok
+test_wrong_nearby_rational_value_remains_trial (test_equation.EquationAdapter.test_wrong_nearby_rational_value_remains_trial) ... ok
+test_exact_n_values_above_float_precision (test_plotting.PlotChecks.test_exact_n_values_above_float_precision) ... ok
+test_isolated_control_is_present (test_plotting.PlotChecks.test_isolated_control_is_present) ... ok
+test_saved_primitive_flag_cannot_create_star (test_plotting.PlotChecks.test_saved_primitive_flag_cannot_create_star) ... ok
+test_small_nonempty_counts_and_render (test_plotting.PlotChecks.test_small_nonempty_counts_and_render) ... ok
+test_tiny_coverage_remains_exact_and_manual_point_is_separate (test_plotting.PlotChecks.test_tiny_coverage_remains_exact_and_manual_point_is_separate) ... ok
+test_bruteforce_native_control_coverage (test_region.RegionTests.test_bruteforce_native_control_coverage) ... ok
+test_height_lower_bound_is_the_first_permitted_integer (test_region.RegionTests.test_height_lower_bound_is_the_first_permitted_integer) ... ok
+test_integer_roots_at_large_boundaries (test_region.RegionTests.test_integer_roots_at_large_boundaries) ... ok
+test_interval_modular_count_without_enumeration (test_region.RegionTests.test_interval_modular_count_without_enumeration) ... ok
+test_invalid_and_empty_scopes (test_region.RegionTests.test_invalid_and_empty_scopes) ... ok
+test_known_375_control_included_on_global_ratio_boundary (test_region.RegionTests.test_known_375_control_included_on_global_ratio_boundary) ... ok
+test_large_region_stays_compact_and_exact (test_region.RegionTests.test_large_region_stays_compact_and_exact) ... ok
+test_partition_and_resume_pages_are_exact (test_region.RegionTests.test_partition_and_resume_pages_are_exact) ... ok
+test_ratio_root_rounding_near_huge_integer_boundaries (test_region.RegionTests.test_ratio_root_rounding_near_huge_integer_boundaries) ... ok
+test_small_height_fallback_is_explicit (test_region.RegionTests.test_small_height_fallback_is_explicit) ... ok
+
+----------------------------------------------------------------------
+Ran 53 tests in 5.108s
+
+OK
+{
+  "source": "manual-one-point-check",
+  "point": {
+    "n": "13",
+    "x": "-144",
+    "y": "695/756",
+    "t": "-695/12",
+    "S": "81",
+    "N": "88511",
+    "residual": "0",
+    "direct_discrepancy": "0",
+    "square_integer_H": "69555600",
+    "cube_triple": [
+      "2423/12",
+      "1033/12",
+      "-207"
+    ],
+    "cube_sum": "375",
+    "cube_gcd": null,
+    "exact": true,
+    "integral_lift": false,
+    "primitive": false,
+    "status": "rational"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "complete": true,
+  "cube_triples": [],
+  "pairs_checked": 0,
+  "points": [],
+  "required": false,
+  "schema_version": 1,
+  "scope": {
+    "height_max": "-1",
+    "height_min": "0",
+    "n_max": "100000000000000000000",
+    "n_min": "100000000000000000",
+    "primitive_only": true
+  },
+  "source_sha256": {
+    "campaign.py": "7e89ffd1434f6e59e9720f1c3de88734daddf10067029526a2d9248848643ffb",
+    "ej_backend.py": "56fb014ba06e7a6fce20c7b5dffa8028082855633854f87af093f91ac98611cd",
+    "ej_worker.cpp": "8753652ce3d725022ca49ab9825e496c3d9d7b189568a78394a58987cbd2e51a",
+    "equation.py": "5964c2d3940308a78a69c597bf3af4782fad8b0e0c9df761b685520c56655372",
+    "region.py": "20f42ce75e595a00aad5d05bb2a5d62250c9d6e1e8e0383738aec1d97ba7e2e5"
+  },
+  "updated_utc": "2026-11-24T23:47:56.812018+00:00"
+}
