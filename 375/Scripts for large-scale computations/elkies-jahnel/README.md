@@ -37,16 +37,39 @@ comparisons. The proved lower ratio index is
 floor(5 * ceil_cuberoot(3H^2 - 3H + 1 - K) / 2).
 ```
 
+The planner starts every new shell at the tighter, proved upper index
+
+```text
+R0 = min(4H, floor_cuberoot(floor(125*(H^3 + K)/2)) + 1).
+```
+
+Indeed, `a<=b` implies `2a^3<=c^3+K`. Since `c>=H`, the ratio index
+`j=(5H)*a/c` satisfies `j^3<=125*(H^3+K)/2`. The `+1` retains candidates
+exactly at an integer cube-root bound because an ordinary task's upper
+endpoint is excluded. The existing global endpoint `4H` remains inclusive;
+at `H=25,K=375` the boundary representation `(20,20,-25)` is retained.
+When `R0<4H`, every omitted index at or above `R0` is proved infeasible.
+At large heights the starting ratio is near `2^(-1/3)`, about `0.793700526`,
+instead of an empty stretch starting at `0.8`.
+
+Existing tasks and cursors through `4H` remain valid. An explicit
+`--right-index` is also retained if it lies in the original valid region.
+The tighter default changes which work is scheduled, not the worker's
+acceptance rules.
+
 The region proof requires `H>=25`, `125K<=3H^3`, and
 `3H^2-3H+1>K`. The worker enforces these conditions. It covers both residual
 signs and applies the coordinate gcd test. Heights and indices use arbitrary
 precision integers; no fixed bit-width ceiling is imposed.
 
 An individual work unit has a finite endpoint. The **overall planner has no
-final height bound**: `next_plan.json` advances through the remaining ratio
-bands and doubles H after a shell is exhausted. Finite independent jobs are
-necessary for distributed completion and retries; they do not bound the
-entire mathematical campaign.
+final height bound**. Each `plan` invocation writes one finite page and a
+`next_plan.json` cursor, then exits. Following that cursor assigns the
+remaining ratio bands and doubles H once the shell has been fully planned;
+each new shell starts at `R0`. This does not mean its computations have
+finished. A controller must run the tasks, resume partial work, and collect
+their results before claiming coverage. Finite independent jobs support
+distributed completion and retries without imposing a final campaign height.
 
 ## Mathematical implementation
 
@@ -96,7 +119,8 @@ polynomial shortcut are adaptations for an exact fixed-target search.
 
 ## Build and validate
 
-Requires C++17, GMP development headers/libraries, GNU Make and Python 3.9+.
+Requires C++17, GMP development headers/libraries, GNU Make and Python 3.9+
+on Linux/POSIX (the runner uses `fcntl.flock` for exclusive result ownership).
 
 ```sh
 make
@@ -106,7 +130,10 @@ make test
 Tests include independent exhaustive small shells, primitive positive and
 negative controls, ratio and height boundaries, width invariance, tile-boundary
 continuation, the known huge nonprimitive 375 example, height `10^40`, and
-polynomial roots beyond 50 digits. Pipeline tests exercise nonempty results,
+polynomial roots beyond 50 digits. The tighter planner bound is checked
+against exhaustive small shells, an exact interior cube-root boundary, the
+inclusive global endpoint, and advancement to later shells. Pipeline tests
+exercise nonempty results,
 separate continuations, missing terminal records, changed binaries, invalid
 hits and mixed-version collection.
 
@@ -127,6 +154,8 @@ or a final search limit. No fixed lower or upper size cutoff was requested.
 This cursor visits that shell and then higher shells; regions below the chosen
 start need their own planned coverage if they are to be included. Starting
 elsewhere changes the assigned work, not the solution-acceptance criteria.
+The first task begins at the proved feasible upper edge described above.
+Being in that region permits solutions; it does not guarantee a hit.
 
 `grid-span` is the integer ratio-index width of each task, not a coordinate
 bound or a promised runtime. Calibrate it on the intended worker hardware.
@@ -168,12 +197,21 @@ task or binary is refused. Alternatively run `continuation.task.json` in a
 new directory and retain **all** partial and continuation result directories.
 The collector verifies their parent task, exact intervals and binary hashes;
 receiving only a final continuation cannot fill an earlier missing interval.
+Each runner holds `runner.lock` exclusively for its result directory. A second
+runner fails before modifying task, status, checkpoint or hit files, including
+when a controller has died but its original worker runner is still alive.
 
 Pin `--worker-sha256` during planning, and/or supply
 `--expected-worker-sha256` to collection. A page cannot mix binaries.
 `status.json` distinguishes `complete`, `partial` and `error`. An unexpected
 exit, malformed terminal record, wrong scope or invalid hit is an error.
 Rejected result directories contribute no accepted coverage.
+Successful complete/partial results must include `hits.jsonl`, including an
+empty file when no hit was found. Its number of unique verified triples must
+match the saved status count. Missing or truncated hit artifacts contribute
+no coverage, and a rerun refuses to overwrite a successful status whose
+saved artifacts fail these checks. Running/error states remain resumable
+under the normal crash-replay rules.
 
 Collection writes exact verified hits and a coverage/gap summary. Counts of
 `lattice_points` include intervals covered algebraically by the cubic solver;

@@ -14,11 +14,15 @@ from pathlib import Path
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+import ej375 as ej
+
 WORKER = ROOT / "bin" / "elkies375_worker"
 SOURCE = ROOT / "src" / "elkies375_worker.cpp"
 
@@ -114,6 +118,22 @@ class ExactLatticeMath(unittest.TestCase):
         records = self.worker(64, 6)
         self.assertIn((-43, -58, 65), triples(records))
         self.assertEqual(triples(records), brute_shell(64, 6, primitive=True))
+
+    def test_planner_upper_bound_preserves_full_small_shell_coverage(self):
+        # Compare the tightened planning region with an independent exhaustive
+        # search, not only with another invocation of the same lattice worker.
+        for height, target in ((25, 375), (64, 6), (128, 6), (128, 375),
+                               (64, 7), (64, 24), (128, 7125), (73, 1207)):
+            with self.subTest(height=height, target=target):
+                right = ej.upper_index(height, target)
+                records = self.worker(height, target, right=right, primitive=False)
+                self.assertTrue(records[-1]["complete"])
+                self.assertEqual(triples(records), brute_shell(height, target))
+                if (height, target) == (73, 1207):
+                    # The exact rational endpoint j=(5H)*a/c=290 must be
+                    # retained although the task's upper endpoint is excluded.
+                    self.assertEqual(right, 291)
+                    self.assertIn((58, 58, -73), triples(records))
 
     def test_global_top_endpoint_and_adjacent_ratio_partition(self):
         # At H=25, (20,20,25) lies exactly at a/c=4/5. Only the global

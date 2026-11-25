@@ -19,9 +19,9 @@ import json
 from pathlib import Path
 import sys
 
-from common375 import (CHECKPOINT_SCHEMA, COUNTERS, G_VALUES, MAX_H, MODES, PAGE_SCHEMA,
-                       PARAMETERIZATION, STATUS_SCHEMA, atomic_json, check_k, hit_key,
-                       load_json, validate_scope, validate_task, verify_hit)
+from common375 import (COUNTERS, G_VALUES, MAX_H, MODES, PAGE_SCHEMA, PARAMETERIZATION,
+                       atomic_json, check_k, checked_sha256, load_json, read_result_progress,
+                       validate_scope, validate_task, verify_hit)
 
 
 def merge(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
@@ -39,12 +39,24 @@ def main() -> int:
     ap.add_argument("--results", type=Path, nargs="+", required=True)
     ap.add_argument("--page", type=Path, help="page.json to compute gaps against")
     ap.add_argument("--output-dir", type=Path, required=True)
+    ap.add_argument("--expected-worker-sha256", help="accept only this exact worker binary SHA-256")
+    ap.add_argument("--require-complete", action="store_true", help="exit 2 if the supplied page has uncovered heights")
     args = ap.parse_args()
 
     page = load_json(args.page) if args.page else None
     k = int(page["k"]) if page else None
     mode = page.get("mode", "xy") if page else None
     campaign_id = page["campaign_id"] if page else None
+    try:
+        pins = {checked_sha256(v) for v in (args.expected_worker_sha256,
+                                           page.get("expected_worker_sha256") if page else None) if v is not None}
+        if len(pins) > 1:
+            raise ValueError("command-line and page worker SHA-256 pins disagree")
+        expected_sha = next(iter(pins), None)
+    except ValueError as exc:
+        ap.error(str(exc))
+    if args.require_complete and page is None:
+        ap.error("--require-complete needs --page")
     if page:
         try:
             validate_scope(page, PAGE_SCHEMA)
@@ -58,9 +70,11 @@ def main() -> int:
     counters = {c: 0 for c in COUNTERS}
     hits: dict[str, dict] = {}
     errors = []
+    hashes = set()
+    staged = []
     dirs = set()
     for root in args.results:
-        for marker in list(root.rglob("status.json")) + list(root.rglob("checkpoint.json")):
+        for marker in list(root.rglob("task.json")) + list(root.rglob("status.json")) + list(root.rglob("checkpoint.json")):
             dirs.add(marker.parent)
     for d in sorted(dirs):
         try:
@@ -74,54 +88,38 @@ def main() -> int:
                 raise ValueError("mixed search modes")
             if campaign_id is not None and task["campaign_id"] != campaign_id:
                 raise ValueError("mixed campaigns")
-            start = t["h_start"]
-            cp = d / "checkpoint.json"
-            status_path = d / "status.json"
-            status = load_json(status_path) if status_path.exists() else {}
-            checkpoint = load_json(cp) if cp.exists() else {}
-            for record, schema in ((status, STATUS_SCHEMA), (checkpoint, CHECKPOINT_SCHEMA)):
-                if not record:
-                    continue
-                validate_scope(record, schema)
-                if record.get("campaign_id") != task["campaign_id"] or record.get("task_id") != task["task_id"] \
-                        or int(record["k"]) != t["k"] or record.get("mode") != t["mode"]:
-                    raise ValueError("result metadata does not match its task")
-            nxt = int(checkpoint["next_h"]) if checkpoint else int(status.get("next_h", start))
-            if not start <= nxt <= t["h_stop"]:
-                raise ValueError("result cursor lies outside the task range")
-            task_counters = {c: 0 for c in COUNTERS}
-            if cp.exists():
-                for c, v in checkpoint["counters"].items():
-                    if c in task_counters:
-                        task_counters[c] += int(v)
-            # coverage of this directory: from the first shell it ran to next_h
-            first = start
-            shells = d / "shells.jsonl"
-            if shells.exists():
-                hs = [json.loads(line)["h"] for line in shells.read_text().splitlines() if line.strip()]
-                if hs:
-                    first = min(hs)
-            task_hits = {}
-            hp = d / "hits.jsonl"
-            if hp.exists():
-                for line in hp.read_text(encoding="utf-8").splitlines():
-                    if line.strip():
-                        rec = json.loads(line)
-                        verify_hit(rec, t["k"])
-                        if rec.get("mode", "both") != t["mode"]:
-                            raise ValueError("hit mode does not match its task")
-                        task_hits[hit_key(rec)] = rec
-            # Commit this directory only after all scope and certificate checks pass.
+            if not (d / "status.json").is_file():
+                raise ValueError("returned result is missing status.json")
+            progress = read_result_progress(d, task, t, observed_hashes=hashes)
+            digest = progress["worker_sha256"]
+            if digest is None:
+                raise ValueError("result has no worker SHA-256")
+            hashes.add(digest)
+            if expected_sha is not None and digest != expected_sha:
+                raise ValueError("result worker SHA-256 differs from the expected binary")
+            first, nxt = progress["covered_h_start"], progress["next_h"]
+            if page and not int(page["h_start"]) <= first <= t["h_start"] <= nxt <= t["h_stop"] <= int(page["h_stop"]):
+                raise ValueError("result interval is outside the page")
+            if progress["status"].get("state") == "error":
+                raise ValueError(f"task reported an error: {progress['status'].get('error')}")
+            # Stage only verified directories; reject mixed binaries globally.
             k, mode, campaign_id = t["k"], t["mode"], task["campaign_id"]
-            if nxt > first:
-                covered.append((first, nxt))
-            for c, v in task_counters.items():
-                counters[c] += v
-            hits.update(task_hits)
-            if status.get("state") == "error":
-                errors.append({"dir": str(d), "error": status.get("error")})
+            staged.append((first, nxt, progress["counters"], progress["hits"]))
         except Exception as exc:  # noqa: BLE001
             errors.append({"dir": str(d), "error": f"unreadable: {exc}"})
+
+    if len(hashes) > 1:
+        errors.append({"dir": "all results", "error": "mixed worker SHA-256 values; collect one release at a time"})
+        staged = []
+    if expected_sha is not None and hashes - {expected_sha}:
+        errors.append({"dir": "all results", "error": "unexpected worker SHA-256; no returned coverage accepted"})
+        staged = []
+    for first, nxt, task_counters, task_hits in staged:
+        if nxt > first:
+            covered.append((first, nxt))
+        for c, v in task_counters.items():
+            counters[c] += v
+        hits.update(task_hits)
 
     cov = merge(covered)
     gaps = []
@@ -168,10 +166,13 @@ def main() -> int:
                "desired_d_values": sorted({f"{r['d_num']}/{r['d_den']}" for r in desired}),
                "integer_chart_hits": sum(r["chart"] == "integer" for r in ordered),
                "half_chart_hits": sum(r["chart"] == "half" for r in ordered),
+               "worker_sha256": sorted(hashes), "expected_worker_sha256": expected_sha,
                "task_dirs": len(dirs), "errors": errors}
     atomic_json(args.output_dir / "summary.json", summary)
     print(json.dumps({k2: summary[k2] for k2 in ("k", "covered_heights", "gaps", "hits", "desired_hits", "errors")}, indent=1))
-    return 1 if errors else 0
+    if errors:
+        return 1
+    return 2 if args.require_complete and gaps else 0
 
 
 if __name__ == "__main__":

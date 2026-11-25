@@ -18,6 +18,9 @@ point-primitivity tests below.
 
 ## Accepted results: either case is enough
 
+Here `n` is the integer called `x` in the original conversation, and this
+folder's `x` is the rational parameter originally called `m`.
+
 Find a point on
 
 ```text
@@ -72,9 +75,21 @@ interval for `n` or `y`: all integer roots `S` of each selected cubic are found.
 A completed task establishes coverage only for its selected height interval,
 mode, and the two allowed values of `g`.
 
-The normal worker accepts heights through `200000000`. Thus it can return
-`abs(x) <= 100000000`; reaching `abs(x)` near `10^14` with this restriction
-would require `q` near `2*10^14`, beyond the current height enumerator.
+The normal worker accepts heights through `200000000`. Together with unit
+`g`, this gives the following safe outer bounds at `K = 375`:
+
+| Quantity | Bound |
+| --- | --- |
+| Original integer `x`, called `n` here | `abs(n) <= 100000000` |
+| Original rational `m`, called `x` here | `abs(x) <= 100000000` |
+| `y` | `abs(y) < 900000000` |
+| Each cube component `A, B, C` | Magnitude less than `1000000000` |
+
+These bounds follow from the selected slope domain; they are not claims
+that the maxima occur. [DERIVATION.md](DERIVATION.md#6-coverage-and-run-records)
+proves them. Finding all roots for each selected slope therefore remains a
+bounded search. A primitive cube representation can have `abs(g) > 1`, so
+the unit-g domain does not cover every primitive representation.
 
 The production option `--g-max-digits` has been removed. Tasks and result
 metadata instead state **`"g_values": [-1, 1]`**. Version-2 schemas prevent
@@ -95,6 +110,11 @@ The tests compare the fixed-g worker with independent enumeration on the
 original equation, check both signs of `g`, both charts, the three-coordinate
 integer gcd, rejected legacy settings, and task/resume/collect behavior.
 General continued-fraction checks use the separate raw diagnostic solver.
+Failure-injection tests cover missing or inconsistent terminal records,
+nonzero exits, final-shell replay, signal interruptions, continuation
+coverage, and mismatched binary provenance. A real-worker positive control
+checks that exact hit certificates survive running, resuming, and collection.
+The optional PARI/GP test is skipped when `gp` is unavailable.
 
 ## Plan and run a campaign
 
@@ -102,8 +122,11 @@ Choose a height interval explicitly. For example, prioritize half-integer
 points with:
 
 ```sh
-python3 make_campaign.py --campaign-id ce375-unit-half --mode xy-half   --h-start 1 --h-stop 20000 --output-dir ce375-unit-half
-python3 run_task.py --task ce375-unit-half/tasks/ce375-unit-half-0.json   --output-dir results/ce375-unit-half-0
+python3 make_campaign.py --campaign-id ce375-unit-half --mode xy-half \
+  --h-start 1 --h-stop 20000 --output-dir ce375-unit-half
+WORKER_SHA="$(sha256sum bin/thue375_worker | cut -d ' ' -f 1)"
+python3 run_task.py --task ce375-unit-half/tasks/ce375-unit-half-0.json \
+  --output-dir results/ce375-unit-half-0 --expected-worker-sha256 "$WORKER_SHA"
 ```
 
 Use `--mode xy` to search both alternatives. Run every generated task to cover
@@ -114,9 +137,49 @@ The raw pair count through height `H` is `2H^2 + H`.
 
 Generation writes task files and `page.json`; it does not submit jobs.
 `--deadline-seconds 0` disables a time deadline, while the assigned height
-endpoint still applies. Each completed shell is checkpointed, and rerunning
-a task in the same output directory resumes it. Interrupted tasks produce a
-`continuation.task.json` when shells remain.
+endpoint still applies. This planner generates finite pages; it does not
+expand the parent worker's height domain indefinitely.
+
+### Completion, checkpoints, and continuations
+
+A successful task must produce a start record matching its exact scope,
+ordered shell records, one consistent `complete` terminal record, and worker
+exit code zero. Missing terminal records, nonzero normal exits, malformed
+progress, and output after a terminal record are errors, even if the worker
+reported the last height.
+
+The most recently reported shell remains pending until another ordered shell
+arrives or a valid terminal record is followed by exit zero. The runner
+records only committed shells in its checkpoint. Rerunning with the same
+output directory replays an uncommitted final shell; a crash between the
+shell-log append and checkpoint replacement is handled by truncating that
+uncommitted log tail before resuming.
+
+A valid `partial` terminal record or a legitimate signal interruption leaves
+explicit remaining work in `continuation.task.json`. The runner exits zero
+for complete or deliberately partial work and nonzero for errors. Use the
+status and continuation files to distinguish completion from a partial run.
+
+The continuation can run in the same directory or a fresh directory. Each
+directory records its actual `covered_h_start` and durable `next_h`; a fresh
+directory holding only a continuation cannot claim its predecessor's work.
+Collect both directories to recover their combined coverage.
+
+### Binary provenance and existing outputs
+
+`--expected-worker-sha256` checks the executable before touching the output
+directory. The runner saves the actual hash in status, checkpoint, hit, and
+shell records, and pins saved task and continuation manifests with
+`expected_worker_sha256`. A resume must use that same binary. Conflicting
+task pins, command-line pins, or saved hashes cause refusal without modifying
+existing results. Compute the hash from the worker actually used on the
+target runtime; a separately built copy can have a different hash.
+
+These are additive reliability fields within the existing version-2
+mathematical task contract. **Older version-2 outputs without the required
+hashes and terminal proof are refused.** Rerun their requested work in fresh
+output directories; do not manufacture provenance or completion fields for
+old results. Version-1 general-g records remain historical evidence only.
 
 For Charity Engine, the entry point remains:
 
@@ -127,14 +190,28 @@ python3 /app/run_task.py --task /local/input/task.json --output-dir /local/outpu
 ## Collect and independently verify
 
 ```sh
-python3 collect.py --results results/ --page ce375-unit-half/page.json --output-dir collected
+python3 collect.py --results results/ --page ce375-unit-half/page.json \
+  --output-dir collected --expected-worker-sha256 "$WORKER_SHA" --require-complete
 python3 verify_hits.py collected/hits.jsonl
 ```
 
 `collected/desired_d_values.txt` lists acceptable points from either selected
 case. `collected/summary.json` records the height coverage, gaps, and fixed
-`g_values`. The Python verifier checks exact arithmetic, the point gcd, and
-that the actual enumerated `g` is one of the two permitted values.
+`g_values`, together with worker hashes and errors. The collector checks the
+committed contiguous shell records against the checkpoint and rejects
+inconsistent metadata, error-status directories, and mixed binary hashes.
+Returned results must retain `status.json` and `hits.jsonl`, including an empty
+hit file for a zero-hit run. A completed or partial status must report exactly
+the number of unique saved points. Checkpoints record a durable unique-hit
+count as well, so missing hits cannot be hidden by a stale running status.
+With `--expected-worker-sha256`, an unexpected binary invalidates the returned
+coverage. The Python verifier checks exact arithmetic, the point gcd, and
+that the actual enumerated `g` is one of the two permitted values; it verifies
+hit certificates independently of campaign completeness.
+
+Collector exit codes are `1` for errors, `2` for gaps when `--require-complete`
+is supplied, and `0` otherwise. Without `--require-complete`, a successful
+collection may describe a partial page, so inspect `summary.json` for gaps.
 
 ## Historical evidence and diagnostics
 

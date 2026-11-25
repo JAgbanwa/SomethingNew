@@ -70,6 +70,153 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def checked_sha256(value: str) -> str:
+    if not isinstance(value, str) or len(value) != 64 or any(c not in "0123456789abcdefABCDEF" for c in value):
+        raise ValueError("worker SHA-256 must be 64 hexadecimal characters")
+    return value.lower()
+
+
+def record_integer(value: Any, label: str) -> int:
+    """Protocol integers must not silently round floats or accept booleans."""
+    if type(value) is int:
+        return value
+    if isinstance(value, str) and value and value.lstrip("-").isdigit() and value.count("-") <= 1:
+        return int(value)
+    raise ValueError(f"{label} must be an integer")
+
+
+def shell_counters(record: dict, expected_h: int) -> dict:
+    if record.get("type") != "shell" or record_integer(record.get("h"), "shell h") != expected_h:
+        raise ValueError(f"worker shell is not the expected height {expected_h}")
+    counts = {key: record_integer(record.get(key), f"shell {key}") for key in COUNTERS}
+    if any(v < 0 for v in counts.values()):
+        raise ValueError("worker shell has a negative counter")
+    if counts["pairs"] != 4 * expected_h - 1:
+        raise ValueError("worker shell pair count does not cover the whole height")
+    return counts
+
+
+def verify_task_hit(record: dict, t: dict, first: int, stop: int) -> dict:
+    verified = verify_hit(record, t["k"])
+    if record.get("type") != "hit" or record.get("mode", "both") != t["mode"]:
+        raise ValueError("hit mode or record type does not match its task")
+    keys = ("thue_p", "thue_q") if t["mode"] in XY_MODES else ("d_num", "d_den")
+    height = max(abs(int(record[keys[0]])), int(record[keys[1]]))
+    if not first <= height < stop:
+        raise ValueError("hit certificate is outside the task's searched heights")
+    return verified
+
+
+def read_result_progress(out: Path, task: dict, t: dict, observed_hashes: set | None = None) -> dict:
+    """Validate saved coverage without modifying it; ignore an uncommitted log tail.
+
+    The checkpoint owns the durable prefix of shells.jsonl. A crash between
+    appending a shell and replacing its checkpoint may leave an extra tail,
+    which the runner truncates before replaying that shell. Version-2 results
+    without the additive provenance fields cannot establish reliable coverage.
+    """
+    cp_path, status_path = out / "checkpoint.json", out / "status.json"
+    hits_path, shell_path = out / "hits.jsonl", out / "shells.jsonl"
+    cp = load_json(cp_path) if cp_path.exists() else {}
+    status = load_json(status_path) if status_path.exists() else {}
+    if not status and (cp or hits_path.exists() or shell_path.exists()):
+        raise ValueError("saved results have no status artifact; restore it or use a fresh output directory")
+    hashes = set()
+
+    def remember_hash(value):
+        digest = checked_sha256(value)
+        hashes.add(digest)
+        if observed_hashes is not None:
+            observed_hashes.add(digest)
+
+    if task.get("expected_worker_sha256") is not None:
+        remember_hash(task["expected_worker_sha256"])
+    for record, schema in ((cp, CHECKPOINT_SCHEMA), (status, STATUS_SCHEMA)):
+        if not record:
+            continue
+        validate_scope(record, schema)
+        if (record.get("campaign_id") != task["campaign_id"] or record.get("task_id") != task["task_id"]
+                or record_integer(record.get("k"), "result k") != t["k"] or record.get("mode") != t["mode"]
+                or record_integer(record.get("h_stop"), "result h_stop") != t["h_stop"]):
+            raise ValueError("result metadata does not match its task")
+        if "worker_sha256" not in record:
+            raise ValueError("saved result has no worker SHA-256; use a fresh output directory")
+        remember_hash(record["worker_sha256"])
+    covered = record_integer((cp or status).get("covered_h_start", t["h_start"]), "covered_h_start")
+    cursor = record_integer(cp.get("next_h", covered), "checkpoint next_h")
+    if not 1 <= covered <= t["h_start"] <= cursor <= t["h_stop"]:
+        raise ValueError("task start or checkpoint lies outside this directory's covered interval")
+    terminal = cp.get("terminal_state")
+    if terminal not in (None, "complete", "partial"):
+        raise ValueError("checkpoint has an invalid terminal state")
+    if cp and terminal is not None and (type(cp.get("worker_exit_code")) is not int or cp["worker_exit_code"] != 0):
+        raise ValueError("terminal checkpoint has no successful worker exit")
+    if (cursor == t["h_stop"]) != (terminal == "complete"):
+        raise ValueError("endpoint checkpoint has no confirmed complete terminal state")
+    if status:
+        if record_integer(status.get("covered_h_start"), "status covered_h_start") != covered:
+            raise ValueError("status and checkpoint disagree on the covered start")
+        if not covered <= record_integer(status.get("next_h"), "status next_h") <= cursor:
+            raise ValueError("status cursor exceeds the durable checkpoint")
+        if status.get("state") not in ("running", "partial", "complete", "error"):
+            raise ValueError("invalid saved status state")
+        if status.get("state") == "complete" and terminal != "complete":
+            raise ValueError("complete status has no confirmed terminal checkpoint")
+        if status.get("state") == "partial" and cursor == t["h_stop"]:
+            raise ValueError("partial status has no remaining heights")
+        if status.get("state") in ("complete", "partial") and record_integer(status.get("next_h"), "status next_h") != cursor:
+            raise ValueError("terminal status and checkpoint cursors disagree")
+    counters = {key: 0 for key in COUNTERS}
+    shell_offset = 0
+    if cursor > covered:
+        with shell_path.open("rb") as handle:
+            for h in range(covered, cursor):
+                line = handle.readline()
+                if not line:
+                    raise ValueError("checkpoint has missing shell records")
+                record = json.loads(line)
+                remember_hash(record.get("worker_sha256"))
+                for key, value in shell_counters(record, h).items():
+                    counters[key] += value
+            shell_offset = handle.tell()
+    elif shell_path.exists() and shell_path.stat().st_size and not hashes:
+        raise ValueError("saved shells have no worker provenance")
+    if cp:
+        expected_counts = {key: record_integer(cp["counters"].get(key), f"checkpoint {key}") for key in COUNTERS}
+        if counters != expected_counts:
+            raise ValueError("checkpoint counters do not match its committed shell records")
+    hits = {}
+    if (cp or status.get("state") in ("complete", "partial")) and not hits_path.is_file():
+        raise ValueError("checkpointed or terminal result is missing hits.jsonl")
+    if hits_path.exists():
+        with hits_path.open(encoding="utf-8") as handle:
+            for line in handle:
+                if not line.strip():
+                    continue
+                record = json.loads(line)
+                verify_task_hit(record, t, covered, t["h_stop"])
+                remember_hash(record.get("worker_sha256"))
+                hits[hit_key(record)] = record
+    if status.get("state") in ("complete", "partial"):
+        expected_hits = record_integer(status.get("hits"), "status hits")
+        if expected_hits < 0 or len(hits) != expected_hits:
+            raise ValueError("terminal status hit count does not match the saved unique hits")
+    if cp:
+        committed_hits = record_integer(cp.get("hits"), "checkpoint hits")
+        # Hits are fsynced before a checkpoint records their unique count. An
+        # interrupted attempt can append more hits before its next checkpoint;
+        # running/error status counts may consequently be stale.
+        if committed_hits < 0 or len(hits) < committed_hits:
+            raise ValueError("saved unique hits are missing from the durable checkpoint")
+        if terminal == "complete" and len(hits) != committed_hits:
+            raise ValueError("complete checkpoint hit count does not match the saved unique hits")
+    if len(hashes) > 1:
+        raise ValueError("saved results contain different worker SHA-256 values")
+    return {"checkpoint": cp, "status": status, "covered_h_start": covered, "next_h": cursor,
+            "counters": counters, "shell_offset": shell_offset, "hits": hits,
+            "worker_sha256": next(iter(hashes), None)}
+
+
 def pairs_through(h: int) -> int:
     """Raw (p, q) pairs in shells 1..h: shell H has 4H - 1 pairs."""
     return 2 * h * h + h if h > 0 else 0

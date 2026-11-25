@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -101,6 +102,88 @@ class Pipeline(unittest.TestCase):
         self.assertFalse(summary["covered"])
         self.assertTrue(summary["errors"])
 
+    def test_missing_or_truncated_hit_artifacts_contribute_no_coverage(self):
+        page, task = self.page()
+        out = self.dir / "result"
+        self.cli("run", "--task", task, "--output-dir", out)
+        self.assertEqual(ej.load(out / "status.json")["hits"], 1)
+        hit_file = out / "hits.jsonl"
+        original = hit_file.read_text()
+        saved_status = (out / "status.json").read_bytes()
+        saved_checkpoint = (out / "checkpoint.json").read_bytes()
+        self.assertEqual(ej.verify_hit(json.loads(original), ej.load(task)), (-43, -58, 65))
+        for corruption in ("missing", "truncated"):
+            with self.subTest(corruption=corruption):
+                if corruption == "missing":
+                    hit_file.unlink()
+                else:
+                    hit_file.write_text("")
+                dest = self.dir / corruption
+                self.cli("collect", "--page", page, "--results", out,
+                         "--output-dir", dest, ok=False)
+                summary = ej.load(dest / "summary.json")
+                self.assertFalse(summary["complete"])
+                self.assertFalse(summary["covered"])
+                self.assertEqual(summary["hits"], 0)
+                self.assertTrue(summary["gaps"])
+                self.assertTrue(summary["errors"])
+                if corruption == "truncated":
+                    self.assertIn("hit count", summary["errors"][0]["error"])
+                self.cli("run", "--task", task, "--output-dir", out, ok=False)
+                self.assertEqual((out / "status.json").read_bytes(), saved_status)
+                self.assertEqual((out / "checkpoint.json").read_bytes(), saved_checkpoint)
+                hit_file.write_text(original)
+
+        # The status counts unique verified triples, not physical JSONL rows.
+        hit_file.write_text(original+original)
+        dest = self.dir / "duplicate-row"
+        self.cli("collect", "--page", page, "--results", out,
+                 "--output-dir", dest, "--require-complete")
+        summary = ej.load(dest / "summary.json")
+        self.assertTrue(summary["complete"])
+        self.assertEqual(summary["hits"], 1)
+
+    def test_truncated_partial_hit_artifact_contributes_no_coverage(self):
+        page, task = self.page(max_tiles=1)
+        out = self.dir / "result"
+        for _ in range(20):
+            self.cli("run", "--task", task, "--output-dir", out)
+            status = ej.load(out / "status.json")
+            if status["hits"]:
+                break
+        self.assertEqual(status["hits"], 1)
+        self.assertEqual(status["state"], "partial")
+        dest = self.dir / "intact"
+        self.cli("collect", "--page", page, "--results", out, "--output-dir", dest)
+        intact = ej.load(dest / "summary.json")
+        self.assertTrue(intact["covered"])
+        self.assertEqual(intact["hits"], 1)
+        self.assertFalse(intact["errors"])
+        original = (out / "hits.jsonl").read_text()
+        saved_status = (out / "status.json").read_bytes()
+        saved_checkpoint = (out / "checkpoint.json").read_bytes()
+        (out / "hits.jsonl").write_text("")
+        dest = self.dir / "truncated"
+        self.cli("collect", "--page", page, "--results", out,
+                 "--output-dir", dest, ok=False)
+        summary = ej.load(dest / "summary.json")
+        self.assertFalse(summary["covered"])
+        self.assertEqual(summary["hits"], 0)
+        self.assertIn("hit count", summary["errors"][0]["error"])
+        self.cli("run", "--task", task, "--output-dir", out, ok=False)
+        self.assertEqual((out / "status.json").read_bytes(), saved_status)
+        self.assertEqual((out / "checkpoint.json").read_bytes(), saved_checkpoint)
+
+        # Running/error counts may predate a committed append during a crash;
+        # they must not prevent valid checkpoint replay after an interruption.
+        (out / "hits.jsonl").write_text(original)
+        for state in ("running", "error"):
+            status = ej.load(out / "status.json")
+            status.update(state=state, hits=0)
+            ej.atomic_json(out / "status.json", status)
+            self.cli("run", "--task", task, "--output-dir", out)
+            self.assertEqual(ej.load(out / "status.json")["hits"], 1)
+
     def test_changed_binary_cannot_resume(self):
         _, task = self.page(max_tiles=1)
         out = self.dir / "result"
@@ -113,6 +196,46 @@ class Pipeline(unittest.TestCase):
         p = self.cli("run", "--task", task, "--output-dir", out, "--worker", copy, ok=False)
         self.assertIn("different task or worker binary", p.stderr)
         self.assertEqual((out / "status.json").read_bytes(), old_status)
+
+    def test_concurrent_runner_cannot_mutate_existing_results(self):
+        _, task = self.page()
+        out = self.dir / "result"
+        ready, release = self.dir / "ready", self.dir / "release"
+        gated = self.dir / "gated_worker"
+        gated.write_text(f"#!{sys.executable}\nimport os,sys,time\nfrom pathlib import Path\n"
+            f"Path({str(ready)!r}).touch()\n"
+            f"while not Path({str(release)!r}).exists(): time.sleep(0.01)\n"
+            f"os.execv({str(ej.DEFAULT_WORKER)!r}, [{str(ej.DEFAULT_WORKER)!r}, *sys.argv[1:]])\n")
+        gated.chmod(0o755)
+        first = subprocess.Popen([sys.executable, str(ROOT / "ej375.py"), "run", "--task", str(task),
+                                  "--output-dir", str(out), "--worker", str(gated)],
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            deadline = time.monotonic()+10
+            while not ready.exists() and first.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.01)
+            self.assertTrue(ready.exists(), "first runner did not reach its gated worker")
+            before = {p.name: p.read_bytes() for p in out.iterdir()
+                      if p.is_file() and p.name != "runner.lock"}
+            second = self.cli("run", "--task", task, "--output-dir", out, "--worker", gated, ok=False)
+            self.assertIn("another EJ runner already owns", second.stderr)
+            after = {p.name: p.read_bytes() for p in out.iterdir()
+                     if p.is_file() and p.name != "runner.lock"}
+            self.assertEqual(after, before)
+            release.touch()
+            stdout, stderr = first.communicate(timeout=20)
+            self.assertEqual(first.returncode, 0, stdout+stderr)
+            self.assertEqual(ej.load(out / "status.json")["state"], "complete")
+            self.assertEqual(ej.load(out / "status.json")["hits"], 1)
+        finally:
+            release.touch()
+            if first.poll() is None:
+                first.terminate()
+                try:
+                    first.communicate(timeout=5)
+                except subprocess.TimeoutExpired:
+                    first.kill()
+                    first.communicate()
 
     def test_missing_terminal_record_is_an_error(self):
         _, task = self.page()
@@ -197,10 +320,60 @@ class Pipeline(unittest.TestCase):
                  "--page-size", 2, "--output-dir", page)
         rows = [ej.load(page / p["path"]) for p in ej.load(page / "page.json")["tasks"]]
         self.assertEqual([r["height"] for r in rows], ["25", "50"])
+        self.assertEqual([int(r["index_stop"]) for r in rows],
+                         [ej.upper_index(25, 375), ej.upper_index(50, 375)])
+        self.assertLess(int(rows[1]["index_stop"]), 4*50)
         nxt = self.dir / "next"
         self.cli("plan", "--cursor", page / "next_plan.json", "--output-dir", nxt)
         first = ej.load(nxt / ej.load(nxt / "page.json")["tasks"][0]["path"])
         self.assertEqual(first["height"], "100")
+        self.assertEqual(int(first["index_stop"]), ej.upper_index(100, 375))
+
+    def test_default_plan_starts_at_proved_feasible_edge(self):
+        for h, k in ((25, 375), (73, 1207), (10**14, 375), (10**40, 375)):
+            with self.subTest(height=h, target=k):
+                page = self.dir / f"edge-{h}-{k}"
+                self.cli("plan", "--height", h, "--k", k, "--campaign-id", "edge",
+                         "--grid-span", 1000, "--page-size", 1, "--output-dir", page)
+                task = ej.load(page / ej.load(page / "page.json")["tasks"][0]["path"])
+                lo, hi = int(task["index_start"]), int(task["index_stop"])
+                numerator = 125*(h**3+k)
+                # Integer inequalities independently certify the boundary,
+                # including a perfect cube and the inclusive global endpoint.
+                self.assertLessEqual(2*(hi-1)**3, numerator)
+                if hi != 4*h:
+                    self.assertGreater(2*hi**3, numerator)
+                else:
+                    self.assertGreaterEqual(2*hi**3, numerator)
+                self.assertLess(2*lo**3, numerator)
+                if h >= 10**14:
+                    self.assertLess(hi, 4*h)
+                    self.assertEqual(hi-lo, 1000)
+
+                if (h, k) == (25, 375):
+                    self.assertEqual(hi, 100)
+                if (h, k) == (73, 1207):
+                    # j=290 exactly reaches the cube-root bound. An endpoint
+                    # rounded merely upward to 290 would wrongly exclude it.
+                    self.assertEqual(hi, 291)
+                    record = {"type": "hit", "k": k, "x": "58", "y": "58",
+                              "z": "-73", "primitive": True, "height": "73"}
+                    self.assertEqual(ej.verify_hit(record, task), (58, 58, -73))
+
+    def test_explicit_top_and_legacy_cursor_remain_valid(self):
+        h = 10**14
+        page = self.dir / "explicit"
+        self.cli("plan", "--height", h, "--right-index", 4*h,
+                 "--campaign-id", "legacy", "--grid-span", 1000, "--page-size", 1,
+                 "--output-dir", page)
+        task = ej.load(page / ej.load(page / "page.json")["tasks"][0]["path"])
+        self.assertEqual(int(task["index_stop"]), 4*h)
+        ej.validate_task(task)
+        nxt = self.dir / "continued"
+        self.cli("plan", "--cursor", page / "next_plan.json", "--output-dir", nxt)
+        continued = ej.load(nxt / ej.load(nxt / "page.json")["tasks"][0]["path"])
+        self.assertEqual(int(continued["index_stop"]), 4*h-1000)
+        self.assertEqual(continued["index_stop"], task["index_start"])
 
     def test_schema_and_original_equation(self):
         with self.assertRaises(ValueError):

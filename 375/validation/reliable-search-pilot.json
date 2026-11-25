@@ -1,0 +1,264 @@
+{
+  "schema": "ce375-reliable-search-pilot-v1",
+  "date_utc": "2026-11-23",
+  "base_commit": "857adf3f89831816461641d6d4f7bbf89783304f",
+  "source_identity": "Measured working-tree changes atop base_commit; source and binary SHA-256 values below identify the tested code.",
+  "environment": {
+    "execution": "local Linux; no Charity Engine submission",
+    "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "wall_measurement": "time.monotonic elapsed, including process startup, planning and collection where applicable",
+    "cpu_measurement": "resource.getrusage(RUSAGE_CHILDREN) user+system delta; includes controller/runner/native subprocess CPU"
+  },
+  "evidence_file_sha256": {
+    "large_gap_report.json": "73388fefbd57aac1e3e563c700fc968758121633f38a3fbe2c91b762297eaaa6",
+    "large_gap_release.json": "d9b62bb04ed1ce58a46bf868afeb1b7392241621384af4fa4d79fa02fce4413f",
+    "continuing_ej_start_validation.json": "8e9a41a543f1ad6167c6e246acafbea4719de23c330ab052e6a2914d3ec7000b",
+    "continuing_ej_resume_validation.json": "a199fd22637df046d6be6a7bdb6e6329a408286a14e6b0d76d4b2fdb28c60b6f"
+  },
+  "worker_sha256": {
+    "gap": "b86593f81f702a23b09f17f54ca0613956671aa10338bec9b270efdd10645485",
+    "elkies_jahnel": "d481d0221138a2818d55105166bf05331f25d64c17adc68d35459f7f5bd2af06"
+  },
+  "source_sha256": {
+    "375/gap-search/src/gap_worker.cpp": "a13d8e81f82e1afccdce15068c1fb13fad7ce5f96f3863258718d6a5604c8c5e",
+    "375/gap-search/Makefile": "8565ffe5bee5bff8d3484aa15c50b4cdfd4bb338c57dcf0cd945f9ffd4c8b1be",
+    "375/gap-search/gap_common.py": "c48b1d1e865a9c3d356fa7a44bc683cfcf40a452bfedd70bf00d9cb246b5929b",
+    "375/gap-search/gap_campaign.py": "0e55111f5ae2c95e1fdc7a62e601b5acbad02f91c136bd522d4b8319be77ddf0",
+    "375/gap-search/run_gap_task.py": "0586ae51078cad894d50efdb3a0d572b7851cd9bacc7c5c658962c0bd2203325",
+    "375/gap-search/collect_gap.py": "21617db57b1e9d8f991d31ce2dea7389eedccd45b2a2424e714b6d7bc585f082",
+    "375/gap-search/audit_gap.py": "67f96e66e56ec368840aac71f09aa71b8c075c75c40d689e73705b7ef6a0be67",
+    "375/gap-search/to_points375.py": "fd12a5d0065d76c7054d59c3268b8e7fe4a2b75646098cad262a31b4b0382a10",
+    "375/gap-search/tests/test_result_integrity.py": "22eeb2e7495e12af0df6d4eed14e9c25c5215879b2d9f471d5ec0014a84e795f",
+    "375/search375.py": "4a33aa621d356efd592ee82993debaca40f3081bcf3eb03d34cf1af4ed8ca31e",
+    "375/Scripts for large-scale computations/elkies-jahnel/ej375.py": "2ed0a11db1db499bdfbf88ff999a1a2949cd081d6c38b026ada11ac3884ca283",
+    "375/Scripts for large-scale computations/elkies-jahnel/src/elkies375_worker.cpp": "259e40bbbc1a02b333336372f212857314ae1a3c81e69804628b128dbe0bce2c",
+    "375/Scripts for large-scale computations/elkies-jahnel/Makefile": "ec64b827c42a29f721ed4f00a6d54c1b10fa9db926ff153b55f02bd35d7737fa"
+  },
+  "source_checks": {
+    "recorded_gap_hashes_unchanged_at_finish": true,
+    "recorded_ej_start_hashes_match_after_resume": true
+  },
+  "gap": {
+    "target": 375,
+    "primitive": true,
+    "ratio_max": 65536,
+    "heuristic_frontier": 0,
+    "region": {
+      "d_start": "100000000000000",
+      "d_stop": "100000027300000",
+      "stop_exclusive": true,
+      "z_abs_lower": "floor(3847*d/1000)",
+      "z_abs_upper": "65536*d",
+      "z_bounds_inclusive": true
+    },
+    "completed_tasks": 110,
+    "d_values_covered": 27300000,
+    "partitions": [
+      {
+        "name": "sample",
+        "d_start": "100000000000000",
+        "d_stop": "100000000050000",
+        "task_d_count": 50000,
+        "tasks": 1
+      },
+      {
+        "name": "pilot",
+        "d_start": "100000000050000",
+        "d_stop": "100000027300000",
+        "task_d_count": 250000,
+        "tasks": 109
+      }
+    ],
+    "counters": {
+      "d_total": 27300000,
+      "d_skipped_mod3": 9100000,
+      "d_skipped_prim": 3494400,
+      "d_no_roots": 10114338,
+      "d_live": 4591262,
+      "roots": 13034626,
+      "candidates": 71174059987,
+      "pass_2adic": 71174059987,
+      "pass_residue": 2173909,
+      "exact_checks": 2173909,
+      "hits": 0,
+      "hits_primitive": 0
+    },
+    "timing": {
+      "search_wall_seconds_including_startup": 37.27871161497387,
+      "search_child_cpu_seconds_including_startup": 34.41238699999999,
+      "audit_wall_seconds_including_startup": 30.108781603001262,
+      "audit_child_cpu_seconds_including_startup": 30.025702,
+      "total_measured_command_wall_seconds": 67.661216976976
+    },
+    "audit": {
+      "fraction": 1,
+      "chunks_checked": 110,
+      "chunks_matching": 110,
+      "method": "Re-execute every returned chunk with the pinned native worker; compare counters and exact solution identities.",
+      "separate_algorithm": false
+    },
+    "collector_errors": [],
+    "collector_gaps": [],
+    "hits": 0,
+    "primitive_hits": 0
+  },
+  "continuing_elkies_jahnel": {
+    "target": 375,
+    "height_start": "1000000000000000000",
+    "schedule": "interleave",
+    "grid_span": 100000,
+    "tile_scale": "11/2",
+    "task_max_tiles": 1000,
+    "checkpoint_every": 100,
+    "acceptance": {
+      "primitive_cubes": true,
+      "chart": "half",
+      "primitive_point_required": false,
+      "solution_target": 1
+    },
+    "region_definition": "For each listed row: H<=c<2H, 0<a<=b<c, L<=(5H)*a/c<R, and a^3+b^3-c^3=+375 or -375.",
+    "completed_bands": [
+      {
+        "job": 0,
+        "level": 0,
+        "height": "1000000000000000000",
+        "index_start": "3968502629920398687",
+        "index_stop": "3968502629920498687",
+        "tiles": 6250,
+        "lattice_points": "157225",
+        "hits": 0,
+        "task_sha256": "ffd171313fa33b0cde2501297b7f9d9a0fb54893080d3c10d29fb478f57bb727",
+        "receipt_file_sha256": "08f04a74b2e3cb295cac3213bd8e11e7159837b1b13ea6211e3fb2dbbd004347"
+      },
+      {
+        "job": 1,
+        "level": 1,
+        "height": "2000000000000000000",
+        "index_start": "7937005259840897374",
+        "index_stop": "7937005259840997374",
+        "tiles": 6250,
+        "lattice_points": "156906",
+        "hits": 0,
+        "task_sha256": "a119ea2940c7948457dfe49e7f2858a24913c89d1c0d801ec66f371e86acca22",
+        "receipt_file_sha256": "f095d124b081f1d44efc56e42f60f2167f540ee3608f616482b64e22c50de591"
+      },
+      {
+        "job": 2,
+        "level": 0,
+        "height": "1000000000000000000",
+        "index_start": "3968502629920298687",
+        "index_stop": "3968502629920398687",
+        "tiles": 6250,
+        "lattice_points": "156188",
+        "hits": 0,
+        "task_sha256": "504e4dc1fa5f54f193787478de4ac33e0568f0af7ccd549eef6906493a6b7f5e",
+        "receipt_file_sha256": "05f39d6a25c2430807a91a22855fd4657edc78903f437975dfd8d2f9017766aa"
+      },
+      {
+        "job": 3,
+        "level": 2,
+        "height": "4000000000000000000",
+        "index_start": "15874010519681894748",
+        "index_stop": "15874010519681994748",
+        "tiles": 6250,
+        "lattice_points": "156423",
+        "hits": 0,
+        "task_sha256": "d9c3847ababe2cc4cb39de131e9c38256eab96b756c8f2b273e3087b6fac0648",
+        "receipt_file_sha256": "e9127ecc97eba90877ec5e674bff942d5d04bff629f15234aad85e487daf3828"
+      },
+      {
+        "job": 4,
+        "level": 1,
+        "height": "2000000000000000000",
+        "index_start": "7937005259840797374",
+        "index_stop": "7937005259840897374",
+        "tiles": 6250,
+        "lattice_points": "156817",
+        "hits": 0,
+        "task_sha256": "3f293a97c9a0481b9b766d8e45e41897f8240a06ba77ba446b85c5ef8be3136c",
+        "receipt_file_sha256": "87aac98629e736b372a47c5c751e9381217d875cd52115a4b3b31f4526f44830"
+      },
+      {
+        "job": 5,
+        "level": 0,
+        "height": "1000000000000000000",
+        "index_start": "3968502629920198687",
+        "index_stop": "3968502629920298687",
+        "tiles": 6250,
+        "lattice_points": "156675",
+        "hits": 0,
+        "task_sha256": "de53de2f8fb62b174b4e322e894f11f69ece6ef82cee26cd04937680590b4e57",
+        "receipt_file_sha256": "ecbb9ee5e5043caee489711fd9891f53fddff8329ab69d7991dd9bd9261fb61a"
+      }
+    ],
+    "invocations": [
+      {
+        "operation": "start",
+        "exit_code": 0,
+        "wall_seconds": 90.0996358199991,
+        "child_cpu_seconds": 89.443778,
+        "state": "paused",
+        "stop_reason": "execution time budget",
+        "cumulative_completed_tasks": 4,
+        "cumulative_credited_tiles": 25000,
+        "cumulative_credited_lattice_points": "626742",
+        "cumulative_worker_attempts": 31,
+        "pending": {
+          "job": 4,
+          "level": 1
+        }
+      },
+      {
+        "operation": "resume",
+        "exit_code": 0,
+        "wall_seconds": 35.20116811299886,
+        "child_cpu_seconds": 35.026613999999995,
+        "state": "paused",
+        "stop_reason": "completed-task budget",
+        "cumulative_completed_tasks": 6,
+        "cumulative_credited_tiles": 37500,
+        "cumulative_credited_lattice_points": "940234",
+        "cumulative_worker_attempts": 43,
+        "pending": null
+      }
+    ],
+    "total_wall_seconds": 125.30080393299795,
+    "total_child_cpu_seconds": 124.47039199999999,
+    "completed_tasks": 6,
+    "credited_tiles": 37500,
+    "credited_lattice_points": "940234",
+    "lattice_points_semantics": "Includes lattice intervals covered algebraically by the exact cubic solver; not individual cube evaluations.",
+    "timing_scope_note": "The first invocation timing includes partial work on pending job4; its cumulative credited counters include only completed jobs. The resume finishes that job and job5.",
+    "completed_receipt_chain_head": "5fb497d919a7aacf5fffa778cfe4610ead58fd70a6d71e5b039dc4d169463f8c",
+    "pending_after_resume": null,
+    "final_state": "paused",
+    "stop_reason": "completed-task budget",
+    "primitive_cube_hits": 0,
+    "qualifying_original_point_hits": 0,
+    "collection_errors": [],
+    "collection_gaps_within_completed_bands": [],
+    "small_case_check": {
+      "k": 375,
+      "method": "exhaustive exact pair enumeration",
+      "primitive_triples": 0,
+      "region": "max(abs(cube coordinates)) <25",
+      "triples": [
+        [
+          5,
+          5,
+          5
+        ]
+      ]
+    },
+    "final_height_bound": null
+  },
+  "limitations": [
+    "No primitive375 solution was found in these finite pilots.",
+    "No Charity Engine jobs were submitted.",
+    "The gap pilot certifies only its finite d interval and ratio cap; the EJ pilot certifies only the six listed bands.",
+    "No complete large height shell or global height exclusion was established.",
+    "Timings are local measurements, not a completion-time or discovery-probability forecast.",
+    "The engines search different regions, so these timings are not a like-for-like speed ranking."
+  ],
+  "reproduction": "Repository-relative commands are in reliable-search-pilot.md."
+}

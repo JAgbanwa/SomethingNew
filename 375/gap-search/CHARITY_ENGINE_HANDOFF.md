@@ -135,20 +135,22 @@ python3 collect_gap.py \
   --expected-worker-sha256 "$ce375_worker_sha256"
 python3 audit_gap.py \
   --page ce375-smoke/page.json --results results \
-  --fraction 1 --seed 375
+  --fraction 1 --seed 375 \
+  --expected-worker-sha256 "$ce375_worker_sha256"
 ```
 
 Success means both task statuses say `complete`, returned coverage is exactly
 `[10000000000,10001000000)`, the collector reports no gaps or errors, and every
-pilot chunk agrees on rerun. A nonzero number of mathematical hits is not a
+pilot chunk agrees in counters and exact solution identities on rerun. A nonzero number of mathematical hits is not a
 success criterion for an infrastructure test. If there are hits, convert them:
 
 ```sh
 python3 to_points375.py collected-smoke/hits.jsonl
 ```
 
-An empty hit file is normal for a smoke pilot; do not invoke the converter on it
-as if it were an error. The repository's known-answer tests separately exercise
+An empty hit file is normal when the saved-hit counters are zero, but the file
+must still be returned. A missing file is an integrity error. Do not invoke the
+converter on an empty hit file as if it were an error. The repository's known-answer tests separately exercise
 candidate discovery, exact checking, and primitivity classification.
 
 ## 5. Test the container contract locally
@@ -169,7 +171,20 @@ docker run --rm \
 Repeat with task 1 and a different output directory, then run the collector and
 auditor against `container-results`. Do not mix host and container outputs in a
 single collection unless their worker hashes agree. Pass the image's expected
-worker hash to the collector. Store each returned job's
+worker hash to both collector and auditor. The auditor must execute the exact
+binary used by the tasks. If the host-built binary differs, run the audit inside
+the same image on trusted local hardware:
+
+```sh
+docker run --rm \
+  --mount "type=bind,src=$(pwd),dst=/pilot,readonly" \
+  ce375-gap:pilot python3 /app/audit_gap.py \
+  --page /pilot/ce375-smoke/page.json --results /pilot/container-results \
+  --fraction 1 --seed 375 \
+  --expected-worker-sha256 "$ce375_image_worker_sha256"
+```
+
+Store each returned job's
 files together in its own directory; identical output filenames are expected
 across jobs.
 
@@ -182,8 +197,8 @@ The runner writes:
 | `task.json` | Assigned task parameters |
 | `status.json` | `running`, `partial`, `complete`, or `error`, with progress and worker identity |
 | `checkpoint.json` | Completed gap interval and accumulated counters |
-| `chunks.jsonl` | Per-chunk deterministic counters for reruns |
-| `hits.jsonl` | Exactly verified candidate triples |
+| `chunks.jsonl` | Per-chunk deterministic counters and worker hashes for reruns; return even when empty |
+| `hits.jsonl` | Exactly verified candidate triples and worker hashes; return even when empty |
 | `run.log`, `worker.stderr.log` | Execution and diagnostic logs |
 | `continuation.task.json` | Remaining interval after a deliberately partial run, when needed |
 
@@ -192,13 +207,31 @@ the same task, binary, and retained output directory resumes from that cursor.
 Atomic local writes protect against torn local checkpoints; they do not create
 remote storage durability. If outputs are lost, reissue the uncredited interval.
 
-Use `--expected-worker-sha256` in the runner and collector to pin the binary.
+Use `--expected-worker-sha256` in the runner, collector and auditor to pin the binary.
 The runner refuses a changed-binary resume before modifying its output
 directory. The collector rejects mixed worker hashes or a mismatch with the
 expected hash, exits with an error, and accepts no coverage from that collection.
 Normal completion requires a matching worker terminal record and a successful
 process exit; reaching the endpoint without that record is an error. Deliberate
 partial runs and genuine interruptions remain resumable.
+
+The collector and auditor require the task, status and both JSONL logs together;
+a checkpoint is also required to claim committed progress. They reject missing
+or truncated logs, absent per-record hashes, and counts that disagree with the
+saved unique hit identities. Nothing from an invalid directory is credited.
+The checkpoint hit counters describe only its durable interval. A hit saved
+from an unfinished next chunk can legitimately make `status.hits` larger than
+the checkpoint hit count; it remains available and is deduplicated on resume.
+A stale `running` status may lag a valid checkpoint, but cannot claim progress
+or counters beyond it.
+
+Interrupted final chunks can leave old rows in the append-only chunk log.
+Validation reconstructs the latest contiguous partition of the durable prefix
+and reconciles its counters with the checkpoint, so replayed rows do not count
+twice. Audits sample only that committed partition. Every sampled interval must
+match both its rerun counters and the exact ordered `(x, y, z)` identities; a
+different valid triple with the same hit count does not pass. A rerun also needs
+a matching start, complete terminal record and successful process exit.
 
 For planned deadlines, leave time before CE's hard cap for a chunk to finish,
 the runner to close its files, and the platform to return outputs. Determine the
