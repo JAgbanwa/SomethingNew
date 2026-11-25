@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "check": "Fresh bounded reproduction using run_experiment.py, followed by a read-only view of archived records",
+  "runtime": {
+    "platform": "Linux",
+    "python": "3.12.14"
+  },
+  "search_completed_utc": "2026-11-25T01:16:02.296701+00:00",
+  "script_sha256": "a8e1ceb2db978d37ee1296ef5a598bbf82ab34062be82702a5d6b35435c90d25",
+  "summary_values": {
+    "n_min": "100000000000000000",
+    "n_max": "100000000000000000000",
+    "target": "primitive",
+    "planned_tasks": "100763245124579414319",
+    "materialized_tasks": 43,
+    "complete_tasks": 43,
+    "partial_tasks": 0,
+    "error_tasks": 0,
+    "completed_ratio_index_units": "43000",
+    "completed_tiles": "551",
+    "covered_lattice_points": "12571",
+    "canonical_cube_hits": 0,
+    "equation_points": 0,
+    "primitive_equation_points": 0,
+    "complete_target_search_in_n_interval": false
+  },
+  "reference_comparison": {
+    "directory": "../elkies375/examples/large-pilot",
+    "all_43_task_identifiers_equal": true,
+    "all_task_scope_objects_equal": true,
+    "all_completed_tile_boundaries_equal": true,
+    "all_task_lattice_counts_equal": true,
+    "all_exact_point_and_cube_lists_equal": true,
+    "summary_search_counters_equal": true,
+    "read_only_view_plot_metadata_equal": true
+  },
+  "preservation": {
+    "unchanged_tracked_shared_package_files": 95,
+    "unchanged_supplied_png_files": 3
+  },
+  "notes": [
+    "This fresh execution validates the launcher; the published PNGs remain the user-supplied files.",
+    "Times, local paths and platform strings are not used to compare mathematical search results.",
+    "The full requested n-interval search remains unfinished."
+  ]
+}
